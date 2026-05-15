@@ -35,7 +35,7 @@ Recommended Railway variables:
 - `OPENAI_MODEL=gpt-5.5`
 - `PLAID_CLIENT_ID=<Plaid client id>`
 - `PLAID_SECRET=<Plaid secret>`
-- `PLAID_ENV=development` or `production`
+- `PLAID_ENV=production` for Chase
 - `A3_TOKEN_SECRET=<long random secret for stored Plaid tokens>`
 - `PLAID_REDIRECT_URI=https://a3.aolabs.io/oauth.html`
 - attach a persistent volume mounted at `/data`
