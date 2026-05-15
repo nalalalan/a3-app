@@ -4,10 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>a3.aolabs.io</title>
-    <meta name="description" content="Persistent A3 financial readiness monitor.">
+    <meta name="description" content="Private A3 financial readiness monitor.">
     <link rel="canonical" href="https://a3.aolabs.io/">
     <meta property="og:title" content="a3.aolabs.io">
-    <meta property="og:description" content="Persistent A3 financial readiness monitor.">
+    <meta property="og:description" content="Private A3 financial readiness monitor.">
     <meta property="og:url" content="https://a3.aolabs.io/">
     <meta property="og:type" content="website">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
@@ -22,12 +22,10 @@
       </a>
       <div>
         <p class="eyebrow">a3.aolabs.io</p>
-        <h1>A3 readiness</h1>
+        <h1>A3</h1>
       </div>
       <div class="top-actions">
         <span id="storageState" class="storage-state">Loading</span>
-        <button id="tickButton" type="button">Check</button>
-        <button id="runAdvisor" type="button">Advisor</button>
         <label class="file-button">
           <input id="csvInput" type="file" accept=".csv,text/csv">
           CSV
@@ -37,185 +35,104 @@
 
     <section id="lockPanel" class="lock-panel" aria-label="Private access" hidden>
       <div>
-        <p class="label">Private access</p>
-        <h2>Code required</h2>
+        <p class="label">Private</p>
+        <h2>PIN</h2>
       </div>
-      <input id="accessInput" type="password" autocomplete="current-password" placeholder="Access code">
+      <input id="accessInput" type="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN">
       <button id="unlockButton" type="button">Unlock</button>
       <span id="accessMessage"></span>
     </section>
 
     <main class="shell">
-      <section class="state-row" aria-label="A3 state">
-        <div class="state-block state-main">
-          <p class="label">State</p>
-          <strong id="stateLabel">--</strong>
-          <span id="stateReason">--</span>
+      <section class="primary-state" aria-label="Current data state">
+        <p class="label">Data</p>
+        <strong id="stateLabel">--</strong>
+        <span id="stateReason">--</span>
+      </section>
+
+      <section class="summary-row" aria-label="A3 summary">
+        <div class="summary-block">
+          <p class="label">A3</p>
+          <strong id="a3Price">--</strong>
+          <span id="a3Code">--</span>
         </div>
-        <div class="state-block">
-          <p class="label">A3 gap</p>
+        <div class="summary-block">
+          <p class="label">Bank data</p>
           <strong id="gapValue">--</strong>
           <span id="gapLabel">--</span>
         </div>
-        <div class="state-block">
-          <p class="label">Monthly room</p>
-          <strong id="roomValue">--</strong>
-          <span id="roomLabel">--</span>
-        </div>
-        <div class="state-block">
-          <p class="label">One action</p>
+        <div class="summary-block">
+          <p class="label">Next</p>
           <strong id="actionLabel">--</strong>
           <span id="actionDetail">--</span>
         </div>
       </section>
 
-      <section class="control-row" aria-label="Planning inputs">
-        <label>
-          <span class="label">CSV mode</span>
-          <select id="modeSelect">
-            <option value="auto">Auto</option>
-            <option value="checking">Checking</option>
-            <option value="credit">Credit card</option>
-          </select>
-        </label>
-        <label>
-          <span class="label">Balance</span>
-          <input id="balanceInput" type="text" inputmode="decimal" placeholder="optional">
-        </label>
-        <label>
-          <span class="label">Floor</span>
-          <input id="floorInput" type="text" inputmode="decimal">
-        </label>
-        <label>
-          <span class="label">Down payment</span>
-          <input id="downPaymentInput" type="text" inputmode="decimal">
-        </label>
-        <label>
-          <span class="label">Monthly cap</span>
-          <input id="monthlyCapInput" type="text" inputmode="decimal">
-        </label>
-        <label>
-          <span class="label">Target date</span>
-          <input id="targetDateInput" type="date">
-        </label>
-        <button id="saveSettings" type="button">Save</button>
+      <section class="panel advisor-panel" aria-label="Advisor state">
+        <p class="label">Advisor</p>
+        <h2 id="advisorStatus">--</h2>
+        <strong id="advisorAction">--</strong>
+        <span id="advisorSummary">--</span>
+        <span id="advisorEffect">--</span>
       </section>
 
-      <section class="layout">
-        <section class="panel target-panel" aria-label="A3 target">
-          <div class="panel-head">
-            <div>
-              <p class="label">Target</p>
-              <h2>Audi A3 Premium Plus</h2>
-            </div>
+      <details class="panel">
+        <summary>Settings</summary>
+        <section class="control-row" aria-label="Planning inputs">
+          <label>
+            <span class="label">CSV mode</span>
+            <select id="modeSelect">
+              <option value="auto">Auto</option>
+              <option value="checking">Checking</option>
+              <option value="credit">Credit card</option>
+            </select>
+          </label>
+          <label>
+            <span class="label">Balance</span>
+            <input id="balanceInput" type="text" inputmode="decimal" placeholder="optional">
+          </label>
+          <label>
+            <span class="label">Floor</span>
+            <input id="floorInput" type="text" inputmode="decimal">
+          </label>
+          <label>
+            <span class="label">Down payment</span>
+            <input id="downPaymentInput" type="text" inputmode="decimal">
+          </label>
+          <label>
+            <span class="label">Monthly cap</span>
+            <input id="monthlyCapInput" type="text" inputmode="decimal">
+          </label>
+          <label>
+            <span class="label">Target date</span>
+            <input id="targetDateInput" type="date">
+          </label>
+          <button id="saveSettings" type="button">Save</button>
+        </section>
+      </details>
+
+      <details class="panel">
+        <summary>Details</summary>
+        <div class="detail-grid">
+          <section aria-label="Build">
+            <p class="label">Build</p>
+            <strong id="a3Build">--</strong>
             <a href="/a3-a0j42547.pdf">PDF</a>
-          </div>
-          <div class="target-grid">
-            <div>
-              <span class="label">Price</span>
-              <strong id="a3Price">--</strong>
-            </div>
-            <div>
-              <span class="label">Audi code</span>
-              <strong id="a3Code">--</strong>
-            </div>
-            <div class="target-wide">
-              <span class="label">Build</span>
-              <strong id="a3Build">--</strong>
-            </div>
-          </div>
-        </section>
-
-        <section class="panel advisor-panel" aria-label="Advisor">
-          <div class="panel-head">
-            <div>
-              <p class="label">Advisor</p>
-              <h2 id="advisorStatus">--</h2>
-            </div>
-            <span>stored</span>
-          </div>
-          <div class="advisor-copy">
-            <strong id="advisorAction">--</strong>
-            <span id="advisorSummary">--</span>
-            <span id="advisorEffect">--</span>
-          </div>
-        </section>
-
-        <section class="panel trend-panel" aria-label="Spending trend">
-          <div class="panel-head">
-            <div>
-              <p class="label">Trend</p>
-              <h2>Weekly spend</h2>
-            </div>
-            <span>8 weeks</span>
-          </div>
-          <div id="weekChart" class="week-chart"></div>
-        </section>
-
-        <section class="panel" aria-label="Watch">
-          <div class="panel-head">
-            <div>
-              <p class="label">Watch</p>
-              <h2>Checks</h2>
-            </div>
-          </div>
-          <div id="watchList" class="rows"></div>
-        </section>
-
-        <section class="panel" aria-label="Recurring">
-          <div class="panel-head">
-            <div>
-              <p class="label">Pattern</p>
-              <h2>Recurring</h2>
-            </div>
-          </div>
-          <div id="recurringList" class="rows"></div>
-        </section>
-
-        <section class="panel" aria-label="Categories">
-          <div class="panel-head">
-            <div>
-              <p class="label">30d</p>
-              <h2>Categories</h2>
-            </div>
-          </div>
-          <div id="categoryList" class="rows"></div>
-        </section>
-
-        <section class="panel chat-panel" aria-label="Chat">
-          <div class="panel-head">
-            <div>
-              <p class="label">Ask</p>
-              <h2>A3 advisor</h2>
-            </div>
-          </div>
-          <div id="chatList" class="messages"></div>
-          <div class="chat-compose">
-            <textarea id="chatInput" rows="3" placeholder="Ask about the A3 plan"></textarea>
-            <button id="chatButton" type="button">Send</button>
-          </div>
-        </section>
-
-        <section class="panel" aria-label="Memory">
-          <div class="panel-head">
-            <div>
-              <p class="label">Memory</p>
-              <h2>Changes</h2>
-            </div>
-          </div>
-          <div id="eventList" class="rows"></div>
-        </section>
-
-        <section class="panel transactions-panel" aria-label="Transactions">
-          <div class="panel-head">
-            <div>
-              <p class="label">Ledger</p>
-              <h2>Latest transactions</h2>
-            </div>
-          </div>
-          <div id="transactionList" class="transactions"></div>
-        </section>
-      </section>
+          </section>
+          <section aria-label="Checks">
+            <p class="label">Checks</p>
+            <div id="watchList" class="rows"></div>
+          </section>
+          <section aria-label="Changes">
+            <p class="label">Changes</p>
+            <div id="eventList" class="rows"></div>
+          </section>
+          <section aria-label="Latest transactions">
+            <p class="label">Latest</p>
+            <div id="transactionList" class="transactions"></div>
+          </section>
+        </div>
+      </details>
     </main>
 
     <script src="/app.js" defer></script>

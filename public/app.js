@@ -1,8 +1,6 @@
 const els = {
   storageState: document.getElementById("storageState"),
   csvInput: document.getElementById("csvInput"),
-  runAdvisor: document.getElementById("runAdvisor"),
-  tickButton: document.getElementById("tickButton"),
   lockPanel: document.getElementById("lockPanel"),
   accessInput: document.getElementById("accessInput"),
   unlockButton: document.getElementById("unlockButton"),
@@ -18,8 +16,6 @@ const els = {
   stateReason: document.getElementById("stateReason"),
   gapValue: document.getElementById("gapValue"),
   gapLabel: document.getElementById("gapLabel"),
-  roomValue: document.getElementById("roomValue"),
-  roomLabel: document.getElementById("roomLabel"),
   actionLabel: document.getElementById("actionLabel"),
   actionDetail: document.getElementById("actionDetail"),
   a3Price: document.getElementById("a3Price"),
@@ -29,15 +25,9 @@ const els = {
   advisorSummary: document.getElementById("advisorSummary"),
   advisorAction: document.getElementById("advisorAction"),
   advisorEffect: document.getElementById("advisorEffect"),
-  weekChart: document.getElementById("weekChart"),
   watchList: document.getElementById("watchList"),
-  recurringList: document.getElementById("recurringList"),
-  categoryList: document.getElementById("categoryList"),
   eventList: document.getElementById("eventList"),
-  transactionList: document.getElementById("transactionList"),
-  chatInput: document.getElementById("chatInput"),
-  chatButton: document.getElementById("chatButton"),
-  chatList: document.getElementById("chatList")
+  transactionList: document.getElementById("transactionList")
 };
 
 const money = new Intl.NumberFormat("en-US", {
@@ -57,8 +47,6 @@ const shortDate = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
   timeZone: "UTC"
 });
-
-let latestState = null;
 
 async function api(path, options = {}) {
   const { accessCodeOverride, headers = {}, ...fetchOptions } = options;
@@ -90,24 +78,20 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
-function signed(value) {
-  const number = Number(value || 0);
-  const formatted = money.format(Math.abs(number));
-  if (number > 0) return `+${formatted}`;
-  if (number < 0) return `-${formatted}`;
-  return formatted;
-}
-
 function dateLabel(date) {
   if (!date) return "--";
   return shortDate.format(new Date(`${date}T00:00:00Z`));
+}
+
+function isSampleOnly(data) {
+  return !(data.imports || []).some((item) => item.source !== "sample");
 }
 
 function setBusy(text) {
   els.storageState.textContent = text;
 }
 
-function showLock(message = "Code required") {
+function showLock(message = "PIN required") {
   els.lockPanel.hidden = false;
   els.accessMessage.textContent = message;
   els.accessInput.focus();
@@ -120,7 +104,6 @@ function hideLock() {
 
 async function loadState() {
   const data = await api("/api/state");
-  latestState = data;
   hideLock();
   render(data);
 }
@@ -131,14 +114,8 @@ function render(data) {
   const goal = analysis.goal;
   const latestRun = data.advisorRuns[0];
   const latestImport = data.imports[0];
+  const sampleOnly = isSampleOnly(data);
 
-  els.storageState.textContent = latestRun?.error
-    ? "AI blocked"
-    : latestImport?.source === "sample"
-      ? "Sample data"
-      : data.openaiConfigured
-        ? `AI ${data.model}`
-        : "AI missing";
   els.modeSelect.value = settings.mode;
   els.balanceInput.value = settings.currentBalance;
   els.floorInput.value = settings.cashFloor;
@@ -146,88 +123,84 @@ function render(data) {
   els.monthlyCapInput.value = settings.monthlyCarCap;
   els.targetDateInput.value = settings.targetDate || "";
 
-  document.documentElement.dataset.state = analysis.readiness.color;
-  els.stateLabel.textContent = analysis.readiness.label;
-  els.stateReason.textContent = analysis.readiness.reason;
-  els.gapValue.textContent = money.format(goal.downPaymentGap);
-  els.gapLabel.textContent = `${money.format(goal.availableForDownPayment)} above floor / ${money.format(goal.downPaymentTarget)} target`;
-  els.roomValue.textContent = signed(goal.monthlyRoom);
-  els.roomLabel.textContent = `${money.format(goal.monthlySavingsPace)} saved/mo / ${money.format(goal.monthlySavingsNeeded)} needed`;
-  els.actionLabel.textContent = analysis.action.label;
-  els.actionDetail.textContent = analysis.action.detail;
-
   els.a3Price.textContent = money.format(data.goal.priceAsBuilt);
   els.a3Code.textContent = data.goal.audiCode;
   els.a3Build.textContent = `${data.goal.exterior} / ${data.goal.interior} / ${data.goal.package}`;
 
-  if (latestRun) {
-    els.advisorStatus.textContent = latestRun.advice.status;
-    els.advisorSummary.textContent = latestRun.advice.summary;
-    els.advisorAction.textContent = latestRun.advice.one_action;
-    els.advisorEffect.textContent = latestRun.advice.a3_effect;
-  } else {
-    els.advisorStatus.textContent = "not run";
-    els.advisorSummary.textContent = "Run advisor after import";
-    els.advisorAction.textContent = analysis.action.label;
-    els.advisorEffect.textContent = analysis.action.detail;
+  document.documentElement.dataset.state = sampleOnly ? "danger" : analysis.readiness.color;
+
+  if (sampleOnly) {
+    els.storageState.textContent = "Not current";
+    els.stateLabel.textContent = "Not current";
+    els.stateReason.textContent = "Sample data only. Chase is not connected.";
+    els.gapValue.textContent = "No bank data";
+    els.gapLabel.textContent = "Debt and balances are missing.";
+    els.actionLabel.textContent = "Import CSV";
+    els.actionDetail.textContent = "Use a current Chase export.";
+    els.advisorStatus.textContent = "Paused";
+    els.advisorAction.textContent = "Do not use sample numbers.";
+    els.advisorSummary.textContent = "Current debt is not in this app yet.";
+    els.advisorEffect.textContent = "";
+    renderRows(els.watchList, [{ label: "Data missing", detail: "Current Chase activity not imported." }], (item) => [item.label, item.detail]);
+    renderRows(els.eventList, data.events, (item) => [item.label, item.type]);
+    els.transactionList.innerHTML = `<div class="empty">Hidden until current data is imported.</div>`;
+    return;
   }
 
-  renderWeeks(analysis.weeks);
-  renderRows(els.watchList, analysis.watch, (item) => [item.label, item.detail]);
-  renderRows(els.recurringList, analysis.recurring, (item) => [item.merchant, `${moneyExact.format(item.amount)} / ${item.count} hits`]);
-  renderRows(els.categoryList, analysis.categories, (item) => [item.category, money.format(item.total)]);
-  renderRows(els.eventList, data.events, (item) => [item.label, `${item.type} / ${new Date(item.createdAt).toLocaleString()}`]);
-  renderTransactions(analysis.transactions);
-  renderChat(data.messages);
-}
+  els.storageState.textContent = latestRun?.error
+    ? "AI blocked"
+    : data.openaiConfigured
+      ? "AI on"
+      : "CSV data";
+  els.stateLabel.textContent = analysis.readiness.label;
+  els.stateReason.textContent = latestImport
+    ? `${latestImport.name || "CSV"} / ${analysis.latestDate || "no date"}`
+    : analysis.readiness.reason;
+  els.gapValue.textContent = money.format(goal.downPaymentGap);
+  els.gapLabel.textContent = `${money.format(goal.availableForDownPayment)} above floor`;
+  els.actionLabel.textContent = latestRun?.advice?.one_action || analysis.action.label;
+  els.actionDetail.textContent = latestRun?.advice?.why || analysis.action.detail;
 
-function renderWeeks(weeks) {
-  const max = Math.max(...weeks.map((week) => week.total), 1);
-  els.weekChart.innerHTML = weeks.map((week) => {
-    const height = Math.max(3, Math.round((week.total / max) * 100));
-    return `<div class="week">
-      <div class="bar-wrap"><span class="bar" style="--h:${height}%"></span></div>
-      <strong>${escapeHtml(money.format(week.total))}</strong>
-      <span>${escapeHtml(dateLabel(week.start))}</span>
-    </div>`;
-  }).join("");
+  if (latestRun) {
+    els.advisorStatus.textContent = titleCase(latestRun.advice.status);
+    els.advisorAction.textContent = latestRun.advice.one_action;
+    els.advisorSummary.textContent = latestRun.advice.summary;
+    els.advisorEffect.textContent = latestRun.advice.a3_effect;
+  } else {
+    els.advisorStatus.textContent = "Ready";
+    els.advisorAction.textContent = analysis.action.label;
+    els.advisorSummary.textContent = analysis.action.detail;
+    els.advisorEffect.textContent = "";
+  }
+
+  renderRows(els.watchList, analysis.watch, (item) => [item.label, item.detail]);
+  renderRows(els.eventList, data.events.slice(0, 8), (item) => [item.label, `${item.type} / ${new Date(item.createdAt).toLocaleString()}`]);
+  renderTransactions(analysis.transactions);
 }
 
 function renderRows(container, items, mapper) {
   container.innerHTML = items.length ? items.map((item) => {
     const [label, detail] = mapper(item);
     return `<div class="row">
-      <div class="row-main">
-        <strong>${escapeHtml(label)}</strong>
-        <span>${escapeHtml(detail)}</span>
-      </div>
+      <strong>${escapeHtml(label)}</strong>
+      <span>${escapeHtml(detail)}</span>
     </div>`;
   }).join("") : `<div class="empty">None.</div>`;
 }
 
-function renderTransactions(transactions) {
-  els.transactionList.innerHTML = transactions.slice(0, 18).map((transaction) => {
-    const value = transaction.spend > 0 ? -transaction.spend : transaction.inflow;
-    return `<div class="tx">
-      <div class="tx-main">
-        <strong>${escapeHtml(transaction.merchant)}</strong>
-        <strong class="amount ${value < 0 ? "negative" : "positive"}">${escapeHtml(moneyExact.format(value))}</strong>
-      </div>
-      <div class="tx-meta">
-        <span>${escapeHtml(dateLabel(transaction.date))} / ${escapeHtml(transaction.category)}</span>
-        <span>${escapeHtml(transaction.type || transaction.source || "")}</span>
-      </div>
-    </div>`;
-  }).join("") || `<div class="empty">No transactions.</div>`;
+function titleCase(value) {
+  const text = String(value || "").trim();
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : "";
 }
 
-function renderChat(messages) {
-  els.chatList.innerHTML = messages.slice(-10).map((message) => (
-    `<div class="message ${message.role}">
-      <strong>${escapeHtml(message.role)}</strong>
-      <span>${escapeHtml(message.text)}</span>
-    </div>`
-  )).join("") || `<div class="empty">No chat yet.</div>`;
+function renderTransactions(transactions) {
+  els.transactionList.innerHTML = transactions.slice(0, 8).map((transaction) => {
+    const value = transaction.spend > 0 ? -transaction.spend : transaction.inflow;
+    return `<div class="tx">
+      <strong>${escapeHtml(transaction.merchant)}</strong>
+      <span>${escapeHtml(dateLabel(transaction.date))} / ${escapeHtml(transaction.category)} / ${escapeHtml(moneyExact.format(value))}</span>
+    </div>`;
+  }).join("") || `<div class="empty">No transactions.</div>`;
 }
 
 function settingsPayload() {
@@ -268,18 +241,6 @@ els.csvInput.addEventListener("change", async (event) => {
   }
 });
 
-els.runAdvisor.addEventListener("click", async () => {
-  setBusy("Advisor");
-  await api("/api/advisor/run", { method: "POST", body: "{}" });
-  await loadState();
-});
-
-els.tickButton.addEventListener("click", async () => {
-  setBusy("Checking");
-  await api("/api/monitor/tick", { method: "POST", body: "{}" });
-  await loadState();
-});
-
 els.unlockButton.addEventListener("click", async () => {
   const code = els.accessInput.value.trim();
   if (!code) return;
@@ -300,18 +261,6 @@ els.unlockButton.addEventListener("click", async () => {
 
 els.accessInput.addEventListener("keydown", (event) => {
   if (event.key === "Enter") els.unlockButton.click();
-});
-
-els.chatButton.addEventListener("click", async () => {
-  const message = els.chatInput.value.trim();
-  if (!message) return;
-  setBusy("Thinking");
-  els.chatInput.value = "";
-  await api("/api/chat", {
-    method: "POST",
-    body: JSON.stringify({ message })
-  });
-  await loadState();
 });
 
 loadState().catch((error) => {
