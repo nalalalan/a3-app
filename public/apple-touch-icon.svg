@@ -1,9 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 128 128" role="img" aria-label="Bank trend monitor">
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 128 128" role="img" aria-label="Audi A3 financial readiness">
   <rect width="128" height="128" rx="24" fill="#f4f4f1"/>
-  <rect x="16" y="24" width="96" height="72" rx="10" fill="#ffffff" stroke="#1d2320" stroke-width="4"/>
-  <path d="M27 43h74M27 58h30M27 74h22" stroke="#303a35" stroke-width="6" stroke-linecap="round" opacity=".72"/>
-  <path d="M45 86c11-16 20-12 28-22 10-13 17-16 30-9" fill="none" stroke="#6f7f74" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="45" cy="86" r="5" fill="#586b63"/>
-  <circle cx="73" cy="64" r="5" fill="#6f7f74"/>
-  <circle cx="103" cy="55" r="5" fill="#8a6e3f"/>
+  <path d="M22 73c6-16 19-25 38-25h14c15 0 25 7 32 21l8 3v16H17V76z" fill="#66716c" stroke="#151918" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M43 50h31c9 0 16 5 20 15H32c3-7 6-12 11-15z" fill="#eef0eb" stroke="#151918" stroke-width="3"/>
+  <circle cx="39" cy="89" r="11" fill="#151918"/>
+  <circle cx="39" cy="89" r="5" fill="#e8e4d8"/>
+  <circle cx="94" cy="89" r="11" fill="#151918"/>
+  <circle cx="94" cy="89" r="5" fill="#e8e4d8"/>
+  <path d="M22 36h72" stroke="#9f8350" stroke-width="7" stroke-linecap="round"/>
+  <path d="M80 24l17 12-17 12" fill="none" stroke="#9f8350" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

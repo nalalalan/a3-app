@@ -1,14 +1,16 @@
-# chase.aolabs.io
+# a3.aolabs.io
 
-Local-only personal finance radar for Chase CSV exports.
+Persistent A3 financial readiness monitor for Chase CSV exports.
 
 ## Current build
 
-- Static app.
-- No backend.
-- No Plaid token handling yet.
-- CSV parsing and analysis run in the browser.
-- Imported transactions are saved only in browser `localStorage`.
+- Railway-ready Node app.
+- Persistent JSON storage through `A3_DATA_DIR`.
+- Chase CSV imports are stored server-side.
+- Advisor runs and chat are remembered.
+- OpenAI advisor uses `OPENAI_API_KEY` and `OPENAI_MODEL` when configured.
+- Private access can be enabled with `A3_ACCESS_CODE` before importing real bank data.
+- Plaid/Chase OAuth is not wired yet.
 
 ## Local preview
 
@@ -22,8 +24,12 @@ Open `http://localhost:3000`.
 
 ## Deploy
 
-The publishable surface is `public/` and uses `public/CNAME` for `chase.aolabs.io`.
+Railway should serve the Node app with `a3.aolabs.io` as the custom domain.
 
-Current Pages state: built from `gh-pages`.
+Recommended Railway variables:
 
-Current live blocker: DNS for `chase.aolabs.io` must be a CNAME to `nalalalan.github.io`. GitHub Pages cannot issue HTTPS until that record resolves.
+- `A3_DATA_DIR=/data`
+- `A3_ACCESS_CODE=<private app code>`
+- `OPENAI_API_KEY=<rotated key>`
+- `OPENAI_MODEL=gpt-5.5`
+- attach a persistent volume mounted at `/data`

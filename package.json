@@ -1,8 +1,8 @@
 {
-  "name": "chase-aolabs",
+  "name": "a3-aolabs",
   "version": "0.1.0",
   "private": true,
-  "description": "Local-only Chase CSV financial radar.",
+  "description": "Persistent A3 financial readiness monitor.",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
