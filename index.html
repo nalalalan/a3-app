@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>chase.aolabs.io</title>
+    <meta name="description" content="Local-only Chase CSV spending and cash-buffer radar.">
+    <link rel="canonical" href="https://chase.aolabs.io/">
+    <meta property="og:title" content="chase.aolabs.io">
+    <meta property="og:description" content="Local-only Chase CSV spending and cash-buffer radar.">
+    <meta property="og:url" content="https://chase.aolabs.io/">
+    <meta property="og:type" content="website">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.svg">
+    <link rel="manifest" href="/site.webmanifest">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="ao-link" href="https://aolabs.io/" aria-label="AO Labs">
+        <span class="ao-mark" aria-hidden="true">AO</span>
+      </a>
+      <div>
+        <p class="eyebrow">chase.aolabs.io</p>
+        <h1>Money radar</h1>
+      </div>
+      <div class="top-actions">
+        <span id="storageState" class="storage-state">Local only</span>
+        <label class="file-button">
+          <input id="csvInput" type="file" accept=".csv,text/csv">
+          Import CSV
+        </label>
+      </div>
+    </header>
+
+    <main class="shell">
+      <section class="state-row" aria-label="Current state">
+        <div class="state-block state-main">
+          <p class="label">State</p>
+          <strong id="stateLabel">sample</strong>
+          <span id="stateReason">Sample data loaded</span>
+        </div>
+        <div class="state-block">
+          <p class="label">Cash buffer</p>
+          <strong id="bufferValue">--</strong>
+          <span id="balanceLabel">Balance unknown</span>
+        </div>
+        <div class="state-block">
+          <p class="label">30d spend</p>
+          <strong id="spendValue">--</strong>
+          <span id="spendTrend">--</span>
+        </div>
+        <div class="state-block">
+          <p class="label">One action</p>
+          <strong id="actionLabel">Import Chase CSV</strong>
+          <span id="actionDetail">Transactions stay in this browser</span>
+        </div>
+      </section>
+
+      <section class="control-row" aria-label="Settings">
+        <label>
+          <span class="label">CSV mode</span>
+          <select id="modeSelect">
+            <option value="auto">Auto</option>
+            <option value="checking">Checking</option>
+            <option value="credit">Credit card</option>
+          </select>
+        </label>
+        <label>
+          <span class="label">Current balance</span>
+          <input id="balanceInput" type="text" inputmode="decimal" placeholder="optional">
+        </label>
+        <label>
+          <span class="label">Floor</span>
+          <input id="floorInput" type="text" inputmode="decimal" value="500">
+        </label>
+        <button id="sampleButton" type="button">Sample</button>
+        <button id="clearButton" type="button">Clear</button>
+      </section>
+
+      <section class="layout">
+        <section class="panel trend-panel" aria-label="Spending trend">
+          <div class="panel-head">
+            <div>
+              <p class="label">Trend</p>
+              <h2>Weekly spend</h2>
+            </div>
+            <span id="trendWindow">8 weeks</span>
+          </div>
+          <div id="weekChart" class="week-chart"></div>
+        </section>
+
+        <section class="panel" aria-label="Recurring charges">
+          <div class="panel-head">
+            <div>
+              <p class="label">Pattern</p>
+              <h2>Recurring</h2>
+            </div>
+            <span id="recurringCount">0</span>
+          </div>
+          <div id="recurringList" class="rows"></div>
+        </section>
+
+        <section class="panel" aria-label="Alerts">
+          <div class="panel-head">
+            <div>
+              <p class="label">Watch</p>
+              <h2>Checks</h2>
+            </div>
+            <span id="watchCount">0</span>
+          </div>
+          <div id="watchList" class="rows"></div>
+        </section>
+
+        <section class="panel" aria-label="Categories">
+          <div class="panel-head">
+            <div>
+              <p class="label">30d</p>
+              <h2>Categories</h2>
+            </div>
+            <span id="categoryCount">0</span>
+          </div>
+          <div id="categoryList" class="rows"></div>
+        </section>
+
+        <section class="panel transactions-panel" aria-label="Transactions">
+          <div class="panel-head">
+            <div>
+              <p class="label">Ledger</p>
+              <h2>Latest transactions</h2>
+            </div>
+            <span id="transactionCount">0</span>
+          </div>
+          <div id="transactionList" class="transactions"></div>
+        </section>
+      </section>
+    </main>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>

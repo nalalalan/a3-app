@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 128 128" role="img" aria-label="Bank trend monitor">
+  <rect width="128" height="128" rx="24" fill="#f4f4f1"/>
+  <rect x="16" y="24" width="96" height="72" rx="10" fill="#ffffff" stroke="#1d2320" stroke-width="4"/>
+  <path d="M27 43h74M27 58h30M27 74h22" stroke="#303a35" stroke-width="6" stroke-linecap="round" opacity=".72"/>
+  <path d="M45 86c11-16 20-12 28-22 10-13 17-16 30-9" fill="none" stroke="#6f7f74" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="45" cy="86" r="5" fill="#586b63"/>
+  <circle cx="73" cy="64" r="5" fill="#6f7f74"/>
+  <circle cx="103" cy="55" r="5" fill="#8a6e3f"/>
+</svg>

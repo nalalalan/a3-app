@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Bank trend monitor">
+  <defs>
+    <linearGradient id="paper" x1="20" y1="12" x2="108" y2="112">
+      <stop stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#dfe3dd"/>
+    </linearGradient>
+    <linearGradient id="ink" x1="18" y1="18" x2="112" y2="114">
+      <stop stop-color="#38413d"/>
+      <stop offset="1" stop-color="#151918"/>
+    </linearGradient>
+    <linearGradient id="line" x1="20" y1="92" x2="108" y2="42">
+      <stop stop-color="#586b63"/>
+      <stop offset="1" stop-color="#8a6e3f"/>
+    </linearGradient>
+    <filter id="d" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="9" stdDeviation="7" flood-color="#101412" flood-opacity=".18"/>
+    </filter>
+  </defs>
+  <g filter="url(#d)">
+    <rect x="16" y="24" width="96" height="72" rx="10" fill="url(#paper)" stroke="#1d2320" stroke-width="4"/>
+    <path d="M27 43h74M27 58h30M27 74h22" stroke="url(#ink)" stroke-width="6" stroke-linecap="round" opacity=".72"/>
+    <path d="M45 86c11-16 20-12 28-22 10-13 17-16 30-9" fill="none" stroke="url(#line)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="45" cy="86" r="5" fill="#586b63"/>
+    <circle cx="73" cy="64" r="5" fill="#6f7f74"/>
+    <circle cx="103" cy="55" r="5" fill="#8a6e3f"/>
+    <path d="M35 102h58" stroke="#1d2320" stroke-width="6" stroke-linecap="round" opacity=".22"/>
+  </g>
+</svg>
