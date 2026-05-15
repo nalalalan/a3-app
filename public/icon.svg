@@ -1,49 +1,34 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="A3 icon">
   <defs>
     <filter id="d" x="-35%" y="-35%" width="170%" height="170%" color-interpolation-filters="sRGB">
-      <feDropShadow dx="0" dy="10" stdDeviation="6" flood-color="#2b211d" flood-opacity=".16"/>
+      <feDropShadow dx="0" dy="10" stdDeviation="6" flood-color="#2b211d" flood-opacity=".17"/>
       <feDropShadow dx="0" dy="1" stdDeviation="1" flood-color="#fffaf4" flood-opacity=".5"/>
     </filter>
-    <linearGradient id="cream" x1="18" y1="18" x2="108" y2="114" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#fff8ef"/>
-      <stop offset="1" stop-color="#e6d8c8"/>
-    </linearGradient>
-    <linearGradient id="steel" x1="18" y1="28" x2="112" y2="102" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#a7b0a8"/>
-      <stop offset=".55" stop-color="#68746e"/>
-      <stop offset="1" stop-color="#3d4944"/>
-    </linearGradient>
-    <linearGradient id="ink" x1="18" y1="14" x2="108" y2="116" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#5d554e"/>
-      <stop offset="1" stop-color="#29231f"/>
-    </linearGradient>
-    <linearGradient id="gold" x1="20" y1="16" x2="108" y2="112" gradientUnits="userSpaceOnUse">
+    <linearGradient id="gold" x1="18" y1="30" x2="108" y2="92" gradientUnits="userSpaceOnUse">
       <stop stop-color="#efc86d"/>
       <stop offset=".58" stop-color="#bd8740"/>
       <stop offset="1" stop-color="#7c5529"/>
     </linearGradient>
-    <linearGradient id="teal" x1="16" y1="20" x2="112" y2="114" gradientUnits="userSpaceOnUse">
+    <linearGradient id="cream" x1="18" y1="28" x2="108" y2="94" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff8ef"/>
+      <stop offset=".64" stop-color="#e6d8c8"/>
+      <stop offset="1" stop-color="#bda78f"/>
+    </linearGradient>
+    <linearGradient id="steel" x1="18" y1="28" x2="108" y2="94" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#a7b0a8"/>
+      <stop offset=".55" stop-color="#68746e"/>
+      <stop offset="1" stop-color="#3d4944"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="18" y1="28" x2="108" y2="94" gradientUnits="userSpaceOnUse">
       <stop stop-color="#9cb9af"/>
       <stop offset=".56" stop-color="#6b928a"/>
       <stop offset="1" stop-color="#426762"/>
     </linearGradient>
   </defs>
-  <g filter="url(#d)">
-    <g fill="none" stroke-linecap="round" stroke-width="6.2" opacity=".96">
-      <ellipse cx="43" cy="42" rx="23" ry="15.5" stroke="url(#gold)"/>
-      <ellipse cx="64" cy="42" rx="23" ry="15.5" stroke="url(#cream)"/>
-      <ellipse cx="85" cy="42" rx="23" ry="15.5" stroke="url(#teal)"/>
-    </g>
-    <path d="M22 96c25 7 61 6 85-4" fill="none" stroke="#d9c9b5" stroke-width="5" stroke-linecap="round"/>
-    <path d="M21 78c5-15 19-24 40-24h15c14 0 25 7 32 20l8 4v14H17V81z" fill="url(#steel)"/>
-    <path d="M42 59h33c9 0 16 5 21 14H33c2-6 5-11 9-14z" fill="url(#cream)"/>
-    <path d="M35 74h65" stroke="#fff8ef" stroke-width="4.8" stroke-linecap="round" opacity=".42"/>
-    <path d="M28 87h82" stroke="url(#ink)" stroke-width="4.2" stroke-linecap="round" opacity=".24"/>
-    <circle cx="42" cy="92" r="10" fill="url(#ink)"/>
-    <circle cx="42" cy="92" r="3.8" fill="#fff8ef"/>
-    <circle cx="94" cy="92" r="10" fill="url(#ink)"/>
-    <circle cx="94" cy="92" r="3.8" fill="#fff8ef"/>
-    <path d="M52 57 63 73 75 57" fill="none" stroke="url(#gold)" stroke-width="4.8" stroke-linecap="round" stroke-linejoin="round" opacity=".72"/>
-    <path d="M82 58h15" stroke="url(#teal)" stroke-width="4.8" stroke-linecap="round" opacity=".72"/>
+  <g filter="url(#d)" fill="none" stroke-linecap="round" stroke-width="8.2">
+    <ellipse cx="32" cy="60" rx="22" ry="18" stroke="url(#gold)"/>
+    <ellipse cx="53" cy="60" rx="22" ry="18" stroke="url(#cream)"/>
+    <ellipse cx="74" cy="60" rx="22" ry="18" stroke="url(#steel)"/>
+    <ellipse cx="95" cy="60" rx="22" ry="18" stroke="url(#teal)"/>
   </g>
 </svg>
