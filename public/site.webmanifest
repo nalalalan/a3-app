@@ -3,8 +3,8 @@
   "short_name": "a3.aolabs",
   "icons": [
     {
-      "src": "/icon.svg",
-      "sizes": "64x64",
+      "src": "/icon.svg?v=20260515-a3-rings",
+      "sizes": "128x128",
       "type": "image/svg+xml"
     }
   ],
