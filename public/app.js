@@ -231,7 +231,7 @@ function renderTransactions(transactions) {
 function renderBankAccounts(accounts) {
   els.bankList.innerHTML = accounts.length ? accounts.map((account) => {
     const balance = account.balanceAvailable ?? account.balanceCurrent;
-    const label = [account.name, account.mask ? `••${account.mask}` : ""].filter(Boolean).join(" ");
+    const label = [account.name, account.mask ? `ending ${account.mask}` : ""].filter(Boolean).join(" ");
     const detail = [
       account.type || "account",
       account.subtype || "",
@@ -257,6 +257,14 @@ function settingsPayload() {
   };
 }
 
+async function exchangePlaidPublicToken(publicToken, metadata) {
+  await api("/api/plaid/exchange-public-token", {
+    method: "POST",
+    body: JSON.stringify({ public_token: publicToken, metadata })
+  });
+  localStorage.removeItem("a3PlaidLinkToken");
+}
+
 els.connectBank.addEventListener("click", async () => {
   try {
     setBusy("Connecting");
@@ -264,15 +272,13 @@ els.connectBank.addEventListener("click", async () => {
       method: "POST",
       body: JSON.stringify({})
     });
+    localStorage.setItem("a3PlaidLinkToken", data.link_token);
     if (!window.Plaid) throw new Error("Plaid blocked");
     const handler = window.Plaid.create({
       token: data.link_token,
       onSuccess: async (public_token, metadata) => {
         setBusy("Syncing");
-        await api("/api/plaid/exchange-public-token", {
-          method: "POST",
-          body: JSON.stringify({ public_token, metadata })
-        });
+        await exchangePlaidPublicToken(public_token, metadata);
         await loadState();
       },
       onExit: (error) => {

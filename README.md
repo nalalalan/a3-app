@@ -37,6 +37,7 @@ Recommended Railway variables:
 - `PLAID_SECRET=<Plaid secret>`
 - `PLAID_ENV=development` or `production`
 - `A3_TOKEN_SECRET=<long random secret for stored Plaid tokens>`
+- `PLAID_REDIRECT_URI=https://a3.aolabs.io/oauth.html`
 - attach a persistent volume mounted at `/data`
 
-Do not put bank usernames or passwords in Railway, git, chat, or this app. Chase login happens only inside Plaid Link / Chase authorization.
+Add `https://a3.aolabs.io/oauth.html` to the allowed redirect URIs in the Plaid dashboard. Do not put bank usernames or passwords in Railway, git, chat, or this app. Chase login happens only inside Plaid Link / Chase authorization.
