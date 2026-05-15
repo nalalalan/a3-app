@@ -4,31 +4,31 @@
       <feDropShadow dx="0" dy="10" stdDeviation="6" flood-color="#2b211d" flood-opacity=".17"/>
       <feDropShadow dx="0" dy="1" stdDeviation="1" flood-color="#fffaf4" flood-opacity=".5"/>
     </filter>
-    <linearGradient id="gold" x1="18" y1="30" x2="108" y2="92" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#efc86d"/>
-      <stop offset=".58" stop-color="#bd8740"/>
-      <stop offset="1" stop-color="#7c5529"/>
+    <linearGradient id="rose" x1="18" y1="30" x2="108" y2="92" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#e7a7b1"/>
+      <stop offset=".58" stop-color="#c17b8a"/>
+      <stop offset="1" stop-color="#8f5d6f"/>
     </linearGradient>
     <linearGradient id="cream" x1="18" y1="28" x2="108" y2="94" gradientUnits="userSpaceOnUse">
       <stop stop-color="#fff8ef"/>
       <stop offset=".64" stop-color="#e6d8c8"/>
       <stop offset="1" stop-color="#bda78f"/>
     </linearGradient>
-    <linearGradient id="steel" x1="18" y1="28" x2="108" y2="94" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#a7b0a8"/>
-      <stop offset=".55" stop-color="#68746e"/>
-      <stop offset="1" stop-color="#3d4944"/>
+    <linearGradient id="blue" x1="18" y1="28" x2="108" y2="94" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9fb1ce"/>
+      <stop offset=".55" stop-color="#6d84a8"/>
+      <stop offset="1" stop-color="#445c7e"/>
     </linearGradient>
-    <linearGradient id="teal" x1="18" y1="28" x2="108" y2="94" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#9cb9af"/>
-      <stop offset=".56" stop-color="#6b928a"/>
-      <stop offset="1" stop-color="#426762"/>
+    <linearGradient id="slate" x1="18" y1="28" x2="108" y2="94" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8aa7b2"/>
+      <stop offset=".56" stop-color="#657f91"/>
+      <stop offset="1" stop-color="#415766"/>
     </linearGradient>
   </defs>
   <g filter="url(#d)" fill="none" stroke-linecap="round" stroke-width="8.2">
-    <ellipse cx="32" cy="60" rx="22" ry="18" stroke="url(#gold)"/>
+    <ellipse cx="32" cy="60" rx="22" ry="18" stroke="url(#rose)"/>
     <ellipse cx="53" cy="60" rx="22" ry="18" stroke="url(#cream)"/>
-    <ellipse cx="74" cy="60" rx="22" ry="18" stroke="url(#steel)"/>
-    <ellipse cx="95" cy="60" rx="22" ry="18" stroke="url(#teal)"/>
+    <ellipse cx="74" cy="60" rx="22" ry="18" stroke="url(#blue)"/>
+    <ellipse cx="95" cy="60" rx="22" ry="18" stroke="url(#slate)"/>
   </g>
 </svg>
