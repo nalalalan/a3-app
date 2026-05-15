@@ -12,6 +12,22 @@ const openAiApiKey = process.env.OPENAI_API_KEY || "";
 const openAiModel = process.env.OPENAI_MODEL || "gpt-5.5";
 const monitorIntervalMs = Number(process.env.A3_MONITOR_INTERVAL_MS || 15 * 60 * 1000);
 const accessCode = process.env.A3_ACCESS_CODE || "";
+const plaidClientId = process.env.PLAID_CLIENT_ID || "";
+const plaidSecret = process.env.PLAID_SECRET || "";
+const plaidEnv = String(process.env.PLAID_ENV || "sandbox").toLowerCase();
+const plaidProducts = String(process.env.PLAID_PRODUCTS || "transactions").split(",").map((item) => item.trim()).filter(Boolean);
+const plaidCountryCodes = String(process.env.PLAID_COUNTRY_CODES || "US").split(",").map((item) => item.trim()).filter(Boolean);
+const plaidClientUserId = process.env.PLAID_CLIENT_USER_ID || "a3-owner";
+const plaidRedirectUri = process.env.PLAID_REDIRECT_URI || "";
+const plaidWebhookUrl = process.env.PLAID_WEBHOOK_URL || "";
+const plaidDaysRequested = Number(process.env.PLAID_DAYS_REQUESTED || 730);
+const tokenSecret = process.env.A3_TOKEN_SECRET || accessCode || "";
+
+const PLAID_BASE_URLS = {
+  sandbox: "https://sandbox.plaid.com",
+  development: "https://development.plaid.com",
+  production: "https://production.plaid.com"
+};
 
 const A3_GOAL = {
   name: "Audi A3 Premium Plus",
@@ -115,7 +131,10 @@ function defaultStore() {
     snapshots: [],
     advisorRuns: [],
     messages: [],
-    events: []
+    events: [],
+    bankConnections: [],
+    bankAccounts: [],
+    bankSyncs: []
   };
 }
 
@@ -131,7 +150,10 @@ async function readStore() {
       snapshots: Array.isArray(parsed.snapshots) ? parsed.snapshots : [],
       advisorRuns: Array.isArray(parsed.advisorRuns) ? parsed.advisorRuns : [],
       messages: Array.isArray(parsed.messages) ? parsed.messages : [],
-      events: Array.isArray(parsed.events) ? parsed.events : []
+      events: Array.isArray(parsed.events) ? parsed.events : [],
+      bankConnections: Array.isArray(parsed.bankConnections) ? parsed.bankConnections : [],
+      bankAccounts: Array.isArray(parsed.bankAccounts) ? parsed.bankAccounts : [],
+      bankSyncs: Array.isArray(parsed.bankSyncs) ? parsed.bankSyncs : []
     };
   } catch {
     return defaultStore();
@@ -146,7 +168,10 @@ async function writeStore(store) {
     snapshots: (store.snapshots || []).slice(-240),
     advisorRuns: (store.advisorRuns || []).slice(-80),
     messages: (store.messages || []).slice(-160),
-    events: (store.events || []).slice(-400)
+    events: (store.events || []).slice(-400),
+    bankConnections: store.bankConnections || [],
+    bankAccounts: store.bankAccounts || [],
+    bankSyncs: (store.bankSyncs || []).slice(-120)
   };
   await fsp.writeFile(statePath, JSON.stringify(next, null, 2));
   return next;
@@ -181,6 +206,99 @@ function suppliedAccessCode(req) {
 function isAuthorized(req) {
   if (!accessCode) return true;
   return safeEqual(suppliedAccessCode(req), accessCode);
+}
+
+function plaidConfigured() {
+  return Boolean(plaidClientId && plaidSecret);
+}
+
+function plaidBaseUrl() {
+  return PLAID_BASE_URLS[plaidEnv] || PLAID_BASE_URLS.sandbox;
+}
+
+function tokenKey() {
+  if (!tokenSecret) return null;
+  return crypto.createHash("sha256").update(tokenSecret).digest();
+}
+
+function protectToken(value) {
+  const token = String(value || "");
+  if (!token) return null;
+  const key = tokenKey();
+  if (!key) return { v: 1, plain: token };
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
+  const ciphertext = Buffer.concat([cipher.update(token, "utf8"), cipher.final()]);
+  return {
+    v: 1,
+    alg: "aes-256-gcm",
+    iv: iv.toString("base64"),
+    tag: cipher.getAuthTag().toString("base64"),
+    ciphertext: ciphertext.toString("base64")
+  };
+}
+
+function revealToken(stored) {
+  if (!stored) return "";
+  if (typeof stored === "string") return stored;
+  if (stored.plain) return String(stored.plain);
+  if (stored.alg !== "aes-256-gcm") throw new Error("Unsupported token storage");
+  const key = tokenKey();
+  if (!key) throw new Error("Plaid token encryption secret missing");
+  const decipher = crypto.createDecipheriv("aes-256-gcm", key, Buffer.from(stored.iv, "base64"));
+  decipher.setAuthTag(Buffer.from(stored.tag, "base64"));
+  return Buffer.concat([
+    decipher.update(Buffer.from(stored.ciphertext, "base64")),
+    decipher.final()
+  ]).toString("utf8");
+}
+
+async function plaidPost(endpoint, payload = {}) {
+  if (!plaidConfigured()) throw new Error("Plaid is not configured");
+  const response = await fetch(`${plaidBaseUrl()}${endpoint}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      client_id: plaidClientId,
+      secret: plaidSecret,
+      ...payload
+    })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const code = data.error_code ? `${data.error_code}: ` : "";
+    throw new Error(data.error_message || data.display_message || `${code}Plaid request failed (${response.status})`);
+  }
+  return data;
+}
+
+function publicConnection(connection) {
+  return {
+    id: connection.id,
+    provider: "plaid",
+    institutionName: connection.institutionName || "Bank",
+    institutionId: connection.institutionId || "",
+    createdAt: connection.createdAt,
+    updatedAt: connection.updatedAt,
+    lastSyncAt: connection.lastSyncAt || "",
+    lastError: connection.lastError || "",
+    accountCount: Number(connection.accountCount || 0)
+  };
+}
+
+function plaidStatus(store) {
+  const connections = (store.bankConnections || []).map(publicConnection);
+  const latestSync = [...(store.bankSyncs || [])].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0];
+  return {
+    configured: plaidConfigured(),
+    env: plaidEnv,
+    connected: connections.length > 0,
+    tokenProtected: Boolean(tokenKey()),
+    connections,
+    accountCount: (store.bankAccounts || []).length,
+    lastSyncAt: latestSync?.createdAt || "",
+    lastError: latestSync?.error || connections.find((item) => item.lastError)?.lastError || ""
+  };
 }
 
 function sendFile(res, filePath) {
@@ -344,6 +462,55 @@ function merchantName(description) {
     .slice(0, 34) || "Transaction";
 }
 
+function cleanCategory(value) {
+  return String(value || "Uncategorized")
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (match) => match.toUpperCase())
+    .trim() || "Uncategorized";
+}
+
+function accountBalanceValue(account) {
+  const available = Number(account.balanceAvailable);
+  const current = Number(account.balanceCurrent);
+  if (Number.isFinite(available)) return available;
+  if (Number.isFinite(current)) return current;
+  return null;
+}
+
+function bankAccountTotals(accounts) {
+  const totals = {
+    connected: accounts.length > 0,
+    cash: 0,
+    cashKnown: false,
+    creditDebt: 0,
+    loanDebt: 0,
+    debtTotal: 0,
+    netCashAfterDebt: 0,
+    lastUpdatedAt: "",
+    items: accounts
+  };
+  for (const account of accounts) {
+    const current = Number(account.balanceCurrent);
+    const balance = accountBalanceValue(account);
+    const type = String(account.type || "").toLowerCase();
+    if (type === "depository") {
+      if (balance !== null) {
+        totals.cash += balance;
+        totals.cashKnown = true;
+      }
+    } else if (type === "credit") {
+      if (Number.isFinite(current) && current > 0) totals.creditDebt += current;
+    } else if (type === "loan") {
+      if (Number.isFinite(current) && current > 0) totals.loanDebt += current;
+    }
+    if (account.updatedAt && account.updatedAt > totals.lastUpdatedAt) totals.lastUpdatedAt = account.updatedAt;
+  }
+  totals.debtTotal = totals.creditDebt + totals.loanDebt;
+  totals.netCashAfterDebt = totals.cash - totals.debtTotal;
+  return totals;
+}
+
 function activeMode(settings, transactions) {
   if (settings.mode !== "auto") return settings.mode;
   const text = transactions.map((transaction) => `${transaction.type} ${transaction.category}`).join(" ").toLowerCase();
@@ -351,6 +518,8 @@ function activeMode(settings, transactions) {
 }
 
 function flowFor(transaction, mode) {
+  if (transaction.plaidAccountType === "credit") mode = "credit";
+  if (transaction.plaidAccountType === "depository") mode = "checking";
   const text = `${transaction.type} ${transaction.category} ${transaction.description}`.toLowerCase();
   const amount = Number(transaction.amount || 0);
   if (mode === "credit") {
@@ -428,8 +597,11 @@ function weeklySpend(transactions, latestDate) {
 }
 
 function watchItems(input) {
-  const { withFlow, last30, latestDate, balanceKnown, balance, cashFloor, bufferDays, spendChange, recurring, goal } = input;
+  const { withFlow, last30, latestDate, balanceKnown, balance, cashFloor, bufferDays, spendChange, recurring, goal, accounts } = input;
   const items = [];
+  if (accounts?.debtTotal > 0) {
+    items.push({ label: "Debt visible", detail: `$${Math.round(accounts.debtTotal)} owed across connected accounts`, severity: "danger" });
+  }
   if (balanceKnown && balance < cashFloor) {
     items.push({ label: "Below floor", detail: `$${Math.round(balance)} vs $${Math.round(cashFloor)} floor`, severity: "danger" });
   } else if (bufferDays !== null && bufferDays < 10) {
@@ -475,6 +647,11 @@ function analyze(store) {
     ...flowFor(transaction, mode),
     merchant: merchantName(transaction.description)
   }));
+  const accounts = bankAccountTotals([...(store.bankAccounts || [])].sort((a, b) => {
+    const left = `${a.type || ""}${a.name || ""}`;
+    const right = `${b.type || ""}${b.name || ""}`;
+    return left.localeCompare(right);
+  }));
   const last30 = withFlow.filter((transaction) => withinDays(transaction, latestDate, 30));
   const prev30 = withFlow.filter((transaction) => withinDays(transaction, latestDate, 30, 30));
   const spend30 = sum(last30.map((transaction) => transaction.spend));
@@ -484,8 +661,9 @@ function analyze(store) {
   const avgDailySpend = spend30 / 30;
   const latestBalance = latestKnownBalance(withFlow);
   const manualBalance = parseAmount(settings.currentBalance);
-  const balanceKnown = settings.currentBalance !== "" || latestBalance !== null;
-  const balance = settings.currentBalance !== "" ? manualBalance : latestBalance;
+  const bankCashBalance = accounts.cashKnown ? accounts.cash : null;
+  const balanceKnown = settings.currentBalance !== "" || bankCashBalance !== null || latestBalance !== null;
+  const balance = settings.currentBalance !== "" ? manualBalance : bankCashBalance !== null ? bankCashBalance : latestBalance;
   const cashFloor = Number(settings.cashFloor || 0);
   const bufferDays = balanceKnown && avgDailySpend > 0 ? Math.max(0, (balance - cashFloor) / avgDailySpend) : null;
   const spendChange = spendPrev > 0 ? ((spend30 - spendPrev) / spendPrev) * 100 : null;
@@ -511,11 +689,12 @@ function analyze(store) {
     monthsToTarget,
     targetDate
   };
-  const watch = watchItems({ withFlow, last30, latestDate, balanceKnown, balance, cashFloor, bufferDays, spendChange, recurring, goal });
-  const readiness = readinessState({ balanceKnown, balance, cashFloor, bufferDays, spendChange, watch, goal, transactions });
-  const action = oneAction({ readiness, watch, recurring, categories, goal, balanceKnown });
+  const watch = watchItems({ withFlow, last30, latestDate, balanceKnown, balance, cashFloor, bufferDays, spendChange, recurring, goal, accounts });
+  const readiness = readinessState({ balanceKnown, balance, cashFloor, bufferDays, spendChange, watch, goal, transactions, accounts });
+  const action = oneAction({ readiness, watch, recurring, categories, goal, balanceKnown, accounts });
   return {
     goal,
+    accounts,
     settings,
     mode,
     latestDate,
@@ -543,8 +722,11 @@ function analyze(store) {
 }
 
 function readinessState(input) {
-  const { transactions, balanceKnown, balance, cashFloor, bufferDays, spendChange, watch, goal } = input;
+  const { transactions, balanceKnown, balance, cashFloor, bufferDays, spendChange, watch, goal, accounts } = input;
   if (!transactions.length) return { label: "no data", reason: "Import Chase CSV", color: "muted" };
+  if (accounts?.debtTotal > 0 && goal.downPaymentGap > 0) {
+    return { label: "debt first", reason: "Debt is ahead of A3", color: "danger" };
+  }
   if ((balanceKnown && balance < cashFloor) || (bufferDays !== null && bufferDays < 5)) {
     return { label: "danger", reason: "Cash floor pressure", color: "danger" };
   }
@@ -558,8 +740,9 @@ function readinessState(input) {
 }
 
 function oneAction(input) {
-  const { readiness, watch, recurring, categories, goal, balanceKnown } = input;
+  const { readiness, watch, recurring, categories, goal, balanceKnown, accounts } = input;
   if (!balanceKnown) return { label: "Add balance", detail: "A3 gap needs current cash" };
+  if (accounts?.debtTotal > 0) return { label: "Debt first", detail: `$${Math.round(accounts.debtTotal).toLocaleString("en-US")} owed before A3 money` };
   if (readiness.label === "danger") return { label: "Protect floor", detail: "Pause flexible spend until next deposit" };
   if (goal.downPaymentGap > 0 && goal.monthlyRoom < 0) {
     return { label: "Close A3 gap", detail: `$${Math.ceil(Math.abs(goal.monthlyRoom))}/mo short` };
@@ -703,8 +886,185 @@ async function runAdvisor(store, reason = "manual") {
   return run;
 }
 
+function plaidAccountToStore(account, connection, now) {
+  return {
+    id: `plaid-${account.account_id}`,
+    provider: "plaid",
+    connectionId: connection.id,
+    accountId: account.account_id,
+    institutionName: connection.institutionName || "Bank",
+    name: account.name || account.official_name || "Account",
+    officialName: account.official_name || "",
+    mask: account.mask || "",
+    type: account.type || "",
+    subtype: account.subtype || "",
+    balanceAvailable: account.balances?.available ?? null,
+    balanceCurrent: account.balances?.current ?? null,
+    balanceLimit: account.balances?.limit ?? null,
+    currency: account.balances?.iso_currency_code || account.balances?.unofficial_currency_code || "USD",
+    updatedAt: now
+  };
+}
+
+function upsertBankAccounts(store, accounts, connection, now) {
+  const byId = new Map((store.bankAccounts || []).map((account) => [account.id, account]));
+  for (const account of accounts || []) {
+    byId.set(`plaid-${account.account_id}`, plaidAccountToStore(account, connection, now));
+  }
+  store.bankAccounts = [...byId.values()];
+  connection.accountCount = (accounts || []).length || connection.accountCount || 0;
+}
+
+function plaidTransactionToApp(transaction, accountsById, connection) {
+  const account = accountsById.get(transaction.account_id) || {};
+  const accountType = String(account.type || "").toLowerCase();
+  const plaidAmount = Number(transaction.amount || 0);
+  const amount = accountType === "credit" ? plaidAmount : -plaidAmount;
+  const category = transaction.personal_finance_category?.primary || transaction.category?.[0] || account.subtype || "Uncategorized";
+  return {
+    id: `plaid-${transaction.transaction_id}`,
+    plaidTransactionId: transaction.transaction_id,
+    plaidAccountId: transaction.account_id,
+    plaidAccountName: account.name || "",
+    plaidAccountType: account.type || "",
+    plaidAccountSubtype: account.subtype || "",
+    date: transaction.date || transaction.authorized_date || "",
+    description: transaction.merchant_name || transaction.name || "Transaction",
+    category: cleanCategory(category),
+    type: transaction.pending ? "Pending" : account.subtype || account.type || "Plaid",
+    amount,
+    balance: null,
+    pending: Boolean(transaction.pending),
+    source: `plaid:${connection.id}`
+  };
+}
+
+function mergePlaidTransactions(store, connection, accountsById, added, modified, removed) {
+  const removedIds = new Set((removed || []).map((item) => `plaid-${item.transaction_id}`));
+  const incoming = [...(added || []), ...(modified || [])]
+    .map((transaction) => plaidTransactionToApp(transaction, accountsById, connection))
+    .filter((transaction) => transaction.date && transaction.plaidTransactionId);
+  const current = (store.transactions || []).filter((transaction) => {
+    if (removedIds.has(transaction.id)) return false;
+    if (incoming.some((item) => item.id === transaction.id)) return false;
+    if (transaction.source === "sample" && incoming.length) return false;
+    return true;
+  });
+  store.transactions = dedupeTransactions([...current, ...incoming])
+    .sort((a, b) => dateMs(b.date) - dateMs(a.date));
+  return incoming.length;
+}
+
+async function refreshPlaidAccounts(store, connection, accessToken, now) {
+  let response;
+  try {
+    response = await plaidPost("/accounts/balance/get", { access_token: accessToken });
+  } catch {
+    response = await plaidPost("/accounts/get", { access_token: accessToken });
+  }
+  upsertBankAccounts(store, response.accounts || [], connection, now);
+  return response.accounts || [];
+}
+
+async function syncPlaidConnection(store, connection, reason = "manual") {
+  const now = new Date().toISOString();
+  const accessToken = revealToken(connection.accessToken);
+  const accounts = await refreshPlaidAccounts(store, connection, accessToken, now);
+  const accountsById = new Map((store.bankAccounts || [])
+    .filter((account) => account.connectionId === connection.id)
+    .map((account) => [account.accountId, account]));
+  let cursor = connection.cursor || null;
+  let hasMore = true;
+  let pageCount = 0;
+  const added = [];
+  const modified = [];
+  const removed = [];
+  while (hasMore && pageCount < 25) {
+    const response = await plaidPost("/transactions/sync", {
+      access_token: accessToken,
+      cursor,
+      count: 500
+    });
+    added.push(...(response.added || []));
+    modified.push(...(response.modified || []));
+    removed.push(...(response.removed || []));
+    if (response.accounts?.length) upsertBankAccounts(store, response.accounts, connection, now);
+    cursor = response.next_cursor || cursor;
+    hasMore = Boolean(response.has_more);
+    pageCount += 1;
+  }
+  const imported = mergePlaidTransactions(store, connection, accountsById, added, modified, removed);
+  connection.cursor = cursor;
+  connection.updatedAt = now;
+  connection.lastSyncAt = now;
+  connection.lastError = "";
+  const sync = {
+    id: crypto.randomUUID(),
+    provider: "plaid",
+    connectionId: connection.id,
+    reason,
+    createdAt: now,
+    accounts: accounts.length,
+    added: added.length,
+    modified: modified.length,
+    removed: removed.length,
+    imported
+  };
+  store.bankSyncs = [...(store.bankSyncs || []), sync];
+  store.imports = [...(store.imports || []), {
+    id: crypto.randomUUID(),
+    name: connection.institutionName || "Plaid",
+    importedAt: now,
+    transactionCount: imported,
+    source: "plaid",
+    append: true
+  }];
+  store.events = [...(store.events || []), {
+    id: crypto.randomUUID(),
+    createdAt: now,
+    type: "bank_sync",
+    label: connection.institutionName || "Bank synced",
+    detail: `${imported} transactions / ${accounts.length} accounts`
+  }];
+  return sync;
+}
+
+async function syncAllPlaidConnections(store, reason = "manual") {
+  const syncs = [];
+  for (const connection of store.bankConnections || []) {
+    try {
+      syncs.push(await syncPlaidConnection(store, connection, reason));
+    } catch (error) {
+      const now = new Date().toISOString();
+      connection.lastError = error.message;
+      connection.updatedAt = now;
+      const sync = {
+        id: crypto.randomUUID(),
+        provider: "plaid",
+        connectionId: connection.id,
+        reason,
+        createdAt: now,
+        error: error.message
+      };
+      store.bankSyncs = [...(store.bankSyncs || []), sync];
+      store.events = [...(store.events || []), {
+        id: crypto.randomUUID(),
+        createdAt: now,
+        type: "bank_sync_error",
+        label: connection.institutionName || "Bank sync blocked",
+        detail: error.message
+      }];
+      syncs.push(sync);
+    }
+  }
+  return syncs;
+}
+
 async function monitorTick(reason = "interval") {
   const store = await readStore();
+  if ((store.bankConnections || []).length && reason !== "import") {
+    await syncAllPlaidConnections(store, reason);
+  }
   const analysis = analyze(store);
   const previous = store.snapshots?.[store.snapshots.length - 1]?.analysis || null;
   const changes = changeSummary(previous, analysis);
@@ -741,6 +1101,8 @@ async function handleApi(req, res, requestUrl) {
       accessLocked: Boolean(accessCode),
       openaiConfigured: Boolean(openAiApiKey),
       model: openAiModel,
+      plaidConfigured: plaidConfigured(),
+      plaidConnected: (store.bankConnections || []).length > 0,
       transactions: store.transactions.length,
       checkedAt: new Date().toISOString()
     });
@@ -774,6 +1136,7 @@ async function handleApi(req, res, requestUrl) {
       goal: A3_GOAL,
       openaiConfigured: Boolean(openAiApiKey),
       model: openAiModel,
+      plaid: plaidStatus(store),
       analysis: analyze(store),
       imports: store.imports.slice(-10).reverse(),
       snapshots: store.snapshots.slice(-12).reverse().map((snapshot) => ({
@@ -788,6 +1151,117 @@ async function handleApi(req, res, requestUrl) {
       messages: store.messages.slice(-20),
       events: store.events.slice(-40).reverse()
     });
+    return true;
+  }
+
+  if (requestUrl.pathname === "/api/plaid/status" && req.method === "GET") {
+    const store = await readStore();
+    sendJson(res, 200, { ok: true, plaid: plaidStatus(store) });
+    return true;
+  }
+
+  if (requestUrl.pathname === "/api/plaid/link-token" && req.method === "POST") {
+    if (!plaidConfigured()) {
+      sendJson(res, 503, { ok: false, error: "Plaid is not configured" });
+      return true;
+    }
+    const payload = await readJsonBody(req, 32 * 1024).catch(() => ({}));
+    const request = {
+      client_name: "a3.aolabs.io",
+      country_codes: plaidCountryCodes,
+      language: "en",
+      user: { client_user_id: plaidClientUserId }
+    };
+    const connection = (store => (store.bankConnections || []).find((item) => item.id === payload.connectionId))(await readStore());
+    if (connection) {
+      request.access_token = revealToken(connection.accessToken);
+    } else {
+      request.products = plaidProducts;
+      if (plaidProducts.includes("transactions")) request.transactions = { days_requested: plaidDaysRequested };
+    }
+    if (plaidRedirectUri) request.redirect_uri = plaidRedirectUri;
+    if (plaidWebhookUrl) request.webhook = plaidWebhookUrl;
+    const data = await plaidPost("/link/token/create", request);
+    sendJson(res, 200, { ok: true, link_token: data.link_token, expiration: data.expiration });
+    return true;
+  }
+
+  if (requestUrl.pathname === "/api/plaid/exchange-public-token" && req.method === "POST") {
+    if (!plaidConfigured()) {
+      sendJson(res, 503, { ok: false, error: "Plaid is not configured" });
+      return true;
+    }
+    const payload = await readJsonBody(req, 256 * 1024);
+    const publicToken = String(payload.public_token || payload.publicToken || "").trim();
+    if (!publicToken) {
+      sendJson(res, 400, { ok: false, error: "public_token is required" });
+      return true;
+    }
+    const exchanged = await plaidPost("/item/public_token/exchange", { public_token: publicToken });
+    const metadata = payload.metadata || {};
+    const now = new Date().toISOString();
+    const store = await readStore();
+    const existing = (store.bankConnections || []).find((item) => item.itemId === exchanged.item_id);
+    const connection = existing || {
+      id: crypto.randomUUID(),
+      provider: "plaid",
+      createdAt: now,
+      cursor: null
+    };
+    connection.itemId = exchanged.item_id;
+    connection.institutionName = metadata.institution?.name || connection.institutionName || "Bank";
+    connection.institutionId = metadata.institution?.institution_id || connection.institutionId || "";
+    connection.accessToken = protectToken(exchanged.access_token);
+    connection.updatedAt = now;
+    connection.lastError = "";
+    if (!existing) store.bankConnections = [...(store.bankConnections || []), connection];
+    store.events = [...(store.events || []), {
+      id: crypto.randomUUID(),
+      createdAt: now,
+      type: "bank_connected",
+      label: connection.institutionName,
+      detail: "Plaid connection added"
+    }];
+    let syncError = "";
+    try {
+      await syncPlaidConnection(store, connection, "connect");
+    } catch (error) {
+      syncError = error.message;
+      connection.lastError = syncError;
+      store.bankSyncs = [...(store.bankSyncs || []), {
+        id: crypto.randomUUID(),
+        provider: "plaid",
+        connectionId: connection.id,
+        reason: "connect",
+        createdAt: new Date().toISOString(),
+        error: syncError
+      }];
+    }
+    await writeStore(store);
+    sendJson(res, 200, { ok: true, syncError, plaid: plaidStatus(store), analysis: analyze(store) });
+    return true;
+  }
+
+  if (requestUrl.pathname === "/api/plaid/sync" && req.method === "POST") {
+    const store = await readStore();
+    if (!(store.bankConnections || []).length) {
+      sendJson(res, 409, { ok: false, error: "No bank connection" });
+      return true;
+    }
+    const syncs = await syncAllPlaidConnections(store, "manual");
+    const analysis = analyze(store);
+    const previous = store.snapshots?.[store.snapshots.length - 1]?.analysis || null;
+    const changes = changeSummary(previous, analysis);
+    store.snapshots = [...(store.snapshots || []), {
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      reason: "bank_sync",
+      changes,
+      analysis
+    }];
+    await writeStore(store);
+    const next = await readStore();
+    sendJson(res, 200, { ok: true, syncs, plaid: plaidStatus(next), analysis: analyze(next) });
     return true;
   }
 

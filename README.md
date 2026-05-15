@@ -10,7 +10,8 @@ Persistent A3 financial readiness monitor for Chase CSV exports.
 - Advisor runs and chat are remembered.
 - OpenAI advisor uses `OPENAI_API_KEY` and `OPENAI_MODEL` when configured.
 - Private access can be enabled with `A3_ACCESS_CODE` before importing real bank data.
-- Plaid/Chase OAuth is not wired yet.
+- Plaid Link can connect Chase without storing Chase credentials in the app.
+- Synced Plaid balances and transactions are stored server-side and folded into the A3 readiness state.
 
 ## Local preview
 
@@ -32,4 +33,10 @@ Recommended Railway variables:
 - `A3_ACCESS_CODE=<private app code>`
 - `OPENAI_API_KEY=<rotated key>`
 - `OPENAI_MODEL=gpt-5.5`
+- `PLAID_CLIENT_ID=<Plaid client id>`
+- `PLAID_SECRET=<Plaid secret>`
+- `PLAID_ENV=development` or `production`
+- `A3_TOKEN_SECRET=<long random secret for stored Plaid tokens>`
 - attach a persistent volume mounted at `/data`
+
+Do not put bank usernames or passwords in Railway, git, chat, or this app. Chase login happens only inside Plaid Link / Chase authorization.
