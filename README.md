@@ -23,3 +23,7 @@ Open `http://localhost:3000`.
 ## Deploy
 
 The publishable surface is `public/` and uses `public/CNAME` for `chase.aolabs.io`.
+
+Current Pages state: built from `gh-pages`.
+
+Current live blocker: DNS for `chase.aolabs.io` must be a CNAME to `nalalalan.github.io`. GitHub Pages cannot issue HTTPS until that record resolves.
