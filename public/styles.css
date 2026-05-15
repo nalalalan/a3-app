@@ -432,7 +432,8 @@ summary {
   }
 
   .suite-app-name {
-    display: none;
+    display: block;
+    max-width: 34px;
   }
 
   .suite-topbar-actions {
