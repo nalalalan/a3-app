@@ -21,6 +21,7 @@ const plaidClientUserId = process.env.PLAID_CLIENT_USER_ID || "a3-owner";
 const plaidRedirectUri = process.env.PLAID_REDIRECT_URI || "";
 const plaidWebhookUrl = process.env.PLAID_WEBHOOK_URL || "";
 const plaidDaysRequested = Number(process.env.PLAID_DAYS_REQUESTED || 730);
+const plaidProductionReviewPending = /^(1|true|yes|pending)$/i.test(String(process.env.PLAID_PRODUCTION_REVIEW_PENDING || ""));
 const tokenSecret = process.env.A3_TOKEN_SECRET || accessCode || "";
 
 const PLAID_BASE_URLS = {
@@ -292,6 +293,7 @@ function plaidStatus(store) {
   return {
     configured: plaidConfigured(),
     env: plaidEnv,
+    productionReviewPending: plaidProductionReviewPending,
     connected: connections.length > 0,
     tokenProtected: Boolean(tokenKey()),
     connections,
@@ -1187,7 +1189,11 @@ async function handleApi(req, res, requestUrl) {
     } catch (error) {
       const message = String(error.message || "");
       if (/invalid client_id or secret/i.test(message)) {
-        sendJson(res, 503, { ok: false, error: "Production Plaid key needed", code: "PLAID_PRODUCTION_KEY_NEEDED" });
+        if (plaidProductionReviewPending) {
+          sendJson(res, 503, { ok: false, error: "Plaid production review pending", code: "PLAID_PRODUCTION_REVIEW_PENDING" });
+        } else {
+          sendJson(res, 503, { ok: false, error: "Production Plaid key needed", code: "PLAID_PRODUCTION_KEY_NEEDED" });
+        }
       } else if (/redirect_uri|redirect uri|OAuth redirect/i.test(message)) {
         sendJson(res, 503, { ok: false, error: "Plaid redirect URI needed", code: "PLAID_REDIRECT_URI_NEEDED" });
       } else {

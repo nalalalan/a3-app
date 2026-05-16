@@ -36,6 +36,7 @@ Recommended Railway variables:
 - `PLAID_CLIENT_ID=<Plaid client id>`
 - `PLAID_SECRET=<Plaid secret>`
 - `PLAID_ENV=production` for Chase
+- `PLAID_PRODUCTION_REVIEW_PENDING=true` while Plaid production access is under review
 - `A3_TOKEN_SECRET=<long random secret for stored Plaid tokens>`
 - `PLAID_REDIRECT_URI=https://a3.aolabs.io/oauth.html`
 - attach a persistent volume mounted at `/data`

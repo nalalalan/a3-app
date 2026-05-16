@@ -116,7 +116,11 @@ function renderBankControls(data) {
   els.syncBank.disabled = !plaid.connected;
   els.connectBank.textContent = plaid.connected ? "relink" : "connect";
   els.syncBank.hidden = !plaid.connected;
-  els.connectBank.title = plaid.configured ? "Connect bank through Plaid" : "Plaid setup needed";
+  els.connectBank.title = plaid.productionReviewPending
+    ? "Plaid review pending"
+    : plaid.configured
+      ? "Connect bank through Plaid"
+      : "Plaid setup needed";
 }
 
 async function loadState() {
@@ -149,13 +153,18 @@ function render(data) {
   document.documentElement.dataset.state = sampleOnly ? "danger" : analysis.readiness.color;
 
   if (sampleOnly) {
-    els.storageState.textContent = data.plaid?.configured ? "Bank off" : "Setup needed";
+    const plaidReviewPending = Boolean(data.plaid?.productionReviewPending);
+    els.storageState.textContent = plaidReviewPending ? "Plaid review" : data.plaid?.configured ? "Bank off" : "Setup needed";
     els.stateLabel.textContent = "Not current";
     els.stateReason.textContent = "Sample data only. Chase is not connected.";
     els.gapValue.textContent = "No bank data";
     els.gapLabel.textContent = "Balances are not connected.";
-    els.actionLabel.textContent = data.plaid?.configured ? "Connect bank" : "Plaid setup needed";
-    els.actionDetail.textContent = data.plaid?.configured ? "Use Chase through Plaid." : "Plaid API keys missing.";
+    els.actionLabel.textContent = plaidReviewPending ? "Plaid review pending" : data.plaid?.configured ? "Connect bank" : "Plaid setup needed";
+    els.actionDetail.textContent = plaidReviewPending
+      ? "Waiting for Plaid production approval."
+      : data.plaid?.configured
+        ? "Use Chase through Plaid."
+        : "Plaid API keys missing.";
     els.advisorStatus.textContent = "Paused";
     els.advisorAction.textContent = "Do not use sample numbers.";
     els.advisorSummary.textContent = "Bank data is not connected.";
@@ -293,9 +302,14 @@ els.connectBank.addEventListener("click", async () => {
       els.actionDetail.textContent = "Plaid API keys missing.";
       return;
     }
+    if (/Plaid production review pending/i.test(error.message)) {
+      els.actionLabel.textContent = "Plaid review pending";
+      els.actionDetail.textContent = "Waiting for Plaid production approval.";
+      return;
+    }
     if (/Production Plaid key needed/i.test(error.message)) {
       els.actionLabel.textContent = "Production key needed";
-      els.actionDetail.textContent = "The saved Plaid secret is Sandbox-only.";
+      els.actionDetail.textContent = "Use the Plaid Production secret.";
       return;
     }
     if (/Plaid redirect URI needed/i.test(error.message)) {
