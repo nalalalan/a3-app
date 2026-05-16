@@ -322,19 +322,34 @@ h2 {
   margin-top: 10px;
 }
 
-.car-panel {
+.media-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.media-panel {
   display: block;
+  min-width: 0;
   overflow: hidden;
+  border: 1px solid var(--line);
   background: #f4eee6;
 }
 
-.car-panel img {
+.media-panel img {
   display: block;
   width: 100%;
-  max-height: 310px;
-  aspect-ratio: 16 / 6.2;
+  aspect-ratio: 16 / 9;
   object-fit: cover;
+}
+
+.media-exterior img {
   object-position: 50% 56%;
+}
+
+.media-interior img {
+  object-position: 50% 53%;
 }
 
 .advisor-panel {
@@ -479,9 +494,16 @@ summary {
     min-height: 112px;
   }
 
-  .car-panel img {
-    max-height: 170px;
+  .media-strip {
+    gap: 8px;
+    grid-template-columns: 1fr;
+  }
+
+  .media-panel img {
     aspect-ratio: 16 / 8.4;
+  }
+
+  .media-exterior img {
     object-position: 57% 58%;
   }
 }
