@@ -45,10 +45,22 @@
     </section>
 
     <main class="shell">
-      <section class="primary-state" aria-label="Current data state">
-        <p class="label">Data</p>
-        <strong id="stateLabel">--</strong>
-        <span id="stateReason">--</span>
+      <section class="primary-state" aria-label="A3 saving progress">
+        <div class="goal-copy">
+          <p class="label">A3 fund</p>
+          <strong id="stateLabel">--</strong>
+          <span id="stateReason">--</span>
+        </div>
+        <div class="goal-meter" aria-label="Down payment progress">
+          <div class="goal-meter-track" aria-hidden="true">
+            <span id="goalMeterFill"></span>
+          </div>
+          <div class="goal-meter-row">
+            <span id="goalSaved">--</span>
+            <span id="goalTarget">--</span>
+          </div>
+          <span id="goalPace" class="goal-pace">--</span>
+        </div>
       </section>
 
       <section class="summary-row" aria-label="A3 summary">
@@ -58,7 +70,7 @@
           <span id="a3Code">--</span>
         </div>
         <div class="summary-block">
-          <p class="label">Bank data</p>
+          <p class="label">Progress</p>
           <strong id="gapValue">--</strong>
           <span id="gapLabel">--</span>
         </div>

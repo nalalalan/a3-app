@@ -16,6 +16,10 @@ const els = {
   saveSettings: document.getElementById("saveSettings"),
   stateLabel: document.getElementById("stateLabel"),
   stateReason: document.getElementById("stateReason"),
+  goalMeterFill: document.getElementById("goalMeterFill"),
+  goalSaved: document.getElementById("goalSaved"),
+  goalTarget: document.getElementById("goalTarget"),
+  goalPace: document.getElementById("goalPace"),
   gapValue: document.getElementById("gapValue"),
   gapLabel: document.getElementById("gapLabel"),
   actionLabel: document.getElementById("actionLabel"),
@@ -95,6 +99,44 @@ function isSampleOnly(data) {
   return !(data.imports || []).some((item) => item.source !== "sample");
 }
 
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function renderGoalMeter(goal, sampleOnly, data) {
+  const target = Math.max(0, Number(goal.downPaymentTarget || 0));
+  const saved = Math.max(0, Number(goal.availableForDownPayment || 0));
+  const progress = !sampleOnly && target > 0 ? clamp(saved / target, 0, 1) : 0;
+  els.goalMeterFill.style.width = `${Math.round(progress * 100)}%`;
+  els.goalSaved.textContent = sampleOnly ? "Live progress pending" : `${money.format(saved)} above floor`;
+  els.goalTarget.textContent = target > 0 ? `${money.format(target)} target` : "Target not set";
+
+  if (sampleOnly) {
+    els.goalPace.textContent = data.plaid?.productionReviewPending
+      ? "Plaid approval is the next step."
+      : data.plaid?.configured
+        ? "Connect Chase to start tracking."
+        : "Plaid setup needed before Chase can connect.";
+    return;
+  }
+
+  if (target <= 0) {
+    els.goalPace.textContent = "Set a down payment target.";
+    return;
+  }
+
+  if (goal.downPaymentGap <= 0) {
+    els.goalPace.textContent = "Down payment target covered.";
+    return;
+  }
+
+  const pace = Math.max(0, Number(goal.monthlySavingsPace || 0));
+  const needed = Math.max(0, Number(goal.monthlySavingsNeeded || 0));
+  els.goalPace.textContent = goal.targetDate
+    ? `${money.format(pace)}/mo pace / ${money.format(Math.ceil(needed))}/mo needed`
+    : `${money.format(goal.downPaymentGap)} remaining`;
+}
+
 function setBusy(text) {
   els.storageState.textContent = text;
 }
@@ -150,13 +192,16 @@ function render(data) {
   els.a3Code.textContent = data.goal.audiCode;
   els.a3Build.textContent = `${data.goal.exterior} / ${data.goal.interior} / ${data.goal.package}`;
 
-  document.documentElement.dataset.state = sampleOnly ? "danger" : analysis.readiness.color;
+  document.documentElement.dataset.state = sampleOnly ? "watch" : analysis.readiness.color;
+  renderGoalMeter(goal, sampleOnly, data);
 
   if (sampleOnly) {
     const plaidReviewPending = Boolean(data.plaid?.productionReviewPending);
     els.storageState.textContent = plaidReviewPending ? "Plaid review" : data.plaid?.configured ? "Bank off" : "Setup needed";
-    els.stateLabel.textContent = "Not current";
-    els.stateReason.textContent = "Sample data only. Chase is not connected.";
+    els.stateLabel.textContent = "A3 fund";
+    els.stateReason.textContent = plaidReviewPending
+      ? "Waiting for Plaid production approval before Chase can connect."
+      : "Connect Chase before using numbers.";
     els.gapValue.textContent = "No bank data";
     els.gapLabel.textContent = "Balances are not connected.";
     els.actionLabel.textContent = plaidReviewPending ? "Plaid review pending" : data.plaid?.configured ? "Connect bank" : "Plaid setup needed";
@@ -166,8 +211,8 @@ function render(data) {
         ? "Use Chase through Plaid."
         : "Plaid API keys missing.";
     els.advisorStatus.textContent = "Paused";
-    els.advisorAction.textContent = "Do not use sample numbers.";
-    els.advisorSummary.textContent = "Bank data is not connected.";
+    els.advisorAction.textContent = "Connect Chase first.";
+    els.advisorSummary.textContent = "No sample numbers are used.";
     els.advisorEffect.textContent = "";
     renderRows(els.watchList, [{ label: "Bank off", detail: "No connected Chase data." }], (item) => [item.label, item.detail]);
     renderBankAccounts(accounts.items || []);
@@ -183,10 +228,13 @@ function render(data) {
       : data.openaiConfigured
       ? "AI on"
       : "CSV data";
-  els.stateLabel.textContent = analysis.readiness.label;
-  els.stateReason.textContent = latestImport
-    ? `${latestImport.name || "CSV"} / ${analysis.latestDate || "no date"}`
-    : analysis.readiness.reason;
+  const targetProgress = goal.downPaymentTarget > 0
+    ? Math.round(clamp(goal.availableForDownPayment / goal.downPaymentTarget, 0, 1) * 100)
+    : 0;
+  els.stateLabel.textContent = goal.downPaymentGap <= 0 ? "A3 ready" : `${targetProgress}% funded`;
+  els.stateReason.textContent = goal.downPaymentGap <= 0
+    ? "Down payment target covered above floor."
+    : `${money.format(goal.downPaymentGap)} left for down payment target.`;
   els.gapValue.textContent = accounts.debtTotal > 0 ? money.format(accounts.debtTotal) : money.format(goal.downPaymentGap);
   els.gapLabel.textContent = accounts.connected
     ? `${money.format(accounts.cash || 0)} cash / ${dateTimeLabel(accounts.lastUpdatedAt)}`

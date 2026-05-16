@@ -273,16 +273,24 @@ h2 {
 
 .primary-state {
   display: grid;
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 340px);
+  gap: 16px;
   min-height: 132px;
-  align-content: center;
+  align-items: center;
   padding: 16px;
   border-left: 5px solid var(--state);
 }
 
+.goal-copy {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+
 .primary-state strong {
-  font-size: clamp(2rem, 7vw, 4.4rem);
+  font-size: clamp(2rem, 6.6vw, 4.05rem);
   line-height: .9;
+  overflow-wrap: anywhere;
 }
 
 .primary-state span,
@@ -295,6 +303,41 @@ h2 {
   font-size: .92rem;
   line-height: 1.28;
   font-weight: 700;
+}
+
+.goal-meter {
+  display: grid;
+  min-width: 0;
+  gap: 9px;
+}
+
+.goal-meter-track {
+  height: 16px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #ebe9e2;
+}
+
+.goal-meter-track span {
+  display: block;
+  width: 0%;
+  height: 100%;
+  background: var(--state);
+  transition: width .18s ease;
+}
+
+.goal-meter-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.goal-meter-row span:last-child {
+  text-align: right;
+}
+
+.goal-pace {
+  display: block;
 }
 
 .summary-row {
@@ -491,7 +534,18 @@ summary {
   }
 
   .primary-state {
+    grid-template-columns: 1fr;
+    gap: 12px;
     min-height: 112px;
+  }
+
+  .goal-meter-row {
+    display: grid;
+    gap: 4px;
+  }
+
+  .goal-meter-row span:last-child {
+    text-align: left;
   }
 
   .media-strip {
