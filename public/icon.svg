@@ -9,11 +9,6 @@
       <stop offset=".58" stop-color="#c17b8a"/>
       <stop offset="1" stop-color="#8f5d6f"/>
     </linearGradient>
-    <linearGradient id="blush" x1="18" y1="28" x2="108" y2="94" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#d9a9ae"/>
-      <stop offset=".58" stop-color="#ad7c89"/>
-      <stop offset="1" stop-color="#765968"/>
-    </linearGradient>
     <linearGradient id="blue" x1="18" y1="28" x2="108" y2="94" gradientUnits="userSpaceOnUse">
       <stop stop-color="#9fb1ce"/>
       <stop offset=".55" stop-color="#6d84a8"/>
@@ -26,9 +21,8 @@
     </linearGradient>
   </defs>
   <g filter="url(#d)" fill="none" stroke-linecap="round" stroke-width="8.2">
-    <ellipse cx="32" cy="60" rx="22" ry="18" stroke="url(#rose)"/>
-    <ellipse cx="53" cy="60" rx="22" ry="18" stroke="url(#blush)"/>
-    <ellipse cx="74" cy="60" rx="22" ry="18" stroke="url(#blue)"/>
-    <ellipse cx="95" cy="60" rx="22" ry="18" stroke="url(#slate)"/>
+    <circle cx="42" cy="64" r="18" stroke="url(#rose)"/>
+    <circle cx="64" cy="64" r="18" stroke="url(#blue)"/>
+    <circle cx="86" cy="64" r="18" stroke="url(#slate)"/>
   </g>
 </svg>
