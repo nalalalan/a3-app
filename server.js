@@ -1181,8 +1181,19 @@ async function handleApi(req, res, requestUrl) {
     }
     if (plaidRedirectUri) request.redirect_uri = plaidRedirectUri;
     if (plaidWebhookUrl) request.webhook = plaidWebhookUrl;
-    const data = await plaidPost("/link/token/create", request);
-    sendJson(res, 200, { ok: true, link_token: data.link_token, expiration: data.expiration });
+    try {
+      const data = await plaidPost("/link/token/create", request);
+      sendJson(res, 200, { ok: true, link_token: data.link_token, expiration: data.expiration });
+    } catch (error) {
+      const message = String(error.message || "");
+      if (/invalid client_id or secret/i.test(message)) {
+        sendJson(res, 503, { ok: false, error: "Production Plaid key needed", code: "PLAID_PRODUCTION_KEY_NEEDED" });
+      } else if (/redirect_uri|redirect uri|OAuth redirect/i.test(message)) {
+        sendJson(res, 503, { ok: false, error: "Plaid redirect URI needed", code: "PLAID_REDIRECT_URI_NEEDED" });
+      } else {
+        throw error;
+      }
+    }
     return true;
   }
 

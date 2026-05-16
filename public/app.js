@@ -293,6 +293,16 @@ els.connectBank.addEventListener("click", async () => {
       els.actionDetail.textContent = "Plaid API keys missing.";
       return;
     }
+    if (/Production Plaid key needed/i.test(error.message)) {
+      els.actionLabel.textContent = "Production key needed";
+      els.actionDetail.textContent = "The saved Plaid secret is Sandbox-only.";
+      return;
+    }
+    if (/Plaid redirect URI needed/i.test(error.message)) {
+      els.actionLabel.textContent = "Redirect URI needed";
+      els.actionDetail.textContent = "Save the A3 OAuth URI in Plaid.";
+      return;
+    }
     document.body.insertAdjacentHTML("beforeend", `<pre class="boot-error">${escapeHtml(error.message)}</pre>`);
   }
 });
