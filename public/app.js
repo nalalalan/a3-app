@@ -198,7 +198,11 @@ function render(data) {
   if (sampleOnly) {
     const plaidReviewPending = Boolean(data.plaid?.productionReviewPending);
     els.storageState.textContent = plaidReviewPending ? "Plaid review" : data.plaid?.configured ? "Bank off" : "Setup needed";
-    els.stateLabel.textContent = "A3 fund";
+    els.stateLabel.textContent = plaidReviewPending
+      ? "Plaid review pending"
+      : data.plaid?.configured
+        ? "Chase not connected"
+        : "Plaid setup needed";
     els.stateReason.textContent = plaidReviewPending
       ? "Plaid approval unlocks Chase tracking."
       : "Connect Chase before using numbers.";
