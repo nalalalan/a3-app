@@ -13,9 +13,9 @@
     <link rel="icon" href="https://aolabs.io/favicon.svg?v=20260516-suite-bloom" type="image/svg+xml">
     <link rel="apple-touch-icon" href="https://aolabs.io/marks/ao-ink.svg?v=20260516-suite-bloom">
     <link rel="manifest" href="/site.webmanifest?v=20260516-a3-three-rings">
-    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/styles.css?v=20260516-locked-view">
   </head>
-  <body>
+  <body class="locked-view">
     <header class="suite-topbar" aria-label="a3 navigation">
       <div class="suite-brand-cluster">
         <a class="suite-ao-home" href="https://aolabs.io/" aria-label="aolabs.io">
@@ -30,13 +30,11 @@
         <span id="storageState" class="storage-state">loading</span>
         <button id="connectBank" type="button" disabled>connect</button>
         <button id="syncBank" type="button" disabled hidden>sync</button>
-        <label class="file-button"><input id="csvInput" type="file" accept=".csv,text/csv">csv</label>
       </div>
     </header>
 
     <section id="lockPanel" class="lock-panel" aria-label="Private access" hidden>
       <div>
-        <p class="label">Private</p>
         <h2>PIN</h2>
       </div>
       <input id="accessInput" type="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN">
@@ -50,31 +48,29 @@
           <img src="/a3-car.jpg?v=20260516-a3-car" alt="Audi A3 Premium Plus in Manhattan Gray metallic">
         </a>
         <div class="dream-copy">
-          <h1>Audi A3</h1>
+          <h1>A3</h1>
           <div class="dream-specs" aria-label="A3 build facts">
             <span>Premium Plus</span>
-            <span>TFSI quattro</span>
-            <span>Manhattan Gray</span>
             <span>$46,690</span>
           </div>
         </div>
-      </section>
 
-      <section class="dream-fund" aria-label="A3 saving progress">
-        <div class="fund-heading">
-          <strong id="stateLabel">--</strong>
-          <span id="stateReason">--</span>
-        </div>
-        <div class="goal-meter" aria-label="Down payment progress">
-          <div class="goal-meter-track" aria-hidden="true">
-            <span id="goalMeterFill"></span>
+        <section class="dream-fund" aria-label="A3 saving progress">
+          <div class="fund-heading">
+            <strong id="stateLabel">--</strong>
+            <span id="stateReason">--</span>
           </div>
-          <div class="goal-meter-row">
-            <span id="goalSaved">--</span>
-            <span id="goalTarget">--</span>
+          <div class="goal-meter" aria-label="Down payment progress">
+            <div class="goal-meter-track" aria-hidden="true">
+              <span id="goalMeterFill"></span>
+            </div>
+            <div class="goal-meter-row">
+              <span id="goalSaved">--</span>
+              <span id="goalTarget">--</span>
+            </div>
+            <span id="goalPace" class="goal-pace">--</span>
           </div>
-          <span id="goalPace" class="goal-pace">--</span>
-        </div>
+        </section>
       </section>
 
       <section class="summary-row" aria-label="A3 summary">
@@ -137,6 +133,7 @@
             <input id="targetDateInput" type="date">
           </label>
           <button id="saveSettings" type="button">Save</button>
+          <label id="csvButton" class="file-button"><input id="csvInput" type="file" accept=".csv,text/csv">CSV</label>
         </section>
       </details>
 
@@ -169,6 +166,6 @@
     </main>
 
     <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
-    <script src="/app.js" defer></script>
+    <script src="/app.js?v=20260516-locked-view" defer></script>
   </body>
 </html>

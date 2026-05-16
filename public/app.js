@@ -3,6 +3,7 @@ const els = {
   connectBank: document.getElementById("connectBank"),
   syncBank: document.getElementById("syncBank"),
   csvInput: document.getElementById("csvInput"),
+  csvButton: document.getElementById("csvButton"),
   lockPanel: document.getElementById("lockPanel"),
   accessInput: document.getElementById("accessInput"),
   unlockButton: document.getElementById("unlockButton"),
@@ -108,7 +109,7 @@ function renderGoalMeter(goal, sampleOnly, data) {
   const saved = Math.max(0, Number(goal.availableForDownPayment || 0));
   const progress = !sampleOnly && target > 0 ? clamp(saved / target, 0, 1) : 0;
   els.goalMeterFill.style.width = `${Math.round(progress * 100)}%`;
-  els.goalSaved.textContent = sampleOnly ? "Live progress pending" : `${money.format(saved)} above floor`;
+  els.goalSaved.textContent = sampleOnly ? "Waiting" : `${money.format(saved)} above floor`;
   els.goalTarget.textContent = target > 0 ? `${money.format(target)} target` : "Target not set";
 
   if (sampleOnly) {
@@ -142,12 +143,15 @@ function setBusy(text) {
 }
 
 function showLock(message = "PIN required") {
+  document.body.classList.add("locked-view");
   els.lockPanel.hidden = false;
+  els.storageState.textContent = "Locked";
   els.accessMessage.textContent = message;
   els.accessInput.focus();
 }
 
 function hideLock() {
+  document.body.classList.remove("locked-view");
   els.lockPanel.hidden = true;
   els.accessMessage.textContent = "";
 }
@@ -199,13 +203,13 @@ function render(data) {
     const plaidReviewPending = Boolean(data.plaid?.productionReviewPending);
     els.storageState.textContent = plaidReviewPending ? "Plaid review" : data.plaid?.configured ? "Bank off" : "Setup needed";
     els.stateLabel.textContent = plaidReviewPending
-      ? "Plaid review pending"
+      ? "Plaid review"
       : data.plaid?.configured
-        ? "Chase not connected"
-        : "Plaid setup needed";
+        ? "Chase"
+        : "Plaid";
     els.stateReason.textContent = plaidReviewPending
-      ? "Plaid approval unlocks Chase tracking."
-      : "Connect Chase before using numbers.";
+      ? "Chase pending."
+      : "Connect Chase.";
     els.gapValue.textContent = "No bank data";
     els.gapLabel.textContent = "Balances are not connected.";
     els.actionLabel.textContent = plaidReviewPending ? "Plaid review pending" : data.plaid?.configured ? "Connect bank" : "Plaid setup needed";
