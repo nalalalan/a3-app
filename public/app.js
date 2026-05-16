@@ -145,6 +145,9 @@ function setBusy(text) {
 function showLock(message = "PIN required") {
   document.body.classList.add("locked-view");
   els.lockPanel.hidden = false;
+  els.connectBank.hidden = true;
+  els.syncBank.hidden = true;
+  els.csvButton.hidden = true;
   els.storageState.textContent = "Locked";
   els.accessMessage.textContent = message;
   els.accessInput.focus();
@@ -153,6 +156,8 @@ function showLock(message = "PIN required") {
 function hideLock() {
   document.body.classList.remove("locked-view");
   els.lockPanel.hidden = true;
+  els.connectBank.hidden = false;
+  els.csvButton.hidden = false;
   els.accessMessage.textContent = "";
 }
 
