@@ -200,7 +200,7 @@ function render(data) {
     els.storageState.textContent = plaidReviewPending ? "Plaid review" : data.plaid?.configured ? "Bank off" : "Setup needed";
     els.stateLabel.textContent = "A3 fund";
     els.stateReason.textContent = plaidReviewPending
-      ? "Waiting for Plaid production approval before Chase can connect."
+      ? "Plaid approval unlocks Chase tracking."
       : "Connect Chase before using numbers.";
     els.gapValue.textContent = "No bank data";
     els.gapLabel.textContent = "Balances are not connected.";
@@ -211,9 +211,9 @@ function render(data) {
         ? "Use Chase through Plaid."
         : "Plaid API keys missing.";
     els.advisorStatus.textContent = "Paused";
-    els.advisorAction.textContent = "Connect Chase first.";
+    els.advisorAction.textContent = plaidReviewPending ? "Chase tracking pending." : "Connect Chase first.";
     els.advisorSummary.textContent = "No sample numbers are used.";
-    els.advisorEffect.textContent = "";
+    els.advisorEffect.textContent = plaidReviewPending ? "Spending plan starts after bank link." : "";
     renderRows(els.watchList, [{ label: "Bank off", detail: "No connected Chase data." }], (item) => [item.label, item.detail]);
     renderBankAccounts(accounts.items || []);
     renderRows(els.eventList, data.events, (item) => [item.label, item.type]);

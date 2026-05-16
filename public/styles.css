@@ -270,7 +270,6 @@ h2 {
   font-weight: 800;
 }
 
-.primary-state,
 .summary-block,
 .panel {
   border: 1px solid var(--line);
@@ -278,43 +277,118 @@ h2 {
   border-radius: 6px;
 }
 
-.primary-state {
+.dream-hero {
   position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(240px, 340px);
-  gap: 24px;
-  min-height: 162px;
-  align-items: center;
+  min-height: clamp(440px, 58vw, 590px);
   overflow: hidden;
-  padding: 24px 22px 22px;
-  border-color: #cec4b7;
-  background: var(--panel-warm);
-  box-shadow: 0 10px 24px rgba(37, 35, 30, .06);
+  border: 1px solid #cfc7ba;
+  border-radius: 6px;
+  background: #c7beb0;
+  box-shadow: 0 18px 44px rgba(37, 35, 30, .11);
 }
 
-.primary-state::before {
+.dream-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(14, 14, 13, .72) 0%, rgba(14, 14, 13, .26) 38%, rgba(14, 14, 13, .02) 68%),
+    linear-gradient(0deg, rgba(14, 14, 13, .78) 0%, rgba(14, 14, 13, .06) 44%, rgba(14, 14, 13, 0) 100%);
+}
+
+.dream-hero::after {
   content: "";
   position: absolute;
   top: 0;
   right: 0;
   left: 0;
+  z-index: 2;
   height: 4px;
-  background: linear-gradient(90deg, var(--rose) 0 26%, var(--blue) 26% 58%, var(--sage) 58% 100%);
+  background: linear-gradient(90deg, var(--rose) 0 24%, var(--blue) 24% 58%, var(--sage) 58% 100%);
 }
 
-.goal-copy {
+.dream-image,
+.dream-image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.dream-image {
+  position: absolute;
+  inset: 0;
+}
+
+.dream-image img {
+  object-fit: cover;
+  object-position: 58% 57%;
+}
+
+.dream-copy {
+  position: absolute;
+  z-index: 3;
+  left: clamp(22px, 4vw, 46px);
+  bottom: clamp(28px, 5vw, 54px);
   display: grid;
-  min-width: 0;
-  gap: 10px;
+  width: min(560px, calc(100% - 44px));
+  gap: 12px;
+  color: #fffaf1;
 }
 
-.primary-state strong {
-  font-size: clamp(2.3rem, 6.8vw, 4.45rem);
+.dream-copy .label {
+  color: rgba(255, 250, 241, .74);
+}
+
+.dream-copy h1 {
+  max-width: 11ch;
+  font-size: clamp(2.8rem, 7.2vw, 5.35rem);
   line-height: .9;
+}
+
+.dream-specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  color: rgba(255, 250, 241, .86);
+  font-size: .92rem;
+  font-weight: 800;
+}
+
+.dream-specs span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+}
+
+.dream-specs span + span {
+  padding-left: 14px;
+  border-left: 1px solid rgba(255, 250, 241, .34);
+}
+
+.dream-fund {
+  position: absolute;
+  right: clamp(18px, 3vw, 34px);
+  top: clamp(26px, 4vw, 48px);
+  z-index: 4;
+  display: grid;
+  width: min(360px, calc(100% - 36px));
+  gap: 11px;
+  padding: 18px;
+  border: 1px solid rgba(255, 250, 241, .58);
+  border-radius: 6px;
+  background: rgba(251, 250, 246, .92);
+  box-shadow: 0 18px 42px rgba(16, 15, 13, .2);
+}
+
+.dream-fund strong {
+  font-size: clamp(2rem, 4.4vw, 3.6rem);
+  line-height: .94;
   overflow-wrap: anywhere;
 }
 
-.primary-state span,
+.dream-fund > span,
 .summary-block span,
 .advisor-panel span,
 .row span,
@@ -412,11 +486,12 @@ h2 {
   margin-top: 12px;
 }
 
-.media-strip {
+.focus-grid {
   display: grid;
-  grid-template-columns: 1.08fr .92fr;
+  grid-template-columns: minmax(0, 1.18fr) minmax(260px, .82fr);
   gap: 12px;
   margin-top: 12px;
+  align-items: stretch;
 }
 
 .media-panel {
@@ -432,12 +507,10 @@ h2 {
 .media-panel img {
   display: block;
   width: 100%;
-  aspect-ratio: 16 / 8.7;
+  height: 100%;
+  min-height: 318px;
+  aspect-ratio: 16 / 9;
   object-fit: cover;
-}
-
-.media-exterior img {
-  object-position: 50% 56%;
 }
 
 .media-interior img {
@@ -446,27 +519,17 @@ h2 {
 
 .advisor-panel {
   display: grid;
-  grid-template-columns: minmax(130px, .38fr) minmax(0, 1fr);
-  gap: 8px 18px;
-  padding: 16px;
+  align-content: center;
+  gap: 10px;
+  min-height: 318px;
+  margin-top: 0;
+  padding: 24px;
   border-left: 4px solid var(--state);
 }
 
 .advisor-panel strong {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  align-self: center;
-  font-size: clamp(1.45rem, 3vw, 2rem);
+  font-size: clamp(1.75rem, 3.4vw, 2.6rem);
   line-height: 1.1;
-}
-
-.advisor-panel .label,
-.advisor-panel h2 {
-  grid-column: 1;
-}
-
-.advisor-panel span {
-  grid-column: 1 / -1;
 }
 
 summary {
@@ -596,11 +659,57 @@ summary {
     grid-template-columns: 1fr;
   }
 
-  .primary-state {
-    grid-template-columns: 1fr;
-    gap: 12px;
-    padding: 20px;
-    min-height: 112px;
+  .dream-hero {
+    display: grid;
+    min-height: 0;
+    background: var(--panel-warm);
+  }
+
+  .dream-hero::before {
+    height: 380px;
+    background:
+      linear-gradient(0deg, rgba(14, 14, 13, .74) 0%, rgba(14, 14, 13, .06) 54%, rgba(14, 14, 13, 0) 100%),
+      linear-gradient(90deg, rgba(14, 14, 13, .48) 0%, rgba(14, 14, 13, .02) 74%);
+  }
+
+  .dream-image {
+    position: relative;
+    height: 380px;
+  }
+
+  .dream-image img {
+    object-position: 56% 58%;
+  }
+
+  .dream-copy {
+    top: 220px;
+    bottom: auto;
+    left: 20px;
+    width: calc(100% - 40px);
+    gap: 9px;
+  }
+
+  .dream-copy h1 {
+    max-width: 10ch;
+    font-size: clamp(2.55rem, 13vw, 4.05rem);
+  }
+
+  .dream-specs {
+    display: none;
+  }
+
+  .dream-fund {
+    position: relative;
+    right: auto;
+    bottom: auto;
+    width: auto;
+    margin: 0;
+    padding: 18px 20px 28px;
+    border: 0;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+    background: var(--panel-warm);
+    box-shadow: none;
   }
 
   .goal-meter-row {
@@ -612,28 +721,18 @@ summary {
     text-align: left;
   }
 
-  .media-strip {
+  .focus-grid {
     gap: 8px;
     grid-template-columns: 1fr;
   }
 
   .media-panel img {
-    aspect-ratio: 16 / 8.4;
+    min-height: 220px;
+    aspect-ratio: 16 / 10;
   }
 
   .advisor-panel {
-    grid-template-columns: 1fr;
-  }
-
-  .advisor-panel strong,
-  .advisor-panel .label,
-  .advisor-panel h2,
-  .advisor-panel span {
-    grid-column: 1;
-    grid-row: auto;
-  }
-
-  .media-exterior img {
-    object-position: 57% 58%;
+    min-height: 0;
+    padding: 20px;
   }
 }
