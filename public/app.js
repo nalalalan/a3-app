@@ -112,11 +112,11 @@ function hideLock() {
 
 function renderBankControls(data) {
   const plaid = data.plaid || {};
-  els.connectBank.disabled = !plaid.configured;
+  els.connectBank.disabled = false;
   els.syncBank.disabled = !plaid.connected;
   els.connectBank.textContent = plaid.connected ? "relink" : "connect";
   els.syncBank.hidden = !plaid.connected;
-  els.connectBank.title = plaid.configured ? "Connect bank through Plaid" : "Plaid variables are not configured";
+  els.connectBank.title = plaid.configured ? "Connect bank through Plaid" : "Plaid credentials are missing";
 }
 
 async function loadState() {
@@ -149,18 +149,18 @@ function render(data) {
   document.documentElement.dataset.state = sampleOnly ? "danger" : analysis.readiness.color;
 
   if (sampleOnly) {
-    els.storageState.textContent = data.plaid?.configured ? "Bank off" : "Not current";
+    els.storageState.textContent = data.plaid?.configured ? "Bank off" : "Plaid off";
     els.stateLabel.textContent = "Not current";
     els.stateReason.textContent = "Sample data only. Chase is not connected.";
     els.gapValue.textContent = "No bank data";
-    els.gapLabel.textContent = "Debt and balances are missing.";
-    els.actionLabel.textContent = data.plaid?.configured ? "Connect bank" : "Import CSV";
-    els.actionDetail.textContent = data.plaid?.configured ? "Use Chase through Plaid." : "Use a current Chase export.";
+    els.gapLabel.textContent = "Balances are not connected.";
+    els.actionLabel.textContent = data.plaid?.configured ? "Connect bank" : "Plaid keys missing";
+    els.actionDetail.textContent = data.plaid?.configured ? "Use Chase through Plaid." : "Add Plaid client ID and secret.";
     els.advisorStatus.textContent = "Paused";
     els.advisorAction.textContent = "Do not use sample numbers.";
-    els.advisorSummary.textContent = "Current debt is not in this app yet.";
+    els.advisorSummary.textContent = "Bank data is not connected.";
     els.advisorEffect.textContent = "";
-    renderRows(els.watchList, [{ label: "Data missing", detail: "Current Chase activity not imported." }], (item) => [item.label, item.detail]);
+    renderRows(els.watchList, [{ label: "Bank off", detail: "No connected Chase data." }], (item) => [item.label, item.detail]);
     renderBankAccounts(accounts.items || []);
     renderRows(els.eventList, data.events, (item) => [item.label, item.type]);
     els.transactionList.innerHTML = `<div class="empty">Hidden until current data is imported.</div>`;
@@ -287,7 +287,12 @@ els.connectBank.addEventListener("click", async () => {
     });
     handler.open();
   } catch (error) {
-    setBusy("Blocked");
+    setBusy("Plaid off");
+    if (/Plaid is not configured/i.test(error.message)) {
+      els.actionLabel.textContent = "Plaid keys missing";
+      els.actionDetail.textContent = "Add Plaid client ID and secret.";
+      return;
+    }
     document.body.insertAdjacentHTML("beforeend", `<pre class="boot-error">${escapeHtml(error.message)}</pre>`);
   }
 });

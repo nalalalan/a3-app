@@ -600,7 +600,7 @@ function watchItems(input) {
   const { withFlow, last30, latestDate, balanceKnown, balance, cashFloor, bufferDays, spendChange, recurring, goal, accounts } = input;
   const items = [];
   if (accounts?.debtTotal > 0) {
-    items.push({ label: "Debt visible", detail: `$${Math.round(accounts.debtTotal)} owed across connected accounts`, severity: "danger" });
+    items.push({ label: "Connected balance", detail: `$${Math.round(accounts.debtTotal)} across credit/loan accounts`, severity: "danger" });
   }
   if (balanceKnown && balance < cashFloor) {
     items.push({ label: "Below floor", detail: `$${Math.round(balance)} vs $${Math.round(cashFloor)} floor`, severity: "danger" });
@@ -725,7 +725,7 @@ function readinessState(input) {
   const { transactions, balanceKnown, balance, cashFloor, bufferDays, spendChange, watch, goal, accounts } = input;
   if (!transactions.length) return { label: "no data", reason: "Import Chase CSV", color: "muted" };
   if (accounts?.debtTotal > 0 && goal.downPaymentGap > 0) {
-    return { label: "debt first", reason: "Debt is ahead of A3", color: "danger" };
+    return { label: "balance first", reason: "Connected balances are ahead of A3", color: "danger" };
   }
   if ((balanceKnown && balance < cashFloor) || (bufferDays !== null && bufferDays < 5)) {
     return { label: "danger", reason: "Cash floor pressure", color: "danger" };
@@ -742,7 +742,7 @@ function readinessState(input) {
 function oneAction(input) {
   const { readiness, watch, recurring, categories, goal, balanceKnown, accounts } = input;
   if (!balanceKnown) return { label: "Add balance", detail: "A3 gap needs current cash" };
-  if (accounts?.debtTotal > 0) return { label: "Debt first", detail: `$${Math.round(accounts.debtTotal).toLocaleString("en-US")} owed before A3 money` };
+  if (accounts?.debtTotal > 0) return { label: "Balance first", detail: `$${Math.round(accounts.debtTotal).toLocaleString("en-US")} connected credit/loan balance` };
   if (readiness.label === "danger") return { label: "Protect floor", detail: "Pause flexible spend until next deposit" };
   if (goal.downPaymentGap > 0 && goal.monthlyRoom < 0) {
     return { label: "Close A3 gap", detail: `$${Math.ceil(Math.abs(goal.monthlyRoom))}/mo short` };
