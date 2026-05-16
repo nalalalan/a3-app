@@ -150,7 +150,7 @@ h2 {
   padding: 0 18px;
   border-bottom: 1px solid var(--line);
   background: #ffffff;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .suite-brand-cluster,
@@ -188,9 +188,9 @@ h2 {
   gap: 8px;
   min-width: 0;
   color: var(--ink);
-  font-size: 1rem;
+  font-size: 1.06rem;
   font-weight: 800;
-  line-height: 1;
+  line-height: 1.18;
   text-transform: lowercase;
 }
 
@@ -206,6 +206,9 @@ h2 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.22;
+  padding-bottom: 2px;
+  margin-bottom: -2px;
 }
 
 .suite-topbar-actions {
@@ -433,7 +436,7 @@ summary {
 
   .suite-app-name {
     display: block;
-    max-width: 34px;
+    max-width: min(58vw, 220px);
   }
 
   .suite-topbar-actions {
