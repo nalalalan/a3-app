@@ -116,7 +116,7 @@ function renderBankControls(data) {
   els.syncBank.disabled = !plaid.connected;
   els.connectBank.textContent = plaid.connected ? "relink" : "connect";
   els.syncBank.hidden = !plaid.connected;
-  els.connectBank.title = plaid.configured ? "Connect bank through Plaid" : "Plaid credentials are missing";
+  els.connectBank.title = plaid.configured ? "Connect bank through Plaid" : "Plaid setup needed";
 }
 
 async function loadState() {
@@ -149,13 +149,13 @@ function render(data) {
   document.documentElement.dataset.state = sampleOnly ? "danger" : analysis.readiness.color;
 
   if (sampleOnly) {
-    els.storageState.textContent = data.plaid?.configured ? "Bank off" : "Plaid off";
+    els.storageState.textContent = data.plaid?.configured ? "Bank off" : "Setup needed";
     els.stateLabel.textContent = "Not current";
     els.stateReason.textContent = "Sample data only. Chase is not connected.";
     els.gapValue.textContent = "No bank data";
     els.gapLabel.textContent = "Balances are not connected.";
-    els.actionLabel.textContent = data.plaid?.configured ? "Connect bank" : "Plaid keys missing";
-    els.actionDetail.textContent = data.plaid?.configured ? "Use Chase through Plaid." : "Add Plaid client ID and secret.";
+    els.actionLabel.textContent = data.plaid?.configured ? "Connect bank" : "Plaid setup needed";
+    els.actionDetail.textContent = data.plaid?.configured ? "Use Chase through Plaid." : "Plaid API keys missing.";
     els.advisorStatus.textContent = "Paused";
     els.advisorAction.textContent = "Do not use sample numbers.";
     els.advisorSummary.textContent = "Bank data is not connected.";
@@ -287,10 +287,10 @@ els.connectBank.addEventListener("click", async () => {
     });
     handler.open();
   } catch (error) {
-    setBusy("Plaid off");
+    setBusy("Setup needed");
     if (/Plaid is not configured/i.test(error.message)) {
-      els.actionLabel.textContent = "Plaid keys missing";
-      els.actionDetail.textContent = "Add Plaid client ID and secret.";
+      els.actionLabel.textContent = "Plaid setup needed";
+      els.actionDetail.textContent = "Plaid API keys missing.";
       return;
     }
     document.body.insertAdjacentHTML("beforeend", `<pre class="boot-error">${escapeHtml(error.message)}</pre>`);
