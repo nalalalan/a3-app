@@ -408,12 +408,15 @@ summary {
   }
 
   .suite-topbar {
+    align-items: flex-start;
+    flex-wrap: wrap;
     gap: 8px;
     min-height: 58px;
-    padding: 0 12px;
+    padding: 8px 12px;
   }
 
   .suite-brand-cluster {
+    flex: 1 1 100%;
     gap: 7px;
   }
 
@@ -440,6 +443,8 @@ summary {
   }
 
   .suite-topbar-actions {
+    flex: 1 1 100%;
+    justify-content: flex-start;
     gap: 6px;
   }
 
