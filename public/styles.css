@@ -322,6 +322,21 @@ h2 {
   margin-top: 10px;
 }
 
+.car-panel {
+  display: block;
+  overflow: hidden;
+  background: #f4eee6;
+}
+
+.car-panel img {
+  display: block;
+  width: 100%;
+  max-height: 310px;
+  aspect-ratio: 16 / 6.2;
+  object-fit: cover;
+  object-position: 50% 56%;
+}
+
 .advisor-panel {
   display: grid;
   gap: 8px;
@@ -462,5 +477,11 @@ summary {
 
   .primary-state {
     min-height: 112px;
+  }
+
+  .car-panel img {
+    max-height: 170px;
+    aspect-ratio: 16 / 8.4;
+    object-position: 57% 58%;
   }
 }
