@@ -109,7 +109,7 @@ function renderGoalMeter(goal, sampleOnly, data) {
   const saved = Math.max(0, Number(goal.availableForDownPayment || 0));
   const progress = !sampleOnly && target > 0 ? clamp(saved / target, 0, 1) : 0;
   els.goalMeterFill.style.width = `${Math.round(progress * 100)}%`;
-  els.goalSaved.textContent = sampleOnly ? "Waiting" : `${money.format(saved)} above floor`;
+  els.goalSaved.textContent = sampleOnly ? "Bank link pending" : `${money.format(saved)} above floor`;
   els.goalTarget.textContent = target > 0 ? `${money.format(target)} target` : "Target not set";
 
   if (sampleOnly) {
