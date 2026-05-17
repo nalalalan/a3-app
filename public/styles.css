@@ -1,12 +1,12 @@
 :root {
   color-scheme: dark;
-  --bg: #12110f;
-  --panel: #191817;
-  --panel-warm: #24211d;
-  --ink: #f0eadf;
-  --muted: #9b9389;
-  --line: rgba(240, 234, 223, .13);
-  --line-soft: rgba(240, 234, 223, .08);
+  --bg: #070706;
+  --panel: #12110f;
+  --panel-warm: #191714;
+  --ink: #f6efe6;
+  --muted: #b2a89a;
+  --line: rgba(246, 239, 230, .16);
+  --line-soft: rgba(246, 239, 230, .08);
   --rose: #cf97a5;
   --blue: #8193b8;
   --sage: #718b79;
@@ -36,7 +36,7 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--bg);
+  background: linear-gradient(180deg, #050505 0%, #0a0908 54%, #070706 100%);
   color: var(--ink);
   font-family: Inter, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -167,15 +167,19 @@ h2 {
 }
 
 .suite-topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  min-height: 58px;
-  padding: 0 20px;
-  border-bottom: 1px solid var(--line);
-  background: rgba(12, 12, 11, .72);
-  backdrop-filter: blur(18px);
+  min-height: 76px;
+  padding: 14px 30px;
+  border-bottom: 0;
+  background: linear-gradient(180deg, rgba(4, 4, 4, .72) 0%, rgba(4, 4, 4, .28) 54%, rgba(4, 4, 4, 0) 100%);
   overflow: visible;
 }
 
@@ -214,8 +218,8 @@ h2 {
   gap: 8px;
   min-width: 0;
   color: var(--ink);
-  font-size: 1rem;
-  font-weight: 620;
+  font-size: .96rem;
+  font-weight: 640;
   line-height: 1.18;
   text-transform: lowercase;
 }
@@ -235,6 +239,7 @@ h2 {
   line-height: 1.22;
   padding-bottom: 2px;
   margin-bottom: -2px;
+  text-shadow: 0 1px 18px rgba(0, 0, 0, .52);
 }
 
 .suite-topbar-actions {
@@ -310,7 +315,7 @@ h2 {
 }
 
 body.locked-view .lock-panel {
-  margin: 18px auto 0;
+  margin: 92px auto 0;
 }
 
 .lock-panel[hidden] {
@@ -332,7 +337,7 @@ body.locked-view .lock-panel {
 
 .dream-hero {
   position: relative;
-  min-height: clamp(640px, calc(100svh - 58px), 860px);
+  min-height: clamp(700px, 100svh, 920px);
   overflow: hidden;
   border-radius: 0;
   background: var(--bg);
@@ -346,8 +351,8 @@ body.locked-view .lock-panel {
   z-index: 1;
   pointer-events: none;
   background:
-    linear-gradient(90deg, rgba(4, 4, 4, .36) 0%, rgba(4, 4, 4, .1) 34%, rgba(4, 4, 4, 0) 70%),
-    linear-gradient(0deg, rgba(4, 4, 4, .56) 0%, rgba(4, 4, 4, .06) 48%, rgba(4, 4, 4, 0) 100%);
+    linear-gradient(180deg, rgba(4, 4, 4, .02) 0%, rgba(4, 4, 4, .02) 48%, rgba(4, 4, 4, .58) 100%),
+    linear-gradient(90deg, rgba(4, 4, 4, .58) 0%, rgba(4, 4, 4, .18) 28%, rgba(4, 4, 4, 0) 62%, rgba(4, 4, 4, .2) 100%);
 }
 
 .dream-image,
@@ -364,17 +369,18 @@ body.locked-view .lock-panel {
 
 .dream-image img {
   object-fit: cover;
-  object-position: 61% 54%;
+  object-position: 62% 56%;
+  filter: contrast(1.05) saturate(1.03) brightness(1.03);
 }
 
 .dream-copy {
   position: absolute;
   z-index: 3;
   left: clamp(24px, 6vw, 82px);
-  bottom: clamp(174px, 22vh, 230px);
+  bottom: clamp(148px, 20vh, 226px);
   display: grid;
   width: min(420px, calc(100% - 48px));
-  gap: 10px;
+  gap: 13px;
   color: #fffaf1;
 }
 
@@ -384,9 +390,10 @@ body.locked-view .lock-panel {
 
 .dream-copy h1 {
   max-width: 4ch;
-  font-size: clamp(3.6rem, 8.4vw, 7.15rem);
+  font-size: clamp(3.7rem, 8vw, 6.8rem);
   font-weight: 500;
   line-height: .9;
+  text-shadow: 0 18px 54px rgba(0, 0, 0, .42);
 }
 
 .dream-specs {
@@ -412,21 +419,21 @@ body.locked-view .lock-panel {
 .dream-fund {
   position: absolute;
   z-index: 5;
-  left: clamp(16px, 6vw, 82px);
+  left: auto;
   right: clamp(16px, 6vw, 82px);
-  bottom: clamp(22px, 5vw, 52px);
+  bottom: clamp(28px, 5vw, 58px);
   display: grid;
-  grid-template-columns: minmax(0, .55fr) minmax(280px, .45fr);
-  gap: 22px;
+  grid-template-columns: 1fr;
+  gap: 14px;
   align-items: center;
-  width: auto;
+  width: min(500px, calc(100% - 48px));
   margin: 0;
-  padding: 16px 18px;
-  border: 1px solid var(--line);
-  border-radius: 2px;
-  background: rgba(13, 13, 12, .58);
-  box-shadow: 0 16px 56px rgba(0, 0, 0, .22);
-  backdrop-filter: blur(18px) saturate(1.1);
+  padding: 18px 20px;
+  border: 1px solid rgba(246, 239, 230, .18);
+  border-radius: 8px;
+  background: linear-gradient(145deg, rgba(18, 17, 15, .68), rgba(12, 12, 11, .5));
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .28);
+  backdrop-filter: blur(18px) saturate(1.08);
 }
 
 .fund-heading {
@@ -435,7 +442,7 @@ body.locked-view .lock-panel {
 }
 
 .fund-heading strong {
-  font-size: clamp(1.08rem, 2.4vw, 1.5rem);
+  font-size: clamp(1.02rem, 2vw, 1.28rem);
   font-weight: 560;
   line-height: 1.02;
   overflow-wrap: anywhere;
@@ -460,11 +467,11 @@ body.locked-view .lock-panel {
 }
 
 .goal-meter-track {
-  height: 6px;
+  height: 5px;
   overflow: hidden;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(246, 239, 230, .18);
   border-radius: 999px;
-  background: rgba(245, 241, 233, .1);
+  background: rgba(245, 241, 233, .12);
 }
 
 .goal-meter-track span {
@@ -527,28 +534,30 @@ body.locked-view .lock-panel {
 
 .image-rhythm {
   display: grid;
-  grid-template-columns: minmax(0, 1.28fr) minmax(0, .72fr);
-  gap: 12px;
-  width: min(calc(100% - 40px), 1040px);
-  margin: 14px auto 0;
+  grid-template-columns: minmax(0, 1.34fr) minmax(0, .66fr);
+  gap: 14px;
+  width: min(calc(100% - 56px), 1120px);
+  margin: 20px auto 0;
 }
 
 .rhythm-image {
   display: block;
   min-width: 0;
-  min-height: 252px;
+  min-height: 260px;
   overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 3px;
+  border: 1px solid rgba(246, 239, 230, .1);
+  border-radius: 8px;
   background: var(--panel);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .24);
 }
 
 .rhythm-image img {
   display: block;
   width: 100%;
   height: 100%;
-  min-height: 252px;
+  min-height: 260px;
   object-fit: cover;
+  filter: contrast(1.04) saturate(1.03);
 }
 
 .rhythm-wide {
@@ -556,7 +565,7 @@ body.locked-view .lock-panel {
 }
 
 .rhythm-wide img {
-  min-height: 518px;
+  min-height: 534px;
   object-position: 50% 53%;
 }
 
@@ -575,8 +584,8 @@ body.locked-view .lock-panel {
 .focus-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.18fr) minmax(260px, .82fr);
-  gap: 12px;
-  width: min(calc(100% - 40px), 1040px);
+  gap: 14px;
+  width: min(calc(100% - 56px), 1120px);
   margin: 14px auto 0;
   align-items: stretch;
 }
@@ -585,10 +594,10 @@ body.locked-view .lock-panel {
   display: block;
   min-width: 0;
   overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: 3px;
+  border: 1px solid rgba(246, 239, 230, .1);
+  border-radius: 8px;
   background: var(--panel);
-  box-shadow: none;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .22);
 }
 
 .media-panel img {
@@ -610,9 +619,9 @@ body.locked-view .lock-panel {
   gap: 8px;
   min-height: 300px;
   margin-top: 0;
-  padding: 22px;
-  border-left: 1px solid var(--line);
-  background: rgba(18, 18, 17, .98);
+  padding: 24px;
+  border-left: 1px solid rgba(246, 239, 230, .12);
+  background: linear-gradient(145deg, rgba(18, 17, 15, .98), rgba(11, 11, 10, .98));
 }
 
 .advisor-panel strong {
@@ -705,8 +714,8 @@ details.panel {
     align-items: center;
     flex-wrap: nowrap;
     gap: 8px;
-    min-height: 58px;
-    padding: 8px 12px;
+    min-height: 64px;
+    padding: 10px 14px;
   }
 
   .suite-brand-cluster {
@@ -765,22 +774,22 @@ details.panel {
   }
 
   .dream-hero {
-    min-height: 620px;
+    min-height: 680px;
   }
 
   .dream-hero::before {
     background:
-      linear-gradient(0deg, rgba(5, 5, 5, .56) 0%, rgba(5, 5, 5, .04) 58%, rgba(5, 5, 5, 0) 100%),
-      linear-gradient(90deg, rgba(5, 5, 5, .22) 0%, rgba(5, 5, 5, .02) 80%);
+      linear-gradient(0deg, rgba(5, 5, 5, .62) 0%, rgba(5, 5, 5, .08) 58%, rgba(5, 5, 5, 0) 100%),
+      linear-gradient(90deg, rgba(5, 5, 5, .32) 0%, rgba(5, 5, 5, .02) 80%);
   }
 
   .dream-image img {
-    object-position: 55% 58%;
+    object-position: 57% 58%;
   }
 
   .dream-copy {
     top: auto;
-    bottom: 178px;
+    bottom: 198px;
     left: 20px;
     width: calc(100% - 40px);
     gap: 10px;
@@ -799,6 +808,7 @@ details.panel {
     left: 12px;
     right: 12px;
     bottom: 12px;
+    width: auto;
     grid-template-columns: 1fr;
     gap: 12px;
     padding: 15px 16px;
@@ -837,7 +847,7 @@ details.panel {
   .rhythm-image,
   .rhythm-image img,
   .rhythm-wide img {
-    min-height: 220px;
+    min-height: 230px;
   }
 
   .media-panel img {
