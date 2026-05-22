@@ -1,6 +1,7 @@
 const els = {
   storageState: document.getElementById("storageState"),
   connectBank: document.getElementById("connectBank"),
+  connectBankPrimary: document.getElementById("connectBankPrimary"),
   syncBank: document.getElementById("syncBank"),
   csvInput: document.getElementById("csvInput"),
   csvButton: document.getElementById("csvButton"),
@@ -142,10 +143,14 @@ function setBusy(text) {
   els.storageState.textContent = text;
 }
 
+function connectButtons() {
+  return [els.connectBank, els.connectBankPrimary].filter(Boolean);
+}
+
 function showLock(message = "PIN required") {
   document.body.classList.add("locked-view");
   els.lockPanel.hidden = false;
-  els.connectBank.hidden = true;
+  connectButtons().forEach((button) => { button.hidden = true; });
   els.syncBank.hidden = true;
   els.csvButton.hidden = true;
   els.storageState.textContent = "Locked";
@@ -156,22 +161,24 @@ function showLock(message = "PIN required") {
 function hideLock() {
   document.body.classList.remove("locked-view");
   els.lockPanel.hidden = true;
-  els.connectBank.hidden = false;
+  connectButtons().forEach((button) => { button.hidden = false; });
   els.csvButton.hidden = false;
   els.accessMessage.textContent = "";
 }
 
 function renderBankControls(data) {
   const plaid = data.plaid || {};
-  els.connectBank.disabled = false;
+  connectButtons().forEach((button) => { button.disabled = false; });
   els.syncBank.disabled = !plaid.connected;
   els.connectBank.textContent = plaid.connected ? "relink" : "connect";
+  if (els.connectBankPrimary) els.connectBankPrimary.textContent = plaid.connected ? "relink Chase" : "connect Chase";
   els.syncBank.hidden = !plaid.connected;
-  els.connectBank.title = plaid.productionReviewPending
+  const title = plaid.productionReviewPending
     ? "Plaid review pending"
     : plaid.configured
       ? "Connect bank through Plaid"
       : "Plaid setup needed";
+  connectButtons().forEach((button) => { button.title = title; });
 }
 
 async function loadState() {
@@ -335,7 +342,7 @@ async function exchangePlaidPublicToken(publicToken, metadata) {
   localStorage.removeItem("a3PlaidLinkToken");
 }
 
-els.connectBank.addEventListener("click", async () => {
+async function connectBank() {
   try {
     setBusy("Connecting");
     const data = await api("/api/plaid/link-token", {
@@ -380,6 +387,10 @@ els.connectBank.addEventListener("click", async () => {
     }
     document.body.insertAdjacentHTML("beforeend", `<pre class="boot-error">${escapeHtml(error.message)}</pre>`);
   }
+}
+
+connectButtons().forEach((button) => {
+  button.addEventListener("click", connectBank);
 });
 
 els.syncBank.addEventListener("click", async () => {
