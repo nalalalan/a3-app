@@ -197,15 +197,18 @@ function compactAdvisor(latestRun, analysis) {
   const advice = latestRun?.advice || {};
 
   if (connected && creditLoanBalance > 0) {
-    const latestAction = shortText(advice.one_action, 64);
-    const action = /autopay|payment|verify/i.test(latestAction)
-      ? latestAction.replace(/^Verify the /i, "Verify ")
-      : "This week: protect cash, reduce one balance.";
+    const payment = recentAutopay(analysis.transactions);
+    const paymentValue = payment
+      ? Math.max(Number(payment.spend || 0), Number(payment.inflow || 0))
+      : 0;
+    const action = payment
+      ? `Check ${moneyExact.format(paymentValue)} Chase payment.`
+      : `Keep at least ${money.format(floor)} cash.`;
     return {
       status: "Balance first",
       action,
-      summary: `${money.format(cash)} cash / ${money.format(creditLoanBalance)} credit/loan balance.`,
-      effect: `Keep at least ${money.format(floor)} cash. The car target stays visible.`
+      summary: `${money.format(cash)} cash. ${money.format(creditLoanBalance)} card/loan balance.`,
+      effect: "Paying down balances first makes the A3 path less risky."
     };
   }
 
@@ -262,32 +265,32 @@ function financialMoves(analysis) {
   if (autopay) {
     const value = Math.max(Number(autopay.spend || 0), Number(autopay.inflow || 0));
     moves.push({
-      label: "Verify autopay",
-      detail: `${moneyExact.format(value)} on ${dateLabel(autopay.date)}`
+      label: "Check payment",
+      detail: `${moneyExact.format(value)} Chase payment found ${dateLabel(autopay.date)}`
     });
   }
   if (accounts.connected) {
     moves.push({
-      label: "Protect floor",
-      detail: `${money.format(cashRoom)} above ${money.format(floor)}`
+      label: `Keep ${money.format(floor)} cash`,
+      detail: `${money.format(cashRoom)} cushion right now`
     });
   }
   if (creditLoanBalance > 0) {
     moves.push({
-      label: "Reduce one balance",
-      detail: `${money.format(creditLoanBalance)} credit/loan balance`
+      label: "Lower card/loan balance",
+      detail: `${money.format(creditLoanBalance)} shown before A3 saving`
     });
   }
   if (goal.downPaymentGap > 0) {
     moves.push({
-      label: "A3 gap",
-      detail: `${money.format(goal.downPaymentGap)} after floor`
+      label: "A3 down payment",
+      detail: `${money.format(goal.downPaymentGap)} left after cash floor`
     });
   }
   const fallbackMoves = [
-    { label: "Protect floor", detail: "Keep cash stable." },
-    { label: "A3 gap", detail: "No sample numbers." },
-    { label: "One move", detail: "Wait for current data." }
+    { label: "Keep cash steady", detail: "Do not guess with old numbers." },
+    { label: "A3 down payment", detail: "Wait for current Chase data." },
+    { label: "One move", detail: "No extra action until data is current." }
   ];
   for (const fallback of fallbackMoves) {
     if (moves.length >= 3) break;
