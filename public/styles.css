@@ -46,6 +46,7 @@ body {
 
 body.locked-view .dream-fund,
 body.locked-view .summary-row,
+body.locked-view .move-strip,
 body.locked-view .focus-grid,
 body.locked-view details.panel {
   display: none;
@@ -591,6 +592,44 @@ body.locked-view .lock-panel {
   overflow-wrap: anywhere;
 }
 
+.move-strip {
+  position: relative;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: min(calc(100% - 72px), 1040px);
+  margin: 10px auto 0;
+  border-top: 1px solid rgba(246, 239, 230, .16);
+  border-bottom: 1px solid rgba(246, 239, 230, .1);
+}
+
+.move-card {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 11px 14px;
+}
+
+.move-card + .move-card {
+  border-left: 1px solid rgba(246, 239, 230, .1);
+}
+
+.move-card strong {
+  color: var(--ink);
+  font-size: .98rem;
+  font-weight: 760;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+
+.move-card span {
+  color: var(--muted);
+  font-size: .8rem;
+  font-weight: 650;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
 .image-rhythm {
   position: relative;
   z-index: 4;
@@ -942,6 +981,7 @@ details.panel {
   }
 
   .summary-row,
+  .move-strip,
   .image-rhythm,
   .focus-grid,
   details.panel {
@@ -964,6 +1004,15 @@ details.panel {
   .focus-grid {
     gap: 8px;
     grid-template-columns: 1fr;
+  }
+
+  .move-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .move-card + .move-card {
+    border-left: 0;
+    border-top: 1px solid rgba(246, 239, 230, .1);
   }
 
   .image-rhythm {

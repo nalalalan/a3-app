@@ -33,6 +33,12 @@ const els = {
   advisorSummary: document.getElementById("advisorSummary"),
   advisorAction: document.getElementById("advisorAction"),
   advisorEffect: document.getElementById("advisorEffect"),
+  moveOneLabel: document.getElementById("moveOneLabel"),
+  moveOneDetail: document.getElementById("moveOneDetail"),
+  moveTwoLabel: document.getElementById("moveTwoLabel"),
+  moveTwoDetail: document.getElementById("moveTwoDetail"),
+  moveThreeLabel: document.getElementById("moveThreeLabel"),
+  moveThreeDetail: document.getElementById("moveThreeDetail"),
   watchList: document.getElementById("watchList"),
   bankList: document.getElementById("bankList"),
   eventList: document.getElementById("eventList"),
@@ -191,9 +197,13 @@ function compactAdvisor(latestRun, analysis) {
   const advice = latestRun?.advice || {};
 
   if (connected && creditLoanBalance > 0) {
+    const latestAction = shortText(advice.one_action, 64);
+    const action = /autopay|payment|verify/i.test(latestAction)
+      ? latestAction.replace(/^Verify the /i, "Verify ")
+      : "This week: protect cash, reduce one balance.";
     return {
       status: "Balance first",
-      action: "This week: protect cash, reduce one balance.",
+      action,
       summary: `${money.format(cash)} cash / ${money.format(creditLoanBalance)} credit/loan balance.`,
       effect: `Keep at least ${money.format(floor)} cash. The car target stays visible.`
     };
@@ -222,6 +232,81 @@ function shortText(value, maxLength) {
   const slice = text.slice(0, maxLength - 1);
   const lastSpace = slice.lastIndexOf(" ");
   return `${slice.slice(0, lastSpace > 40 ? lastSpace : slice.length).trim()}.`;
+}
+
+function recentAutopay(transactions) {
+  return (transactions || []).find((transaction) => {
+    const text = `${transaction.merchant || ""} ${transaction.description || ""}`.toLowerCase();
+    return /autopay|credit crd|credit card payment|automatic payment|payment thank/.test(text)
+      && (Number(transaction.spend || 0) >= 500 || Number(transaction.inflow || 0) >= 500);
+  });
+}
+
+function financialMoves(analysis) {
+  const accounts = analysis.accounts || {};
+  const settings = analysis.settings || {};
+  const goal = analysis.goal || {};
+  const floor = Number(settings.cashFloor || 0);
+  const cash = Number(accounts.cash || 0);
+  const creditLoanBalance = Number(accounts.debtTotal || 0);
+  const cashRoom = Math.max(0, cash - floor);
+  const autopay = recentAutopay(analysis.transactions);
+  const moves = [];
+
+  if (!accounts.connected) {
+    moves.push({
+      label: "Connect Chase",
+      detail: "Use current balances."
+    });
+  }
+  if (autopay) {
+    const value = Math.max(Number(autopay.spend || 0), Number(autopay.inflow || 0));
+    moves.push({
+      label: "Verify autopay",
+      detail: `${moneyExact.format(value)} on ${dateLabel(autopay.date)}`
+    });
+  }
+  if (accounts.connected) {
+    moves.push({
+      label: "Protect floor",
+      detail: `${money.format(cashRoom)} above ${money.format(floor)}`
+    });
+  }
+  if (creditLoanBalance > 0) {
+    moves.push({
+      label: "Reduce one balance",
+      detail: `${money.format(creditLoanBalance)} credit/loan balance`
+    });
+  }
+  if (goal.downPaymentGap > 0) {
+    moves.push({
+      label: "A3 gap",
+      detail: `${money.format(goal.downPaymentGap)} after floor`
+    });
+  }
+  const fallbackMoves = [
+    { label: "Protect floor", detail: "Keep cash stable." },
+    { label: "A3 gap", detail: "No sample numbers." },
+    { label: "One move", detail: "Wait for current data." }
+  ];
+  for (const fallback of fallbackMoves) {
+    if (moves.length >= 3) break;
+    if (!moves.some((move) => move.label === fallback.label)) moves.push(fallback);
+  }
+  return moves.slice(0, 3);
+}
+
+function renderFinancialMoves(moves) {
+  const slots = [
+    [els.moveOneLabel, els.moveOneDetail],
+    [els.moveTwoLabel, els.moveTwoDetail],
+    [els.moveThreeLabel, els.moveThreeDetail]
+  ];
+  slots.forEach(([labelNode, detailNode], index) => {
+    const move = moves[index] || { label: "", detail: "" };
+    labelNode.textContent = move.label;
+    detailNode.textContent = move.detail;
+  });
 }
 
 async function loadState() {
@@ -277,6 +362,7 @@ function render(data) {
     els.advisorAction.textContent = plaidReviewPending ? "Chase tracking pending." : "Connect Chase first.";
     els.advisorSummary.textContent = "No sample numbers are used.";
     els.advisorEffect.textContent = plaidReviewPending ? "Spending plan starts after bank link." : "";
+    renderFinancialMoves(financialMoves(analysis));
     renderRows(els.watchList, [{ label: "Bank off", detail: "No connected Chase data." }], (item) => [item.label, item.detail]);
     renderBankAccounts(accounts.items || []);
     renderRows(els.eventList, data.events, (item) => [item.label, item.type]);
@@ -309,6 +395,7 @@ function render(data) {
   els.advisorAction.textContent = advisorDisplay.action;
   els.advisorSummary.textContent = advisorDisplay.summary;
   els.advisorEffect.textContent = advisorDisplay.effect;
+  renderFinancialMoves(financialMoves(analysis));
 
   renderRows(els.watchList, analysis.watch, (item) => [item.label, item.detail]);
   renderBankAccounts(accounts.items || []);
