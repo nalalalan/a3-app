@@ -292,6 +292,7 @@ function publicConnection(connection) {
 function plaidStatus(store) {
   const connections = (store.bankConnections || []).map(publicConnection);
   const latestSync = [...(store.bankSyncs || [])].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0];
+  const accounts = dedupeBankAccounts(store.bankAccounts || []);
   return {
     configured: plaidConfigured(),
     env: plaidEnv,
@@ -299,7 +300,7 @@ function plaidStatus(store) {
     connected: connections.length > 0,
     tokenProtected: Boolean(tokenKey()),
     connections,
-    accountCount: (store.bankAccounts || []).length,
+    accountCount: accounts.length,
     lastSyncAt: latestSync?.createdAt || "",
     lastError: latestSync?.error || connections.find((item) => item.lastError)?.lastError || ""
   };
@@ -482,6 +483,37 @@ function accountBalanceValue(account) {
   return null;
 }
 
+function keyPart(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function accountLogicalKey(account) {
+  const mask = keyPart(account.mask);
+  if (!mask) return `id:${account.id || account.accountId || ""}`;
+  return [
+    keyPart(account.provider || "plaid"),
+    keyPart(account.institutionId || account.institutionName),
+    keyPart(account.type),
+    keyPart(account.subtype),
+    mask
+  ].join("|");
+}
+
+function dedupeBankAccounts(accounts) {
+  const byKey = new Map();
+  for (const account of accounts || []) {
+    const key = accountLogicalKey(account);
+    const existing = byKey.get(key);
+    if (!existing || String(account.updatedAt || "") >= String(existing.updatedAt || "")) {
+      byKey.set(key, account);
+    }
+  }
+  return [...byKey.values()];
+}
+
 function bankAccountTotals(accounts) {
   const totals = {
     connected: accounts.length > 0,
@@ -513,6 +545,48 @@ function bankAccountTotals(accounts) {
   totals.debtTotal = totals.creditDebt + totals.loanDebt;
   totals.netCashAfterDebt = totals.cash - totals.debtTotal;
   return totals;
+}
+
+function enrichTransactionAccount(transaction, accountsByAccountId) {
+  if (!transaction.plaidAccountId) return transaction;
+  const account = accountsByAccountId.get(transaction.plaidAccountId);
+  if (!account) return transaction;
+  return {
+    ...transaction,
+    plaidAccountMask: transaction.plaidAccountMask || account.mask || "",
+    plaidInstitutionName: transaction.plaidInstitutionName || account.institutionName || "",
+    plaidInstitutionId: transaction.plaidInstitutionId || account.institutionId || "",
+    plaidLogicalAccountKey: accountLogicalKey(account)
+  };
+}
+
+function transactionLogicalKey(transaction) {
+  if (!transaction.plaidTransactionId) return transaction.id || "";
+  return [
+    "plaid",
+    transaction.plaidLogicalAccountKey || transaction.plaidAccountId || "",
+    transaction.date || "",
+    keyPart(transaction.description),
+    keyPart(transaction.category),
+    Number(transaction.amount || 0).toFixed(2)
+  ].join("|");
+}
+
+function dedupeAnalysisTransactions(transactions) {
+  const exactIds = new Set();
+  const logicalSources = new Map();
+  const result = [];
+  for (const transaction of transactions) {
+    if (transaction.id && exactIds.has(transaction.id)) continue;
+    if (transaction.id) exactIds.add(transaction.id);
+    const logicalKey = transactionLogicalKey(transaction);
+    const source = transaction.source || "";
+    const existingSource = logicalSources.get(logicalKey);
+    if (logicalKey && existingSource && source && existingSource !== source) continue;
+    if (logicalKey && !existingSource) logicalSources.set(logicalKey, source || "unknown");
+    result.push(transaction);
+  }
+  return result;
 }
 
 function activeMode(settings, transactions) {
@@ -641,8 +715,13 @@ function watchItems(input) {
 
 function analyze(store) {
   const settings = { ...DEFAULT_SETTINGS, ...(store.settings || {}) };
-  const transactions = [...(store.transactions || [])]
+  const rawBankAccounts = [...(store.bankAccounts || [])];
+  const accountsByAccountId = new Map(rawBankAccounts
+    .filter((account) => account.accountId)
+    .map((account) => [account.accountId, account]));
+  const transactions = dedupeAnalysisTransactions([...(store.transactions || [])]
     .filter((transaction) => transaction.date)
+    .map((transaction) => enrichTransactionAccount(transaction, accountsByAccountId)))
     .sort((a, b) => dateMs(b.date) - dateMs(a.date));
   const mode = activeMode(settings, transactions);
   const latestDate = transactions[0]?.date || new Date().toISOString().slice(0, 10);
@@ -651,7 +730,7 @@ function analyze(store) {
     ...flowFor(transaction, mode),
     merchant: merchantName(transaction.description)
   }));
-  const accounts = bankAccountTotals([...(store.bankAccounts || [])].sort((a, b) => {
+  const accounts = bankAccountTotals(dedupeBankAccounts(rawBankAccounts).sort((a, b) => {
     const left = `${a.type || ""}${a.name || ""}`;
     const right = `${b.type || ""}${b.name || ""}`;
     return left.localeCompare(right);
@@ -813,7 +892,10 @@ async function callOpenAiForAdvice({ analysis, events, messages }) {
         "The goal is to increase the realistic possibility of buying the specified Audi A3 without destabilizing cash flow.",
         "Do not claim to be a licensed financial advisor. Do not give investment, tax, insurance, or loan approval guarantees.",
         "Use the provided source-backed numbers only. If a required number is missing, say what is missing.",
-        "Return one calm action. Keep it concrete, low-stress, and measurable."
+        "Return one calm action. Keep it concrete, low-stress, and measurable.",
+        "Do not write paragraphs. status is 1-3 words. one_action is at most 12 words.",
+        "Do not recommend a specific extra payment amount unless that exact amount is present in the source data or settings.",
+        "Use credit/loan balance instead of debt in user-facing language."
       ].join("\n"),
       input: [{
         role: "user",
@@ -932,6 +1014,9 @@ function plaidTransactionToApp(transaction, accountsById, connection) {
     plaidAccountName: account.name || "",
     plaidAccountType: account.type || "",
     plaidAccountSubtype: account.subtype || "",
+    plaidAccountMask: account.mask || "",
+    plaidInstitutionName: account.institutionName || connection.institutionName || "",
+    plaidInstitutionId: account.institutionId || connection.institutionId || "",
     date: transaction.date || transaction.authorized_date || "",
     description: transaction.merchant_name || transaction.name || "Transaction",
     category: cleanCategory(category),

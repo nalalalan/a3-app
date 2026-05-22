@@ -181,6 +181,49 @@ function renderBankControls(data) {
   connectButtons().forEach((button) => { button.title = title; });
 }
 
+function compactAdvisor(latestRun, analysis) {
+  const accounts = analysis.accounts || {};
+  const settings = analysis.settings || {};
+  const connected = Boolean(accounts.connected);
+  const creditLoanBalance = Number(accounts.debtTotal || 0);
+  const cash = Number(accounts.cash || 0);
+  const floor = Number(settings.cashFloor || 0);
+  const advice = latestRun?.advice || {};
+
+  if (connected && creditLoanBalance > 0) {
+    return {
+      status: "Balance first",
+      action: "This week: protect cash, reduce one balance.",
+      summary: `${money.format(cash)} cash / ${money.format(creditLoanBalance)} credit/loan balance.`,
+      effect: `Keep at least ${money.format(floor)} cash. The car target stays visible.`
+    };
+  }
+
+  if (latestRun) {
+    return {
+      status: titleCase(advice.status),
+      action: shortText(advice.one_action, 86),
+      summary: shortText(advice.summary, 92),
+      effect: shortText([advice.why, advice.a3_effect].filter(Boolean).join(" "), 180)
+    };
+  }
+
+  return {
+    status: "Ready",
+    action: shortText(analysis.action.label, 86),
+    summary: shortText(analysis.action.detail, 92),
+    effect: ""
+  };
+}
+
+function shortText(value, maxLength) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (text.length <= maxLength) return text;
+  const slice = text.slice(0, maxLength - 1);
+  const lastSpace = slice.lastIndexOf(" ");
+  return `${slice.slice(0, lastSpace > 40 ? lastSpace : slice.length).trim()}.`;
+}
+
 async function loadState() {
   const data = await api("/api/state");
   hideLock();
@@ -259,20 +302,13 @@ function render(data) {
   els.gapLabel.textContent = accounts.connected
     ? `${money.format(accounts.cash || 0)} cash / ${dateTimeLabel(accounts.lastUpdatedAt)}`
     : `${money.format(goal.availableForDownPayment)} above floor`;
-  els.actionLabel.textContent = latestRun?.advice?.one_action || analysis.action.label;
-  els.actionDetail.textContent = latestRun?.advice?.why || analysis.action.detail;
-
-  if (latestRun) {
-    els.advisorStatus.textContent = titleCase(latestRun.advice.status);
-    els.advisorAction.textContent = latestRun.advice.one_action;
-    els.advisorSummary.textContent = latestRun.advice.summary;
-    els.advisorEffect.textContent = latestRun.advice.a3_effect;
-  } else {
-    els.advisorStatus.textContent = "Ready";
-    els.advisorAction.textContent = analysis.action.label;
-    els.advisorSummary.textContent = analysis.action.detail;
-    els.advisorEffect.textContent = "";
-  }
+  const advisorDisplay = compactAdvisor(latestRun, analysis);
+  els.actionLabel.textContent = accounts.debtTotal > 0 ? advisorDisplay.status : latestRun?.advice?.one_action || analysis.action.label;
+  els.actionDetail.textContent = accounts.debtTotal > 0 ? advisorDisplay.summary : latestRun?.advice?.why || analysis.action.detail;
+  els.advisorStatus.textContent = advisorDisplay.status;
+  els.advisorAction.textContent = advisorDisplay.action;
+  els.advisorSummary.textContent = advisorDisplay.summary;
+  els.advisorEffect.textContent = advisorDisplay.effect;
 
   renderRows(els.watchList, analysis.watch, (item) => [item.label, item.detail]);
   renderBankAccounts(accounts.items || []);

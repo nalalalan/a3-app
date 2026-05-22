@@ -701,11 +701,11 @@ body.locked-view .lock-panel {
   bottom: 18px;
   display: grid;
   align-content: center;
-  gap: 8px;
-  width: min(390px, calc(100% - 36px));
+  gap: 10px;
+  width: min(340px, calc(100% - 36px));
   min-height: auto;
   margin-top: 0;
-  padding: 18px;
+  padding: 15px;
   border: 1px solid rgba(246, 239, 230, .13);
   border-radius: 2px;
   background:
@@ -715,9 +715,30 @@ body.locked-view .lock-panel {
 }
 
 .advisor-panel strong {
-  font-size: clamp(1.15rem, 2.2vw, 1.5rem);
-  font-weight: 560;
-  line-height: 1.1;
+  max-width: 24ch;
+  font-size: clamp(1.08rem, 1.8vw, 1.28rem);
+  font-weight: 620;
+  line-height: 1.12;
+}
+
+.advisor-more {
+  margin-top: 2px;
+}
+
+.advisor-more summary {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 28px;
+  padding: 0;
+  color: rgba(246, 239, 230, .58);
+  font-size: .8rem;
+  font-weight: 650;
+}
+
+.advisor-more span {
+  display: block;
+  padding-top: 7px;
+  color: rgba(246, 239, 230, .72);
 }
 
 summary {
