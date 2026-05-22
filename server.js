@@ -1183,6 +1183,8 @@ async function monitorTick(reason = "interval") {
 async function handleApi(req, res, requestUrl) {
   if (requestUrl.pathname === "/api/health" || requestUrl.pathname === "/health") {
     const store = await readStore();
+    const analysis = analyze(store);
+    const plaid = plaidStatus(store);
     sendJson(res, 200, {
       ok: true,
       app: "a3.aolabs.io",
@@ -1191,8 +1193,9 @@ async function handleApi(req, res, requestUrl) {
       openaiConfigured: Boolean(openAiApiKey),
       model: openAiModel,
       plaidConfigured: plaidConfigured(),
-      plaidConnected: (store.bankConnections || []).length > 0,
-      transactions: store.transactions.length,
+      plaidConnected: plaid.connected,
+      accounts: plaid.accountCount,
+      transactions: analysis.totals.transactionCount,
       checkedAt: new Date().toISOString()
     });
     return true;
