@@ -174,14 +174,21 @@ function hideLock() {
 
 function renderBankControls(data) {
   const plaid = data.plaid || {};
+  const needsRelink = plaid.connected && /login|required|expired|invalid|item/i.test(String(plaid.lastError || ""));
   connectButtons().forEach((button) => { button.disabled = false; });
   els.syncBank.disabled = !plaid.connected;
-  els.connectBank.textContent = plaid.connected ? "relink" : "connect";
-  if (els.connectBankPrimary) els.connectBankPrimary.textContent = plaid.connected ? "relink Chase" : "connect Chase";
+  els.connectBank.textContent = plaid.connected ? needsRelink ? "relink" : "linked" : "connect";
+  els.connectBank.disabled = plaid.connected && !needsRelink;
+  if (els.connectBankPrimary) {
+    els.connectBankPrimary.textContent = needsRelink ? "relink Chase" : "connect Chase";
+    els.connectBankPrimary.hidden = plaid.connected && !needsRelink;
+  }
   els.syncBank.hidden = !plaid.connected;
   const title = plaid.productionReviewPending
     ? "Plaid review pending"
-    : plaid.configured
+    : plaid.connected && !needsRelink
+      ? "Bank linked through Plaid"
+      : plaid.configured
       ? "Connect bank through Plaid"
       : "Plaid setup needed";
   connectButtons().forEach((button) => { button.title = title; });
@@ -197,18 +204,20 @@ function compactAdvisor(latestRun, analysis) {
   const advice = latestRun?.advice || {};
 
   if (connected && creditLoanBalance > 0) {
-    const payment = recentAutopay(analysis.transactions);
-    const paymentValue = payment
-      ? Math.max(Number(payment.spend || 0), Number(payment.inflow || 0))
-      : 0;
-    const action = payment
-      ? `Open Chase and confirm ${moneyExact.format(paymentValue)} posted.`
-      : `Keep at least ${money.format(floor)} cash.`;
+    const payment = paymentStatus(analysis);
+    const action = payment.status === "posted" || payment.status === "posted_partial"
+      ? "No Chase login needed."
+      : payment.status === "pending"
+        ? `${moneyExact.format(payment.amount)} is pending in Plaid.`
+        : "A3 has not seen the payment in Plaid yet.";
+    const summary = payment.amount > 0
+      ? `${moneyExact.format(payment.amount)} payment ${payment.status === "pending" ? "is pending" : "is posted"} in Plaid.`
+      : `No extra A3 saving today. ${money.format(cash)} cash right now.`;
     return {
-      status: "Start here",
+      status: payment.status === "pending" ? "A3 is watching" : payment.status === "not_visible" ? "A3 is checking" : "Already checked",
       action,
-      summary: `No extra A3 saving today. ${money.format(cash)} cash right now.`,
-      effect: `${money.format(creditLoanBalance)} card/loan balance shows before A3 saving.`
+      summary,
+      effect: `${money.format(cash)} cash; ${money.format(creditLoanBalance)} card/loan balance.`
     };
   }
 
@@ -245,6 +254,19 @@ function recentAutopay(transactions) {
   });
 }
 
+function paymentStatus(analysis) {
+  const fromServer = analysis.paymentStatus || {};
+  if (fromServer.status) return fromServer;
+  const payment = recentAutopay(analysis.transactions);
+  if (!payment) return { status: "not_visible", amount: 0 };
+  return {
+    status: payment.pending ? "pending" : "posted_partial",
+    amount: Math.max(Number(payment.spend || 0), Number(payment.inflow || 0)),
+    date: payment.date,
+    detail: payment.pending ? "Plaid sees it pending." : "Plaid sees it posted."
+  };
+}
+
 function financialMoves(analysis) {
   const accounts = analysis.accounts || {};
   const settings = analysis.settings || {};
@@ -253,7 +275,7 @@ function financialMoves(analysis) {
   const cash = Number(accounts.cash || 0);
   const creditLoanBalance = Number(accounts.debtTotal || 0);
   const cashRoom = Math.max(0, cash - floor);
-  const autopay = recentAutopay(analysis.transactions);
+  const payment = paymentStatus(analysis);
   const moves = [];
 
   if (!accounts.connected) {
@@ -262,20 +284,19 @@ function financialMoves(analysis) {
       detail: "Use current balances."
     });
   }
-  if (accounts.connected && creditLoanBalance > 0 && autopay) {
-    const value = Math.max(Number(autopay.spend || 0), Number(autopay.inflow || 0));
+  if (accounts.connected && creditLoanBalance > 0 && payment.status !== "not_visible") {
     moves.push({
-      label: "Start here",
-      detail: `Open Chase. Confirm ${moneyExact.format(value)} posted.`
+      label: payment.status === "pending" ? "A3 is watching" : "Already checked",
+      detail: `${moneyExact.format(payment.amount)} ${payment.status === "pending" ? "pending" : "posted"} in Plaid.`
     });
     moves.push({
       label: "Do not move A3 cash",
-      detail: `Wait until the ${dateLabel(autopay.date)} payment is settled.`
+      detail: payment.status === "pending" ? "Wait for posted status." : "Keep the floor while balance remains."
     });
   } else if (accounts.connected) {
     moves.push({
-      label: "Start here",
-      detail: `Keep at least ${money.format(floor)} cash.`
+      label: "A3 is checking",
+      detail: "Plaid will be checked again."
     });
   }
   if (creditLoanBalance > 0) {

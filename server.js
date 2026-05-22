@@ -609,6 +609,84 @@ function flowFor(transaction, mode) {
   return amount < 0 ? { spend: Math.abs(amount), inflow: 0 } : { spend: 0, inflow: amount };
 }
 
+function paymentAmount(transaction) {
+  return Math.max(
+    Math.abs(Number(transaction.amount || 0)),
+    Math.abs(Number(transaction.spend || 0)),
+    Math.abs(Number(transaction.inflow || 0))
+  );
+}
+
+function isCreditPayment(transaction) {
+  const text = `${transaction.type || ""} ${transaction.category || ""} ${transaction.description || ""} ${transaction.merchant || ""}`.toLowerCase();
+  return /autopay|credit crd|credit card payment|automatic payment|payment thank|card payment/.test(text)
+    && paymentAmount(transaction) >= 500;
+}
+
+function paymentRole(transaction) {
+  const accountType = String(transaction.plaidAccountType || "").toLowerCase();
+  if (accountType === "credit" && Number(transaction.inflow || 0) > 0) return "card";
+  if (accountType === "depository" && Number(transaction.spend || 0) > 0) return "checking";
+  return "bank";
+}
+
+function creditPaymentStatus(transactions, latestDate) {
+  const candidates = (transactions || [])
+    .filter((transaction) => transaction.date && isCreditPayment(transaction))
+    .filter((transaction) => !latestDate || daysBetween(latestDate, transaction.date) <= 45)
+    .sort((a, b) => dateMs(b.date) - dateMs(a.date) || paymentAmount(b) - paymentAmount(a));
+  if (!candidates.length) {
+    return {
+      status: "not_visible",
+      label: "No large payment visible",
+      amount: 0,
+      detail: "Plaid has not shown a recent large credit-card payment.",
+      candidates: []
+    };
+  }
+  const primary = candidates[0];
+  const amount = paymentAmount(primary);
+  const related = candidates
+    .filter((transaction) => Math.abs(paymentAmount(transaction) - amount) < 1)
+    .filter((transaction) => Math.abs(daysBetween(primary.date, transaction.date)) <= 3);
+  const cardPosted = related.find((transaction) => !transaction.pending && paymentRole(transaction) === "card");
+  const checkingPosted = related.find((transaction) => !transaction.pending && paymentRole(transaction) === "checking");
+  const pending = related.some((transaction) => transaction.pending);
+  const posted = related.some((transaction) => !transaction.pending);
+  let status = "seen";
+  let label = "Payment seen in Plaid";
+  let detail = "Plaid sees the payment.";
+  if (cardPosted && checkingPosted) {
+    status = "posted";
+    label = "Payment posted in Plaid";
+    detail = `Seen on card ${cardPosted.date} and checking ${checkingPosted.date}.`;
+  } else if (posted) {
+    status = "posted_partial";
+    label = "Payment posted in Plaid";
+    detail = `Seen as posted on ${related.find((transaction) => !transaction.pending)?.date || primary.date}.`;
+  } else if (pending) {
+    status = "pending";
+    label = "Payment pending in Plaid";
+    detail = `Plaid sees it pending on ${primary.date}.`;
+  }
+  return {
+    status,
+    label,
+    amount,
+    date: primary.date,
+    detail,
+    candidates: related.map((transaction) => ({
+      date: transaction.date,
+      role: paymentRole(transaction),
+      pending: Boolean(transaction.pending),
+      accountName: transaction.plaidAccountName || "",
+      accountMask: transaction.plaidAccountMask || "",
+      description: transaction.description || "",
+      amount: paymentAmount(transaction)
+    }))
+  };
+}
+
 function withinDays(transaction, latestDate, days, offset = 0) {
   const age = daysBetween(latestDate, transaction.date);
   return age >= offset && age < days + offset;
@@ -775,6 +853,7 @@ function analyze(store) {
   const watch = watchItems({ withFlow, last30, latestDate, balanceKnown, balance, cashFloor, bufferDays, spendChange, recurring, goal, accounts });
   const readiness = readinessState({ balanceKnown, balance, cashFloor, bufferDays, spendChange, watch, goal, transactions, accounts });
   const action = oneAction({ readiness, watch, recurring, categories, goal, balanceKnown, accounts });
+  const paymentStatus = creditPaymentStatus(withFlow, latestDate);
   return {
     goal,
     accounts,
@@ -796,6 +875,7 @@ function analyze(store) {
     },
     readiness,
     action,
+    paymentStatus,
     weeks: weeklySpend(withFlow, latestDate),
     recurring,
     categories,
