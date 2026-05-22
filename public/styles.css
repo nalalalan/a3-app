@@ -47,6 +47,7 @@ body {
 body.locked-view .dream-fund,
 body.locked-view .summary-row,
 body.locked-view .move-strip,
+body.locked-view .action-panel,
 body.locked-view .focus-grid,
 body.locked-view details.panel {
   display: none;
@@ -639,6 +640,81 @@ body.locked-view .lock-panel {
   overflow-wrap: anywhere;
 }
 
+.action-panel {
+  position: relative;
+  z-index: 4;
+  display: grid;
+  gap: 14px;
+  width: min(calc(100% - 72px), 1040px);
+  margin: 18px auto 0;
+  padding: 18px 0 2px;
+  border-top: 1px solid rgba(246, 239, 230, .18);
+  border-bottom: 1px solid rgba(246, 239, 230, .1);
+}
+
+.action-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.action-panel-head h2 {
+  font-size: clamp(1.26rem, 2vw, 1.62rem);
+  font-weight: 760;
+}
+
+.action-panel-head span {
+  color: rgba(246, 239, 230, .62);
+  font-size: .82rem;
+  font-weight: 650;
+  text-align: right;
+}
+
+.improvement-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid rgba(246, 239, 230, .1);
+}
+
+.improvement-row {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  min-height: 98px;
+  min-width: 0;
+  padding: 15px 16px 16px 0;
+}
+
+.improvement-row + .improvement-row {
+  padding-left: 16px;
+  border-left: 1px solid rgba(246, 239, 230, .1);
+}
+
+.improvement-row strong {
+  color: var(--ink);
+  font-size: 1.02rem;
+  font-weight: 760;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.improvement-row span {
+  color: var(--muted);
+  font-size: .86rem;
+  font-weight: 620;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.improvement-row[data-severity="danger"] strong {
+  color: #f1b8ad;
+}
+
+.improvement-row[data-severity="good"] strong {
+  color: #adc4b2;
+}
+
 .image-rhythm {
   position: relative;
   z-index: 4;
@@ -991,6 +1067,7 @@ details.panel {
 
   .summary-row,
   .move-strip,
+  .action-panel,
   .image-rhythm,
   .focus-grid,
   details.panel {
@@ -1020,6 +1097,35 @@ details.panel {
   }
 
   .move-card + .move-card {
+    border-left: 0;
+    border-top: 1px solid rgba(246, 239, 230, .1);
+  }
+
+  .action-panel {
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .action-panel-head {
+    display: grid;
+    gap: 5px;
+  }
+
+  .action-panel-head span {
+    text-align: left;
+  }
+
+  .improvement-list {
+    grid-template-columns: 1fr;
+  }
+
+  .improvement-row {
+    min-height: 0;
+    padding: 12px 0;
+  }
+
+  .improvement-row + .improvement-row {
+    padding-left: 0;
     border-left: 0;
     border-top: 1px solid rgba(246, 239, 230, .1);
   }

@@ -39,6 +39,8 @@ const els = {
   moveTwoDetail: document.getElementById("moveTwoDetail"),
   moveThreeLabel: document.getElementById("moveThreeLabel"),
   moveThreeDetail: document.getElementById("moveThreeDetail"),
+  improvementState: document.getElementById("improvementState"),
+  improvementList: document.getElementById("improvementList"),
   watchList: document.getElementById("watchList"),
   bankList: document.getElementById("bankList"),
   eventList: document.getElementById("eventList"),
@@ -335,6 +337,42 @@ function renderFinancialMoves(moves) {
   });
 }
 
+function renderImprovements(analysis) {
+  const improvements = analysis.improvements || {};
+  const accounts = analysis.accounts || {};
+  const goal = analysis.goal || {};
+  const settings = analysis.settings || {};
+  const floor = Number(settings.cashFloor || 0);
+  const items = Array.isArray(improvements.items) ? improvements.items : [];
+  const fallback = accounts.connected
+    ? [
+        {
+          label: "Mistake to avoid",
+          detail: accounts.debtTotal > 0
+            ? `Do not add A3 cash while ${money.format(accounts.debtTotal)} card/loan balance remains.`
+            : `Keep ${money.format(floor)} untouched before moving A3 cash.`,
+          severity: accounts.debtTotal > 0 ? "danger" : "watch"
+        },
+        {
+          label: "Missing",
+          detail: `${money.format(goal.downPaymentGap || 0)} A3 gap after the cash floor.`,
+          severity: "watch"
+        }
+      ]
+    : [
+        { label: "Missing", detail: "Connect Chase before moving A3 cash.", severity: "watch" },
+        { label: "Floor", detail: `${money.format(floor)} stays untouched.`, severity: "watch" }
+      ];
+  const rows = (items.length ? items : fallback).slice(0, 6);
+  els.improvementState.textContent = improvements.state || (accounts.connected ? "Live Chase data." : "Chase not connected.");
+  els.improvementList.innerHTML = rows.map((item) => `
+    <div class="improvement-row" data-severity="${escapeHtml(item.severity || "watch")}">
+      <strong>${escapeHtml(item.label)}</strong>
+      <span>${escapeHtml(item.detail)}</span>
+    </div>
+  `).join("");
+}
+
 async function loadState() {
   const data = await api("/api/state");
   hideLock();
@@ -389,6 +427,7 @@ function render(data) {
     els.advisorSummary.textContent = "No sample numbers are used.";
     els.advisorEffect.textContent = plaidReviewPending ? "Spending plan starts after bank link." : "";
     renderFinancialMoves(financialMoves(analysis));
+    renderImprovements(analysis);
     renderRows(els.watchList, [{ label: "Bank off", detail: "No connected Chase data." }], (item) => [item.label, item.detail]);
     renderBankAccounts(accounts.items || []);
     renderRows(els.eventList, data.events, (item) => [item.label, item.type]);
@@ -422,6 +461,7 @@ function render(data) {
   els.advisorSummary.textContent = advisorDisplay.summary;
   els.advisorEffect.textContent = advisorDisplay.effect;
   renderFinancialMoves(financialMoves(analysis));
+  renderImprovements(analysis);
 
   renderRows(els.watchList, analysis.watch, (item) => [item.label, item.detail]);
   renderBankAccounts(accounts.items || []);

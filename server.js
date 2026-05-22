@@ -598,11 +598,17 @@ function activeMode(settings, transactions) {
 function flowFor(transaction, mode) {
   if (transaction.plaidAccountType === "credit") mode = "credit";
   if (transaction.plaidAccountType === "depository") mode = "checking";
-  const text = `${transaction.type} ${transaction.category} ${transaction.description}`.toLowerCase();
+  const accountType = String(transaction.plaidAccountType || "").toLowerCase();
+  const type = String(transaction.type || "").toLowerCase();
+  const category = String(transaction.category || "").toLowerCase();
+  const description = String(transaction.description || "").toLowerCase();
+  const text = `${type} ${category} ${description}`.toLowerCase();
+  const nonTypeText = `${category} ${description}`.toLowerCase();
   const amount = Number(transaction.amount || 0);
   if (mode === "credit") {
-    if (/payment|refund|return|credit|cashback/.test(text)) return { spend: 0, inflow: Math.abs(amount) };
-    if (/sale|debit|purchase|fee|interest/.test(text)) return { spend: Math.abs(amount), inflow: 0 };
+    if (/payment|refund|return|cashback|statement credit|credit crd|card payment|payment thank/.test(nonTypeText)) return { spend: 0, inflow: Math.abs(amount) };
+    if (/interest|fee|purchase|sale|debit/.test(nonTypeText)) return { spend: Math.abs(amount), inflow: 0 };
+    if (accountType === "credit") return amount >= 0 ? { spend: amount, inflow: 0 } : { spend: 0, inflow: Math.abs(amount) };
     return amount >= 0 ? { spend: amount, inflow: 0 } : { spend: 0, inflow: Math.abs(amount) };
   }
   if (/deposit|payroll|ach credit|interest earned/.test(text)) return { spend: 0, inflow: Math.abs(amount) };
@@ -739,6 +745,133 @@ function categoryTotals(transactions) {
     .slice(0, 8);
 }
 
+function isDebtPaymentLike(transaction) {
+  const text = `${transaction.category || ""} ${transaction.description || ""} ${transaction.merchant || ""}`.toLowerCase();
+  return isCreditPayment(transaction)
+    || /loan payment|credit card payment|credit crd|autopay|payment thank|card payment/.test(text);
+}
+
+function isFixedOrTransferLike(transaction) {
+  const text = `${transaction.category || ""} ${transaction.description || ""} ${transaction.merchant || ""}`.toLowerCase();
+  return isDebtPaymentLike(transaction)
+    || /rent|utilities|payroll|income|deposit|transfer in|transfer out|zelle payment.*landlord/.test(text);
+}
+
+function groupedSpend(transactions, keyFn) {
+  const groups = new Map();
+  for (const transaction of transactions) {
+    if (transaction.spend <= 0) continue;
+    const key = keyFn(transaction) || "Uncategorized";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(transaction);
+  }
+  return [...groups.entries()].map(([label, items]) => {
+    const sorted = items.sort((a, b) => dateMs(b.date) - dateMs(a.date));
+    return {
+      label,
+      total: sum(sorted.map((item) => item.spend)),
+      count: sorted.length,
+      latestDate: sorted[0]?.date || "",
+      category: sorted[0]?.category || ""
+    };
+  }).sort((a, b) => b.total - a.total);
+}
+
+function immediateImprovements(input) {
+  const { accounts, goal, settings, withFlow, latestDate, paymentStatus } = input;
+  const cash = Number(accounts.cash || 0);
+  const floor = Number(settings.cashFloor || 0);
+  const cushion = Math.max(0, cash - floor);
+  const debtTotal = Number(accounts.debtTotal || 0);
+  const gap = Number(goal.downPaymentGap || 0);
+  const last14 = withFlow.filter((transaction) => withinDays(transaction, latestDate, 14));
+  const flexible = last14.filter((transaction) => transaction.spend > 0 && !isFixedOrTransferLike(transaction));
+  const byMerchant = groupedSpend(flexible, (transaction) => transaction.merchant).slice(0, 6);
+  const byCategory = groupedSpend(flexible, (transaction) => transaction.category).slice(0, 6);
+  const debtPayments = last14.filter((transaction) => isDebtPaymentLike(transaction));
+  const debtPaymentTotal = sum(debtPayments.map((transaction) => transaction.spend));
+  const items = [];
+
+  if (!accounts.connected) {
+    return {
+      state: "Chase not connected.",
+      flexible14: 0,
+      debtPayment14: 0,
+      topMerchants: [],
+      topCategories: [],
+      items: [
+        { label: "Missing", detail: "Connect Chase before moving A3 cash.", severity: "watch" },
+        { label: "Floor", detail: `$${Math.round(floor).toLocaleString("en-US")} stays untouched.`, severity: "watch" }
+      ]
+    };
+  }
+
+  if (debtTotal > 0) {
+    items.push({
+      label: "Mistake to avoid",
+      detail: `Do not add A3 cash while $${Math.round(debtTotal).toLocaleString("en-US")} card/loan balance remains.`,
+      severity: "danger"
+    });
+  } else if (gap > 0) {
+    items.push({
+      label: "A3 cash",
+      detail: `Move cash above the $${Math.round(floor).toLocaleString("en-US")} floor toward the $${Math.round(gap).toLocaleString("en-US")} gap.`,
+      severity: "good"
+    });
+  }
+
+  items.push({
+    label: "Cash floor",
+    detail: `$${Math.round(cushion).toLocaleString("en-US")} can move without breaking the $${Math.round(floor).toLocaleString("en-US")} floor.`,
+    severity: cushion < 500 ? "danger" : "watch"
+  });
+
+  const topMerchant = byMerchant[0];
+  if (topMerchant && topMerchant.total >= 25) {
+    items.push({
+      label: "Biggest leak",
+      detail: `${topMerchant.label}: $${Math.round(topMerchant.total).toLocaleString("en-US")} in 14 days. Freeze this first.`,
+      severity: "watch"
+    });
+  }
+
+  const food = byCategory.find((item) => /food/i.test(item.label));
+  if (food && !items.some((item) => item.detail.includes(food.label))) {
+    items.push({
+      label: "Food leak",
+      detail: `$${Math.round(food.total).toLocaleString("en-US")} in 14 days across ${food.count} charges. Cut for 7 days.`,
+      severity: "watch"
+    });
+  }
+
+  if (debtTotal > 0) {
+    items.push({
+      label: "7-day rule",
+      detail: "No new card spending unless it is necessary.",
+      severity: "danger"
+    });
+  }
+
+  if (paymentStatus?.amount > 0) {
+    items.push({
+      label: paymentStatus.status === "pending" ? "Payment pending" : "Payment posted",
+      detail: paymentStatus.status === "pending"
+        ? `$${Math.round(paymentStatus.amount).toLocaleString("en-US")} still pending in Plaid.`
+        : `No Chase login needed for the $${Math.round(paymentStatus.amount).toLocaleString("en-US")} payment.`,
+      severity: paymentStatus.status === "pending" ? "watch" : "good"
+    });
+  }
+
+  return {
+    state: `$${Math.round(debtTotal).toLocaleString("en-US")} balance; $${Math.round(gap).toLocaleString("en-US")} A3 gap.`,
+    flexible14: sum(flexible.map((transaction) => transaction.spend)),
+    debtPayment14: debtPaymentTotal,
+    topMerchants: byMerchant,
+    topCategories: byCategory,
+    items: items.slice(0, 6)
+  };
+}
+
 function weeklySpend(transactions, latestDate) {
   const weeks = [];
   for (let index = 7; index >= 0; index -= 1) {
@@ -854,6 +987,7 @@ function analyze(store) {
   const readiness = readinessState({ balanceKnown, balance, cashFloor, bufferDays, spendChange, watch, goal, transactions, accounts });
   const action = oneAction({ readiness, watch, recurring, categories, goal, balanceKnown, accounts });
   const paymentStatus = creditPaymentStatus(withFlow, latestDate);
+  const improvements = immediateImprovements({ accounts, goal, settings, withFlow, latestDate, paymentStatus });
   return {
     goal,
     accounts,
@@ -876,6 +1010,7 @@ function analyze(store) {
     readiness,
     action,
     paymentStatus,
+    improvements,
     weeks: weeklySpend(withFlow, latestDate),
     recurring,
     categories,
