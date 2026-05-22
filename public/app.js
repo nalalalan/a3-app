@@ -202,13 +202,13 @@ function compactAdvisor(latestRun, analysis) {
       ? Math.max(Number(payment.spend || 0), Number(payment.inflow || 0))
       : 0;
     const action = payment
-      ? `Check ${moneyExact.format(paymentValue)} Chase payment.`
+      ? `Open Chase and confirm ${moneyExact.format(paymentValue)} posted.`
       : `Keep at least ${money.format(floor)} cash.`;
     return {
-      status: "Balance first",
+      status: "Start here",
       action,
-      summary: `${money.format(cash)} cash. ${money.format(creditLoanBalance)} card/loan balance.`,
-      effect: "Paying down balances first makes the A3 path less risky."
+      summary: `No extra A3 saving today. ${money.format(cash)} cash right now.`,
+      effect: `${money.format(creditLoanBalance)} card/loan balance shows before A3 saving.`
     };
   }
 
@@ -262,26 +262,28 @@ function financialMoves(analysis) {
       detail: "Use current balances."
     });
   }
-  if (autopay) {
+  if (accounts.connected && creditLoanBalance > 0 && autopay) {
     const value = Math.max(Number(autopay.spend || 0), Number(autopay.inflow || 0));
     moves.push({
-      label: "Check payment",
-      detail: `${moneyExact.format(value)} Chase payment found ${dateLabel(autopay.date)}`
+      label: "Start here",
+      detail: `Open Chase. Confirm ${moneyExact.format(value)} posted.`
     });
-  }
-  if (accounts.connected) {
     moves.push({
-      label: `Keep ${money.format(floor)} cash`,
-      detail: `${money.format(cashRoom)} cushion right now`
+      label: "Do not move A3 cash",
+      detail: `Wait until the ${dateLabel(autopay.date)} payment is settled.`
+    });
+  } else if (accounts.connected) {
+    moves.push({
+      label: "Start here",
+      detail: `Keep at least ${money.format(floor)} cash.`
     });
   }
   if (creditLoanBalance > 0) {
     moves.push({
-      label: "Lower card/loan balance",
-      detail: `${money.format(creditLoanBalance)} shown before A3 saving`
+      label: `Keep ${money.format(floor)} cash`,
+      detail: `${money.format(cashRoom)} cushion right now`
     });
-  }
-  if (goal.downPaymentGap > 0) {
+  } else if (goal.downPaymentGap > 0) {
     moves.push({
       label: "A3 down payment",
       detail: `${money.format(goal.downPaymentGap)} left after cash floor`

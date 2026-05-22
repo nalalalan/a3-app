@@ -596,7 +596,7 @@ body.locked-view .lock-panel {
   position: relative;
   z-index: 4;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr) minmax(0, 1fr);
   width: min(calc(100% - 72px), 1040px);
   margin: 10px auto 0;
   border-top: 1px solid rgba(246, 239, 230, .16);
@@ -612,6 +612,15 @@ body.locked-view .lock-panel {
 
 .move-card + .move-card {
   border-left: 1px solid rgba(246, 239, 230, .1);
+}
+
+.move-card:first-child strong {
+  font-size: clamp(1.18rem, 2.1vw, 1.42rem);
+}
+
+.move-card:first-child span {
+  color: rgba(246, 239, 230, .82);
+  font-size: .92rem;
 }
 
 .move-card strong {
