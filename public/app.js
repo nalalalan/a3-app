@@ -497,8 +497,12 @@ function renderCutAssist(improvements, accounts, locks = []) {
 function renderSpendLeaks(improvements, accounts, locks = []) {
   const spending = Array.isArray(improvements.spending) ? improvements.spending : [];
   els.spendWindow.textContent = accounts.connected ? "Last 14 days" : "Waiting for Chase";
+  const primaryKey = spendKey(activeCutItem?.label);
+  const visibleSpending = primaryKey
+    ? spending.filter((item) => spendKey(item.label) !== primaryKey)
+    : spending;
 
-  if (!spending.length) {
+  if (!visibleSpending.length) {
     els.spendLeakList.innerHTML = `<div class="spend-leak-row">
       <div>
         <strong>${accounts.connected ? "No leak list yet" : "Connect Chase"}</strong>
@@ -509,7 +513,7 @@ function renderSpendLeaks(improvements, accounts, locks = []) {
     return;
   }
 
-  els.spendLeakList.innerHTML = spending.map((item) => {
+  els.spendLeakList.innerHTML = visibleSpending.map((item) => {
     const lock = activeLockFor(item.label, locks);
     return `
       <div class="spend-leak-row" data-severity="${escapeHtml(item.severity || "watch")}">

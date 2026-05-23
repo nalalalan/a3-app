@@ -767,41 +767,42 @@ body.locked-view .lock-panel {
   position: relative;
   z-index: 4;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(240px, .54fr);
-  gap: 0;
-  width: min(calc(100% - 72px), 1040px);
-  margin: 12px auto 0;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, .42fr);
+  gap: 18px;
+  width: min(calc(100% - 72px), 940px);
+  margin: 18px auto 0;
   overflow: hidden;
-  border: 1px solid rgba(246, 239, 230, .16);
-  border-radius: 2px;
+  border: 1px solid rgba(246, 239, 230, .12);
+  border-radius: 8px;
   background:
-    linear-gradient(135deg, rgba(10, 10, 9, .96), rgba(18, 17, 15, .9)),
-    radial-gradient(circle at 84% 12%, rgba(129, 147, 184, .16), transparent 34%);
+    linear-gradient(135deg, rgba(18, 17, 15, .94), rgba(10, 10, 9, .96)),
+    radial-gradient(circle at 96% 8%, rgba(129, 147, 184, .08), transparent 38%);
+  box-shadow: 0 18px 70px rgba(0, 0, 0, .18);
 }
 
 .cut-primary {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px 20px;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: center;
+  gap: 14px;
   min-width: 0;
-  padding: 22px 24px;
+  padding: 28px;
 }
 
 .cut-primary h2 {
   color: var(--ink);
-  font-size: clamp(1.65rem, 3.2vw, 2.72rem);
+  font-size: clamp(1.88rem, 3.4vw, 3.18rem);
   font-weight: 790;
-  line-height: .96;
+  line-height: .94;
   overflow-wrap: anywhere;
 }
 
 .cut-primary p {
   min-width: 0;
-  max-width: 62ch;
+  max-width: 42ch;
   margin: 0;
   color: rgba(246, 239, 230, .68);
-  font-size: .96rem;
+  font-size: 1rem;
   font-weight: 650;
   line-height: 1.32;
   overflow-wrap: anywhere;
@@ -817,8 +818,8 @@ body.locked-view .lock-panel {
 }
 
 .cut-primary button {
-  grid-row: 1 / span 2;
-  grid-column: 2;
+  justify-self: start;
+  min-width: 148px;
 }
 
 .cut-primary button:disabled,
@@ -831,34 +832,34 @@ body.locked-view .lock-panel {
 
 .cut-steps {
   display: grid;
-  gap: 0;
+  align-content: center;
+  gap: 8px;
   margin: 0;
-  padding: 0;
+  padding: 24px 24px 24px 0;
   list-style: none;
-  border-left: 1px solid rgba(246, 239, 230, .1);
 }
 
 .cut-steps li {
   position: relative;
   min-width: 0;
-  padding: 15px 18px 15px 42px;
-  color: rgba(246, 239, 230, .72);
-  font-size: .9rem;
+  padding: 0 0 0 30px;
+  color: rgba(246, 239, 230, .7);
+  font-size: .88rem;
   font-weight: 680;
   line-height: 1.24;
   overflow-wrap: anywhere;
 }
 
 .cut-steps li + li {
-  border-top: 1px solid rgba(246, 239, 230, .08);
+  border-top: 0;
 }
 
 .cut-steps li::before {
   content: counter(list-item, decimal-leading-zero);
   position: absolute;
-  left: 16px;
-  top: 15px;
-  color: rgba(246, 239, 230, .38);
+  left: 0;
+  top: .05em;
+  color: rgba(246, 239, 230, .34);
   font-size: .72rem;
   font-weight: 760;
 }
@@ -868,28 +869,27 @@ body.locked-view .lock-panel {
   z-index: 4;
   display: grid;
   gap: 0;
-  width: min(calc(100% - 72px), 1040px);
-  margin: 12px auto 0;
-  border-top: 1px solid rgba(246, 239, 230, .14);
-  border-bottom: 1px solid rgba(246, 239, 230, .1);
+  width: min(calc(100% - 72px), 940px);
+  margin: 18px auto 0;
+  border-top: 1px solid rgba(246, 239, 230, .1);
 }
 
 .spend-panel-head,
 .spend-leak-row {
   display: grid;
-  grid-template-columns: minmax(180px, .38fr) minmax(0, 1fr) auto;
-  gap: 22px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
   align-items: start;
 }
 
 .spend-panel-head {
-  padding: 17px 0 15px;
+  padding: 18px 0 12px;
 }
 
 .spend-panel-head h2 {
   grid-column: 1 / 2;
   color: var(--ink);
-  font-size: clamp(1.24rem, 2vw, 1.58rem);
+  font-size: clamp(1.12rem, 1.8vw, 1.34rem);
   font-weight: 760;
   line-height: 1.02;
 }
@@ -908,7 +908,7 @@ body.locked-view .lock-panel {
 
 .spend-leak-row {
   min-width: 0;
-  padding: 15px 0;
+  padding: 18px 0;
 }
 
 .spend-leak-row + .spend-leak-row {
@@ -947,8 +947,10 @@ body.locked-view .lock-panel {
 }
 
 .spend-leak-row p {
+  grid-column: 1;
   min-width: 0;
-  max-width: 58ch;
+  max-width: 48ch;
+  margin-top: 3px;
   color: var(--muted);
   font-size: .92rem;
   font-weight: 650;
@@ -957,6 +959,8 @@ body.locked-view .lock-panel {
 }
 
 .spend-lock-button {
+  grid-column: 2;
+  grid-row: 1 / span 2;
   justify-self: end;
   align-self: center;
 }
@@ -1403,16 +1407,18 @@ details.panel {
 
   .cut-panel {
     grid-template-columns: 1fr;
-    margin-top: 12px;
+    margin-top: 14px;
+    gap: 0;
+    border-radius: 8px;
   }
 
   .cut-primary {
     grid-template-columns: 1fr;
-    padding: 19px;
+    padding: 22px 20px 18px;
   }
 
   .cut-primary h2 {
-    font-size: clamp(1.72rem, 9vw, 2.34rem);
+    font-size: clamp(1.82rem, 9vw, 2.48rem);
   }
 
   .cut-primary button {
@@ -1422,8 +1428,13 @@ details.panel {
   }
 
   .cut-steps {
+    padding: 0 20px 20px;
     border-left: 0;
-    border-top: 1px solid rgba(246, 239, 230, .1);
+    border-top: 0;
+  }
+
+  .cut-steps li {
+    padding-left: 30px;
   }
 
   .spend-panel {
@@ -1446,14 +1457,17 @@ details.panel {
   }
 
   .spend-leak-row {
-    padding: 12px 0;
+    padding: 15px 0;
   }
 
   .spend-leak-row p {
+    grid-column: auto;
     font-size: .86rem;
   }
 
   .spend-lock-button {
+    grid-column: auto;
+    grid-row: auto;
     justify-self: stretch;
   }
 
