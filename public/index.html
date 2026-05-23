@@ -13,7 +13,7 @@
     <link rel="icon" href="https://aolabs.io/favicon.svg?v=20260516-suite-bloom" type="image/svg+xml">
     <link rel="apple-touch-icon" href="https://aolabs.io/marks/ao-ink.svg?v=20260516-suite-bloom">
     <link rel="manifest" href="/site.webmanifest?v=20260516-a3-three-rings">
-    <link rel="stylesheet" href="/styles.css?v=20260522-a3-spending">
+    <link rel="stylesheet" href="/styles.css?v=20260522-a3-cut">
   </head>
   <body class="locked-view">
     <header class="suite-topbar" aria-label="a3 navigation">
@@ -116,6 +116,19 @@
         </div>
       </section>
 
+      <section class="cut-panel" aria-label="Cut spending assist">
+        <div class="cut-primary">
+          <h2 id="cutTitle">No leak today</h2>
+          <p id="cutReason">Connect Chase to make one spend lock.</p>
+          <button id="cutPrimaryButton" type="button" disabled>lock 7 days</button>
+        </div>
+        <ol id="cutSteps" class="cut-steps">
+          <li>Close checkout.</li>
+          <li>Use what is already paid for.</li>
+          <li>Wait 20 minutes.</li>
+        </ol>
+      </section>
+
       <section class="spend-panel" aria-label="Spending leaks">
         <div class="spend-panel-head">
           <h2>Spending to stop</h2>
@@ -213,6 +226,6 @@
     </main>
 
     <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
-    <script src="/app.js?v=20260522-a3-leaks" defer></script>
+    <script src="/app.js?v=20260522-a3-cut" defer></script>
   </body>
 </html>

@@ -137,7 +137,8 @@ function defaultStore() {
     events: [],
     bankConnections: [],
     bankAccounts: [],
-    bankSyncs: []
+    bankSyncs: [],
+    spendingLocks: []
   };
 }
 
@@ -156,7 +157,8 @@ async function readStore() {
       events: Array.isArray(parsed.events) ? parsed.events : [],
       bankConnections: Array.isArray(parsed.bankConnections) ? parsed.bankConnections : [],
       bankAccounts: Array.isArray(parsed.bankAccounts) ? parsed.bankAccounts : [],
-      bankSyncs: Array.isArray(parsed.bankSyncs) ? parsed.bankSyncs : []
+      bankSyncs: Array.isArray(parsed.bankSyncs) ? parsed.bankSyncs : [],
+      spendingLocks: Array.isArray(parsed.spendingLocks) ? parsed.spendingLocks : []
     };
   } catch {
     return defaultStore();
@@ -174,7 +176,8 @@ async function writeStore(store) {
     events: (store.events || []).slice(-400),
     bankConnections: store.bankConnections || [],
     bankAccounts: store.bankAccounts || [],
-    bankSyncs: (store.bankSyncs || []).slice(-120)
+    bankSyncs: (store.bankSyncs || []).slice(-120),
+    spendingLocks: (store.spendingLocks || []).slice(-160)
   };
   await fsp.writeFile(statePath, JSON.stringify(next, null, 2));
   return next;
@@ -786,7 +789,7 @@ function spendAlternative(label, category) {
     return "Groceries or food already at home for 7 days; no takeout.";
   }
   if (/openai|chatgpt|subscription|software|app|internet|online/.test(text)) {
-    return "Keep one useful plan; pause or cancel duplicate subscriptions.";
+    return "Pause duplicate plans.";
   }
   if (/lyft|uber|taxi|rideshare|transport/.test(text)) {
     return "Batch trips or use transit; rideshare only when necessary.";
@@ -844,6 +847,68 @@ function spendingTriage(byMerchant, byCategory) {
   return rows.slice(0, 5);
 }
 
+function easternDateKey(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(date);
+  const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${byType.year}-${byType.month}-${byType.day}`;
+}
+
+function addDaysKey(date, days) {
+  const next = new Date(`${date}T12:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next.toISOString().slice(0, 10);
+}
+
+function normalizeSpendLockLabel(value) {
+  return String(value || "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9&' ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function spendingLockStatuses(store, analysis) {
+  const today = easternDateKey();
+  const spending = analysis?.improvements?.spending || [];
+  const spendingByKey = new Map(spending.map((item) => [normalizeSpendLockLabel(item.label), item]));
+  const transactions = analysis?.transactions || [];
+  return (store.spendingLocks || []).map((lock) => {
+    const key = lock.key || normalizeSpendLockLabel(lock.label);
+    const matchingSpend = transactions
+      .filter((transaction) => transaction.spend > 0)
+      .filter((transaction) => normalizeSpendLockLabel(transaction.merchant) === key)
+      .filter((transaction) => lock.startDate && dateMs(transaction.date) > dateMs(lock.startDate));
+    const newSpend = sum(matchingSpend.map((transaction) => transaction.spend));
+    const active = lock.expiresOn ? dateMs(lock.expiresOn) >= dateMs(today) : false;
+    const daysLeft = active ? Math.max(0, Math.ceil((dateMs(lock.expiresOn) - dateMs(today)) / 86400000)) : 0;
+    const current = spendingByKey.get(key) || {};
+    return {
+      id: lock.id,
+      label: lock.label,
+      key,
+      startDate: lock.startDate,
+      expiresOn: lock.expiresOn,
+      days: Number(lock.days || 7),
+      daysLeft,
+      active,
+      status: active && newSpend > 0 ? "new_charge" : active ? "clean" : "expired",
+      newSpend,
+      newChargeCount: matchingSpend.length,
+      next: lock.next || current.next || spendAlternative(lock.label, current.category),
+      impactLabel: lock.impactLabel || current.impactLabel || "",
+      updatedAt: lock.updatedAt || lock.createdAt || ""
+    };
+  }).sort((a, b) => {
+    if (a.active !== b.active) return a.active ? -1 : 1;
+    return String(b.updatedAt || "").localeCompare(String(a.updatedAt || ""));
+  });
+}
+
 function immediateImprovements(input) {
   const { accounts, goal, settings, withFlow, latestDate, paymentStatus } = input;
   const cash = Number(accounts.cash || 0);
@@ -877,7 +942,7 @@ function immediateImprovements(input) {
   if (debtTotal > 0) {
     items.push({
       label: "Mistake to avoid",
-      detail: `Do not add A3 cash while $${Math.round(debtTotal).toLocaleString("en-US")} card/loan balance remains.`,
+      detail: `Hold A3 cash while $${Math.round(debtTotal).toLocaleString("en-US")} card/loan balance remains.`,
       severity: "danger"
     });
   } else if (gap > 0) {
@@ -890,15 +955,15 @@ function immediateImprovements(input) {
 
   items.push({
     label: "Cash floor",
-    detail: `$${Math.round(cushion).toLocaleString("en-US")} can move without breaking the $${Math.round(floor).toLocaleString("en-US")} floor.`,
+    detail: `$${Math.round(cushion).toLocaleString("en-US")} above the $${Math.round(floor).toLocaleString("en-US")} floor.`,
     severity: cushion < 500 ? "danger" : "watch"
   });
 
-  const topMerchant = byMerchant[0];
+  const topMerchant = byMerchant.find((item) => item.count > 1) || byMerchant[0];
   if (topMerchant && topMerchant.total >= 25) {
     items.push({
       label: "Biggest leak",
-      detail: `${topMerchant.label}: $${Math.round(topMerchant.total).toLocaleString("en-US")} in 14 days. Freeze this first.`,
+      detail: `${topMerchant.label}: $${Math.round(topMerchant.total).toLocaleString("en-US")} / 14 days. Freeze 7 days.`,
       severity: "watch"
     });
   }
@@ -907,7 +972,7 @@ function immediateImprovements(input) {
   if (food && !items.some((item) => item.detail.includes(food.label))) {
     items.push({
       label: "Food leak",
-      detail: `$${Math.round(food.total).toLocaleString("en-US")} in 14 days across ${food.count} charges. Cut for 7 days.`,
+      detail: `$${Math.round(food.total).toLocaleString("en-US")} / 14 days, ${food.count} charges. Cut 7 days.`,
       severity: "watch"
     });
   }
@@ -915,7 +980,7 @@ function immediateImprovements(input) {
   if (debtTotal > 0) {
     items.push({
       label: "7-day rule",
-      detail: "No new card spending unless it is necessary.",
+      detail: "No new card spend unless necessary.",
       severity: "danger"
     });
   }
@@ -1507,13 +1572,15 @@ async function handleApi(req, res, requestUrl) {
 
   if (requestUrl.pathname === "/api/state" && req.method === "GET") {
     const store = await readStore();
+    const analysis = analyze(store);
     sendJson(res, 200, {
       ok: true,
       goal: A3_GOAL,
       openaiConfigured: Boolean(openAiApiKey),
       model: openAiModel,
       plaid: plaidStatus(store),
-      analysis: analyze(store),
+      analysis,
+      spendingLocks: spendingLockStatuses(store, analysis),
       imports: store.imports.slice(-10).reverse(),
       snapshots: store.snapshots.slice(-12).reverse().map((snapshot) => ({
         id: snapshot.id,
@@ -1526,6 +1593,54 @@ async function handleApi(req, res, requestUrl) {
       advisorRuns: store.advisorRuns.slice(-8).reverse(),
       messages: store.messages.slice(-20),
       events: store.events.slice(-40).reverse()
+    });
+    return true;
+  }
+
+  if (requestUrl.pathname === "/api/spending-locks" && req.method === "POST") {
+    const payload = await readJsonBody(req, 32 * 1024);
+    const label = normalizeSpendLockLabel(payload.label).slice(0, 80);
+    if (!label) {
+      sendJson(res, 400, { ok: false, error: "label is required" });
+      return true;
+    }
+    const days = Math.min(30, Math.max(1, Math.round(Number(payload.days || 7))));
+    const now = new Date().toISOString();
+    const startDate = easternDateKey();
+    const store = await readStore();
+    const analysis = analyze(store);
+    const currentSpend = (analysis.improvements?.spending || []).find((item) => normalizeSpendLockLabel(item.label) === label) || {};
+    const nextLock = {
+      id: crypto.randomUUID(),
+      label,
+      key: label,
+      createdAt: now,
+      updatedAt: now,
+      startDate,
+      expiresOn: addDaysKey(startDate, days),
+      days,
+      next: String(payload.next || currentSpend.next || spendAlternative(label, currentSpend.category)).slice(0, 240),
+      impactLabel: String(payload.impactLabel || currentSpend.impactLabel || "").slice(0, 80)
+    };
+    store.spendingLocks = [
+      ...(store.spendingLocks || []).filter((lock) => (lock.key || normalizeSpendLockLabel(lock.label)) !== label),
+      nextLock
+    ];
+    store.events = [...(store.events || []), {
+      id: crypto.randomUUID(),
+      createdAt: now,
+      type: "spending_lock",
+      label,
+      detail: `${days} days / ${nextLock.impactLabel || "spend freeze"}`
+    }];
+    await writeStore(store);
+    const nextStore = await readStore();
+    const nextAnalysis = analyze(nextStore);
+    sendJson(res, 200, {
+      ok: true,
+      lock: nextLock,
+      spendingLocks: spendingLockStatuses(nextStore, nextAnalysis),
+      analysis: nextAnalysis
     });
     return true;
   }

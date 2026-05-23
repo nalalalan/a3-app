@@ -37,6 +37,10 @@ const els = {
   primaryFixDetail: document.getElementById("primaryFixDetail"),
   improvementState: document.getElementById("improvementState"),
   improvementList: document.getElementById("improvementList"),
+  cutTitle: document.getElementById("cutTitle"),
+  cutReason: document.getElementById("cutReason"),
+  cutPrimaryButton: document.getElementById("cutPrimaryButton"),
+  cutSteps: document.getElementById("cutSteps"),
   spendWindow: document.getElementById("spendWindow"),
   spendLeakList: document.getElementById("spendLeakList"),
   watchList: document.getElementById("watchList"),
@@ -44,6 +48,9 @@ const els = {
   eventList: document.getElementById("eventList"),
   transactionList: document.getElementById("transactionList")
 };
+
+let lastState = null;
+let activeCutItem = null;
 
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -109,6 +116,50 @@ function isSampleOnly(data) {
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
+}
+
+function spendKey(value) {
+  return String(value || "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9&' ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function activeLockFor(label, locks = []) {
+  const key = spendKey(label);
+  return locks.find((lock) => lock.active && spendKey(lock.label || lock.key) === key) || null;
+}
+
+function replacementStep(item) {
+  const text = `${item?.label || ""} ${item?.category || ""}`.toLowerCase();
+  if (/shar|music|instrument|violin/.test(text)) return "Open existing music or supplies.";
+  if (/chipotle|restaurant|food|coffee|cafe|dining|takeout|delivery/.test(text)) return "Eat something already available first.";
+  if (/openai|chatgpt|subscription|software|app|internet|online/.test(text)) return "Use the active plan only.";
+  if (/lyft|uber|taxi|rideshare|transport/.test(text)) return "Walk or transit first.";
+  if (/lululemon|clothing|apparel|shop|retail|merchandise/.test(text)) return "Close the cart and wait.";
+  return "Use what is already paid for.";
+}
+
+function lockButtonText(item, lock) {
+  if (!item?.label) return "lock 7 days";
+  if (!lock) return "lock 7 days";
+  if (lock.status === "new_charge") return "restart 7 days";
+  return lock.daysLeft > 0 ? `locked ${lock.daysLeft}d` : "locked";
+}
+
+function primaryCutItem(spending, locks = []) {
+  const activeLocks = locks.filter((lock) => lock.active);
+  const urgentLock = activeLocks.find((lock) => lock.status === "new_charge") || activeLocks[0];
+  if (urgentLock) {
+    return spending.find((item) => spendKey(item.label) === spendKey(urgentLock.label || urgentLock.key)) || {
+      label: urgentLock.label || urgentLock.key,
+      next: urgentLock.next,
+      impactLabel: urgentLock.impactLabel,
+      count: 2
+    };
+  }
+  return spending.find((item) => Number(item.count || 0) > 1) || spending[0] || null;
 }
 
 function renderGoalMeter(goal, sampleOnly, data) {
@@ -408,7 +459,42 @@ function orderedImprovements(items, primary) {
   return ordered.slice(0, 3);
 }
 
-function renderSpendLeaks(improvements, accounts) {
+function renderCutAssist(improvements, accounts, locks = []) {
+  const spending = Array.isArray(improvements.spending) ? improvements.spending : [];
+  const first = primaryCutItem(spending, locks);
+  activeCutItem = first;
+
+  if (!first) {
+    els.cutTitle.textContent = accounts.connected ? "Hold spending" : "Connect Chase";
+    els.cutReason.textContent = accounts.connected ? "A3 needs more current transactions." : "Current transactions are needed first.";
+    els.cutPrimaryButton.disabled = true;
+    els.cutPrimaryButton.textContent = "lock 7 days";
+    els.cutPrimaryButton.dataset.label = "";
+    els.cutSteps.innerHTML = `
+      <li>Keep the cash floor.</li>
+      <li>Do not add new card spend.</li>
+      <li>Sync again tomorrow.</li>
+    `;
+    return;
+  }
+
+  const lock = activeLockFor(first.label, locks);
+  const hasNewCharge = lock?.status === "new_charge";
+  els.cutTitle.textContent = lock && !hasNewCharge ? `Locked: ${first.label}` : `No ${first.label} today`;
+  els.cutReason.textContent = hasNewCharge
+    ? `${money.format(lock.newSpend || 0)} new spend after lock. Restart and keep the next 7 days clean.`
+    : `${first.impactLabel || ""}. ${first.next || "Freeze this for 7 days."}`.trim();
+  els.cutPrimaryButton.disabled = Boolean(lock && !hasNewCharge);
+  els.cutPrimaryButton.textContent = lockButtonText(first, lock);
+  els.cutPrimaryButton.dataset.label = first.label;
+  els.cutSteps.innerHTML = `
+    <li>Close checkout.</li>
+    <li>${escapeHtml(replacementStep(first))}</li>
+    <li>Wait 20 minutes.</li>
+  `;
+}
+
+function renderSpendLeaks(improvements, accounts, locks = []) {
   const spending = Array.isArray(improvements.spending) ? improvements.spending : [];
   els.spendWindow.textContent = accounts.connected ? "Last 14 days" : "Waiting for Chase";
 
@@ -423,19 +509,23 @@ function renderSpendLeaks(improvements, accounts) {
     return;
   }
 
-  els.spendLeakList.innerHTML = spending.map((item) => `
-    <div class="spend-leak-row" data-severity="${escapeHtml(item.severity || "watch")}">
-      <div>
-        <strong>${escapeHtml(item.label)}</strong>
-        <span>${escapeHtml(item.issue || `${money.format(item.amount || 0)} / ${item.window || "14 days"}`)}</span>
-        <em>${escapeHtml(item.impactLabel || `+${money.format(item.monthlyImpact || 0)}/mo if cut`)}</em>
+  els.spendLeakList.innerHTML = spending.map((item) => {
+    const lock = activeLockFor(item.label, locks);
+    return `
+      <div class="spend-leak-row" data-severity="${escapeHtml(item.severity || "watch")}">
+        <div>
+          <strong>${escapeHtml(item.label)}</strong>
+          <span>${escapeHtml(item.issue || `${money.format(item.amount || 0)} / ${item.window || "14 days"}`)}</span>
+          <em>${escapeHtml(item.impactLabel || `+${money.format(item.monthlyImpact || 0)}/mo if cut`)}</em>
+        </div>
+        <p>${escapeHtml(item.next || "Freeze for 7 days unless it is necessary.")}</p>
+        <button class="spend-lock-button" type="button" data-label="${escapeHtml(item.label)}"${lock?.status === "clean" ? " disabled" : ""}>${escapeHtml(lockButtonText(item, lock))}</button>
       </div>
-      <p>${escapeHtml(item.next || "Freeze for 7 days unless it is necessary.")}</p>
-    </div>
-  `).join("");
+    `;
+  }).join("");
 }
 
-function renderImprovements(analysis) {
+function renderImprovements(analysis, locks = []) {
   const improvements = analysis.improvements || {};
   const accounts = analysis.accounts || {};
   const goal = analysis.goal || {};
@@ -473,7 +563,8 @@ function renderImprovements(analysis) {
       <span>${escapeHtml(itemDetail(item))}</span>
     </div>
   `).join("");
-  renderSpendLeaks(improvements, accounts);
+  renderCutAssist(improvements, accounts, locks);
+  renderSpendLeaks(improvements, accounts, locks);
 }
 
 async function loadState() {
@@ -483,6 +574,7 @@ async function loadState() {
 }
 
 function render(data) {
+  lastState = data;
   const analysis = data.analysis;
   const settings = analysis.settings;
   const goal = analysis.goal;
@@ -529,7 +621,7 @@ function render(data) {
     els.advisorAction.textContent = plaidReviewPending ? "Chase tracking pending." : "Connect Chase first.";
     els.advisorSummary.textContent = "No sample numbers are used.";
     els.advisorEffect.textContent = plaidReviewPending ? "Spending plan starts after bank link." : "";
-    renderImprovements(analysis);
+    renderImprovements(analysis, data.spendingLocks || []);
     renderRows(els.watchList, [{ label: "Bank off", detail: "No connected Chase data." }], (item) => [item.label, item.detail]);
     renderBankAccounts(accounts.items || []);
     renderRows(els.eventList, data.events, (item) => [item.label, item.type]);
@@ -562,7 +654,7 @@ function render(data) {
   els.advisorAction.textContent = advisorDisplay.action;
   els.advisorSummary.textContent = advisorDisplay.summary;
   els.advisorEffect.textContent = advisorDisplay.effect;
-  renderImprovements(analysis);
+  renderImprovements(analysis, data.spendingLocks || []);
 
   renderRows(els.watchList, analysis.watch, (item) => [item.label, item.detail]);
   renderBankAccounts(accounts.items || []);
@@ -632,6 +724,23 @@ async function exchangePlaidPublicToken(publicToken, metadata) {
   localStorage.removeItem("a3PlaidLinkToken");
 }
 
+async function lockSpending(label) {
+  const key = spendKey(label);
+  const item = (lastState?.analysis?.improvements?.spending || []).find((candidate) => spendKey(candidate.label) === key) || activeCutItem || {};
+  if (!key) return;
+  setBusy("Locking");
+  await api("/api/spending-locks", {
+    method: "POST",
+    body: JSON.stringify({
+      label: key,
+      days: 7,
+      next: item.next,
+      impactLabel: item.impactLabel
+    })
+  });
+  await loadState();
+}
+
 async function connectBank() {
   try {
     setBusy("Connecting");
@@ -681,6 +790,26 @@ async function connectBank() {
 
 connectButtons().forEach((button) => {
   button.addEventListener("click", connectBank);
+});
+
+els.cutPrimaryButton.addEventListener("click", async () => {
+  try {
+    await lockSpending(els.cutPrimaryButton.dataset.label);
+  } catch (error) {
+    setBusy("Blocked");
+    document.body.insertAdjacentHTML("beforeend", `<pre class="boot-error">${escapeHtml(error.message)}</pre>`);
+  }
+});
+
+els.spendLeakList.addEventListener("click", async (event) => {
+  const button = event.target.closest(".spend-lock-button");
+  if (!button) return;
+  try {
+    await lockSpending(button.dataset.label);
+  } catch (error) {
+    setBusy("Blocked");
+    document.body.insertAdjacentHTML("beforeend", `<pre class="boot-error">${escapeHtml(error.message)}</pre>`);
+  }
 });
 
 els.syncBank.addEventListener("click", async () => {
