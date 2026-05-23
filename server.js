@@ -822,7 +822,7 @@ function spendAlternative(label, category, context = {}) {
     return `${countText || "Ride spend"}. Receipts show short campus/home trips; batch rides or walk daytime routes when safe.`;
   }
   if (/amazon/.test(text)) {
-    return `${countText || "Amazon pattern"}. Recent receipts are small supplies and tools; order only one named essential at a time.`;
+    return `${countText || "Amazon pattern"}. Receipts split into gear, supplies, food, health, and project parts; buy only a replacement or one named project item.`;
   }
   if (/lululemon|clothing|apparel/.test(text)) {
     return `${countText || "Clothing spend"}. Promo emails are pushing tracksuits/accessories; replace only a daily item that is worn out.`;
@@ -840,6 +840,49 @@ function spendAlternative(label, category, context = {}) {
   return pastPurchase
     ? `$${Math.round(amount90).toLocaleString("en-US")} already spent. Do not turn it into a second purchase.`
     : `${amount14 > 0 ? `$${Math.round(amount14).toLocaleString("en-US")} recent spend` : countText || "Repeat spend"}. Check whether it is still needed before another charge.`;
+}
+
+function merchantReceiptBreakdown(label) {
+  const text = String(label || "").toLowerCase();
+  if (!/amazon/.test(text)) return null;
+
+  return {
+    title: "Amazon: what it is",
+    source: "Gmail receipts checked May 23.",
+    rule: "Allowed: replacement supply, one named project part, or food that replaces takeout. Not allowed: browsing carts, backup gear, duplicate accessories, or spare upgrades.",
+    categories: [
+      {
+        label: "Electronics and camera gear",
+        detail: "DJI parts, microSD, power banks, chargers, phone cases, screen protectors.",
+        action: "Only buy if it finishes a current project today; no backup gear."
+      },
+      {
+        label: "Health and sleep supplies",
+        detail: "CPAP parts, TUMS, body wash, supplements.",
+        action: "Replacement only when the current supply is actually ending."
+      },
+      {
+        label: "Violin and research parts",
+        detail: "Strings, hide glue, seam grip, DC power supply.",
+        action: "Only if tied to this week's named build or practice task."
+      },
+      {
+        label: "Food and kitchen",
+        detail: "Pop-Tarts, cheese grater, small kitchen items.",
+        action: "Buy only when it replaces one takeout or Chipotle decision."
+      },
+      {
+        label: "Self-care extras",
+        detail: "Hair, skin, cleaning, and body products.",
+        action: "One active product per slot; finish it before replacing."
+      },
+      {
+        label: "Cancelled big carts",
+        detail: "Some electronics and accessory bursts were cancelled or refunded.",
+        action: "Keep the cancellation; do not reopen a similar cart."
+      }
+    ]
+  };
 }
 
 function isNamedSubscription(label, category) {
@@ -927,6 +970,7 @@ function merchantSpendPicture(label, broadItems, recentItems, latestDate) {
       amount14: recentTotal,
       monthlyImpact
     }),
+    receiptBreakdown: merchantReceiptBreakdown(label),
     severity: monthlyImpact >= 150 || namedSubscription || cadenceRecurring ? "danger" : "watch",
     priorityScore,
     latestDate: sortedBroad[0]?.date || latestDate || ""

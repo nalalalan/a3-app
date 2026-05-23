@@ -506,6 +506,32 @@ function renderSpendLeaks(improvements, accounts, locks = []) {
     return;
   }
 
+  function renderReceiptBreakdown(item) {
+    const breakdown = item.receiptBreakdown || {};
+    const categories = Array.isArray(breakdown.categories) ? breakdown.categories : [];
+    if (!categories.length) return "";
+    return `
+      <div class="receipt-breakdown">
+        <div class="receipt-breakdown-head">
+          <strong>${escapeHtml(breakdown.title || `${item.label}: what it is`)}</strong>
+          <span>${escapeHtml(breakdown.source || "")}</span>
+        </div>
+        <p>${escapeHtml(breakdown.rule || "")}</p>
+        <div class="receipt-category-list">
+          ${categories.map((category) => `
+            <div class="receipt-category-row">
+              <div>
+                <strong>${escapeHtml(category.label || "")}</strong>
+                <span>${escapeHtml(category.detail || "")}</span>
+              </div>
+              <p>${escapeHtml(category.action || "")}</p>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+    `;
+  }
+
   els.spendLeakList.innerHTML = visibleSpending.map((item) => {
     const rank = String(item.priorityRank || "").padStart(2, "0");
     const pattern = item.pattern ? `${item.pattern} - ` : "";
@@ -519,6 +545,7 @@ function renderSpendLeaks(improvements, accounts, locks = []) {
         </div>
         <p>${escapeHtml(item.next || "Pause unless it is required for work, health, rent, transport, or food.")}</p>
       </div>
+      ${renderReceiptBreakdown(item)}
     `;
   }).join("");
 }
