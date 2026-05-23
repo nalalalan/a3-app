@@ -32,7 +32,7 @@ Recommended Railway variables:
 - `A3_DATA_DIR=/data`
 - `A3_ACCESS_CODE=<private app code>`
 - `OPENAI_API_KEY=<rotated key>`
-- `OPENAI_MODEL=gpt-5.5`
+- `OPENAI_MODEL=gpt-5-mini`
 - `PLAID_CLIENT_ID=<Plaid client id>`
 - `PLAID_SECRET=<Plaid secret>`
 - `PLAID_ENV=production` for Chase
