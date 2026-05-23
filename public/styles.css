@@ -808,28 +808,6 @@ body.locked-view .lock-panel {
   overflow-wrap: anywhere;
 }
 
-.cut-primary button,
-.spend-lock-button {
-  min-height: 38px;
-  border-color: rgba(207, 151, 165, .42);
-  background: rgba(207, 151, 165, .12);
-  color: var(--ink);
-  white-space: nowrap;
-}
-
-.cut-primary button {
-  justify-self: start;
-  min-width: 148px;
-}
-
-.cut-primary button:disabled,
-.spend-lock-button:disabled {
-  border-color: rgba(143, 166, 147, .32);
-  background: rgba(143, 166, 147, .12);
-  color: rgba(246, 239, 230, .7);
-  opacity: 1;
-}
-
 .cut-steps {
   display: grid;
   align-content: center;
@@ -874,8 +852,7 @@ body.locked-view .lock-panel {
   border-top: 1px solid rgba(246, 239, 230, .1);
 }
 
-.spend-panel-head,
-.spend-leak-row {
+.spend-panel-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 18px;
@@ -895,7 +872,7 @@ body.locked-view .lock-panel {
 }
 
 .spend-panel-head span {
-  grid-column: 3;
+  grid-column: 2;
   justify-self: end;
   color: rgba(246, 239, 230, .52);
   font-size: .82rem;
@@ -907,12 +884,24 @@ body.locked-view .lock-panel {
 }
 
 .spend-leak-row {
+  display: grid;
+  grid-template-columns: 44px minmax(190px, .72fr) minmax(220px, 1fr);
+  column-gap: 22px;
+  row-gap: 4px;
+  align-items: start;
   min-width: 0;
   padding: 18px 0;
 }
 
 .spend-leak-row + .spend-leak-row {
   border-top: 1px solid rgba(246, 239, 230, .08);
+}
+
+.spend-rank {
+  color: rgba(246, 239, 230, .34);
+  font-size: .72rem;
+  font-weight: 760;
+  line-height: 1.18;
 }
 
 .spend-leak-row div {
@@ -947,22 +936,14 @@ body.locked-view .lock-panel {
 }
 
 .spend-leak-row p {
-  grid-column: 1;
   min-width: 0;
   max-width: 48ch;
-  margin-top: 3px;
+  margin: 0;
   color: var(--muted);
   font-size: .92rem;
   font-weight: 650;
   line-height: 1.34;
   overflow-wrap: anywhere;
-}
-
-.spend-lock-button {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  justify-self: end;
-  align-self: center;
 }
 
 .spend-leak-row[data-severity="danger"] strong {
@@ -1421,12 +1402,6 @@ details.panel {
     font-size: clamp(1.82rem, 9vw, 2.48rem);
   }
 
-  .cut-primary button {
-    grid-column: auto;
-    grid-row: auto;
-    justify-self: stretch;
-  }
-
   .cut-steps {
     padding: 0 20px 20px;
     border-left: 0;
@@ -1463,12 +1438,6 @@ details.panel {
   .spend-leak-row p {
     grid-column: auto;
     font-size: .86rem;
-  }
-
-  .spend-lock-button {
-    grid-column: auto;
-    grid-row: auto;
-    justify-self: stretch;
   }
 
   .image-rhythm {

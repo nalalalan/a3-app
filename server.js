@@ -462,6 +462,9 @@ function median(values) {
 function merchantName(description) {
   return String(description || "Transaction")
     .toUpperCase()
+    .replace(/\bREBILL\b/g, " ")
+    .replace(/\bBESTBUYCOM\b/g, "BEST BUY")
+    .replace(/\bBESTBUY\b/g, "BEST BUY")
     .replace(/\b\d{2,}\b/g, "")
     .replace(/\b[A-Z]{2}\b/g, "")
     .replace(/[^A-Z0-9&' ]+/g, " ")
@@ -785,8 +788,11 @@ function spendAlternative(label, category) {
   if (/shar|music|instrument|violin/.test(text)) {
     return "Use existing materials for 14 days; buy nothing new.";
   }
-  if (/chipotle|restaurant|food|coffee|cafe|dining|takeout|delivery/.test(text)) {
+  if (/chipotle|restaurant|food|coffee|cafe|fuel america|dining|takeout|delivery/.test(text)) {
     return "Groceries or food already at home for 7 days; no takeout.";
+  }
+  if (/sleeplay|cpap|medical|health/.test(text)) {
+    return "Only buy if health-required; otherwise wait 14 days.";
   }
   if (/openai|chatgpt|subscription|software|app|internet|online/.test(text)) {
     return "Pause duplicate plans.";
@@ -794,8 +800,8 @@ function spendAlternative(label, category) {
   if (/lyft|uber|taxi|rideshare|transport/.test(text)) {
     return "Batch trips or use transit; rideshare only when necessary.";
   }
-  if (/lululemon|clothing|apparel|shop|retail|merchandise/.test(text)) {
-    return "No clothes or gear; wait 7 days before buying.";
+  if (/amazon|bestbuy|best buy|rebill|samsung|electronics|lululemon|clothing|apparel|shop|retail|merchandise/.test(text)) {
+    return "No devices, gear, clothes, or accessories for 14 days.";
   }
   if (/grocery|supermarket/.test(text)) {
     return "One grocery run, one list, one limit.";
@@ -803,30 +809,106 @@ function spendAlternative(label, category) {
   return "Freeze for 7 days unless it is required for work, health, rent, transport, or food.";
 }
 
-function spendingTriage(byMerchant, byCategory) {
+function isNamedSubscription(label, category) {
+  const text = `${label || ""} ${category || ""}`.toLowerCase();
+  return /openai|chatgpt|spotify|netflix|hulu|youtube|apple|icloud|google|microsoft|adobe|github|notion|dropbox|patreon|substack|subscription|membership|software|internet|online/.test(text);
+}
+
+function isRecurringCadence(count, cadence) {
+  return count >= 3 && cadence !== null && cadence >= 20 && cadence <= 40;
+}
+
+function cadenceDays(sorted) {
+  const gaps = [];
+  for (let index = 0; index < sorted.length - 1; index += 1) {
+    const gap = Math.abs(daysBetween(sorted[index].date, sorted[index + 1].date));
+    if (Number.isFinite(gap) && gap > 0) gaps.push(gap);
+  }
+  return gaps.length ? median(gaps) : null;
+}
+
+function merchantSpendPicture(label, broadItems, recentItems, latestDate) {
+  const sortedBroad = broadItems.sort((a, b) => dateMs(b.date) - dateMs(a.date));
+  const sortedRecent = recentItems.sort((a, b) => dateMs(b.date) - dateMs(a.date));
+  const broadTotal = sum(sortedBroad.map((item) => item.spend));
+  const recentTotal = sum(sortedRecent.map((item) => item.spend));
+  const broadCount = sortedBroad.length;
+  const recentCount = sortedRecent.length;
+  const category = sortedBroad[0]?.category || sortedRecent[0]?.category || "";
+  const cadence = cadenceDays(sortedBroad);
+  const namedSubscription = isNamedSubscription(label, category) && broadCount >= 2;
+  const cadenceRecurring = !namedSubscription && isRecurringCadence(broadCount, cadence);
+  const repeat = broadCount >= 3 || recentCount >= 2;
+  const oneOff = broadCount === 1;
+  const multiple = broadCount >= 2;
+  const activeMonthly = oneOff ? 0 : (recentCount > 0 ? recentTotal * (30 / 14) : 0);
+  const broadMonthly = oneOff ? broadTotal : broadTotal * (30 / 90);
+  const monthlyImpact = Math.max(activeMonthly, broadMonthly);
+  const priorityScore = monthlyImpact
+    + (namedSubscription ? 180 : 0)
+    + (cadenceRecurring ? 120 : 0)
+    + (repeat ? 80 : 0)
+    + (recentCount > 0 ? 60 : 0)
+    - (oneOff ? 90 : 0);
+  const pattern = namedSubscription
+    ? "Subscription"
+    : cadenceRecurring
+      ? "Recurring charge"
+    : repeat
+      ? "Repeated habit"
+      : multiple
+        ? "Multiple purchases"
+        : broadTotal >= 250
+          ? "Large one-off"
+          : "One-off";
+  const issueParts = [];
+  if (recentCount > 0) issueParts.push(`$${Math.round(recentTotal).toLocaleString("en-US")} / 14d`);
+  issueParts.push(`$${Math.round(broadTotal).toLocaleString("en-US")} / 90d`);
+  issueParts.push(`${broadCount} charge${broadCount === 1 ? "" : "s"}`);
+  return {
+    label,
+    amount: recentCount > 0 ? recentTotal : broadTotal,
+    amount90: broadTotal,
+    amount14: recentTotal,
+    monthlyImpact,
+    impactLabel: oneOff
+      ? `+$${Math.round(broadTotal).toLocaleString("en-US")} kept if not repeated`
+      : `+$${Math.round(monthlyImpact).toLocaleString("en-US")}/mo if cut`,
+    count: broadCount,
+    recentCount,
+    category,
+    cadence,
+    pattern,
+    window: recentCount > 0 ? "14 + 90 days" : "90 days",
+    issue: issueParts.join("; "),
+    next: spendAlternative(label, category),
+    severity: monthlyImpact >= 150 || namedSubscription || cadenceRecurring ? "danger" : "watch",
+    priorityScore,
+    latestDate: sortedBroad[0]?.date || latestDate || ""
+  };
+}
+
+function spendingTriage(flexible14, flexible90, byCategory) {
+  const recentByMerchant = new Map();
+  for (const transaction of flexible14) {
+    if (!recentByMerchant.has(transaction.merchant)) recentByMerchant.set(transaction.merchant, []);
+    recentByMerchant.get(transaction.merchant).push(transaction);
+  }
+  const broadByMerchant = new Map();
+  for (const transaction of flexible90) {
+    if (!transaction.merchant || transaction.spend <= 0) continue;
+    if (!broadByMerchant.has(transaction.merchant)) broadByMerchant.set(transaction.merchant, []);
+    broadByMerchant.get(transaction.merchant).push(transaction);
+  }
   const seen = new Set();
   const rows = [];
-  for (const item of byMerchant) {
-    if (!item.label || item.total < 25) continue;
-    const key = item.label.toLowerCase();
+  for (const [label, items] of broadByMerchant.entries()) {
+    const total = sum(items.map((item) => item.spend));
+    if (!label || total < 20) continue;
+    const key = label.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    rows.push({
-      label: item.label,
-      amount: item.total,
-      monthlyImpact: item.total * (30 / 14),
-      impactLabel: item.count > 1
-        ? `+$${Math.round(item.total * (30 / 14)).toLocaleString("en-US")}/mo if cut`
-        : `+$${Math.round(item.total).toLocaleString("en-US")} kept if not repeated`,
-      count: item.count,
-      category: item.category,
-      window: "14 days",
-      issue: item.count > 1
-        ? `$${Math.round(item.total).toLocaleString("en-US")} across ${item.count} charges.`
-        : `$${Math.round(item.total).toLocaleString("en-US")} one purchase.`,
-      next: spendAlternative(item.label, item.category),
-      severity: item.total >= 100 ? "danger" : "watch"
-    });
+    rows.push(merchantSpendPicture(label, items, recentByMerchant.get(label) || [], items[0]?.date || ""));
   }
 
   const food = byCategory.find((item) => /food/i.test(item.label));
@@ -834,25 +916,31 @@ function spendingTriage(byMerchant, byCategory) {
     rows.push({
       label: "Food and drink",
       amount: food.total,
-      monthlyImpact: food.total * (30 / 14),
-      impactLabel: `+$${Math.round(food.total * (30 / 14)).toLocaleString("en-US")}/mo if cut`,
+      amount90: food.total,
+      amount14: 0,
+      monthlyImpact: food.total * (30 / 90),
+      impactLabel: `+$${Math.round(food.total * (30 / 90)).toLocaleString("en-US")}/mo if cut`,
       count: food.count,
+      recentCount: 0,
       category: food.label,
-      window: "14 days",
-      issue: `$${Math.round(food.total).toLocaleString("en-US")} across ${food.count} charges.`,
+      pattern: "Category",
+      window: "90 days",
+      issue: `$${Math.round(food.total).toLocaleString("en-US")} / 90d; ${food.count} charges`,
       next: spendAlternative("food", food.label),
-      severity: "danger"
+      severity: "danger",
+      priorityScore: food.total * (30 / 90) + 60
     });
   }
 
   return rows
     .sort((a, b) => {
-      const aRepeat = Number(a.count || 0) > 1 ? 1 : 0;
-      const bRepeat = Number(b.count || 0) > 1 ? 1 : 0;
-      if (aRepeat !== bRepeat) return bRepeat - aRepeat;
+      if (Number(b.priorityScore || 0) !== Number(a.priorityScore || 0)) {
+        return Number(b.priorityScore || 0) - Number(a.priorityScore || 0);
+      }
       return Number(b.monthlyImpact || b.amount || 0) - Number(a.monthlyImpact || a.amount || 0);
     })
-    .slice(0, 5);
+    .map((row, index) => ({ ...row, priorityRank: index + 1 }))
+    .slice(0, 18);
 }
 
 function easternDateKey(date = new Date()) {
@@ -925,9 +1013,11 @@ function immediateImprovements(input) {
   const debtTotal = Number(accounts.debtTotal || 0);
   const gap = Number(goal.downPaymentGap || 0);
   const last14 = withFlow.filter((transaction) => withinDays(transaction, latestDate, 14));
+  const last90 = withFlow.filter((transaction) => withinDays(transaction, latestDate, 90));
   const flexible = last14.filter((transaction) => transaction.spend > 0 && !isFixedOrTransferLike(transaction));
+  const flexible90 = last90.filter((transaction) => transaction.spend > 0 && !isFixedOrTransferLike(transaction));
   const byMerchant = groupedSpend(flexible, (transaction) => transaction.merchant).slice(0, 6);
-  const byCategory = groupedSpend(flexible, (transaction) => transaction.category).slice(0, 6);
+  const byCategory = groupedSpend(flexible90, (transaction) => transaction.category).slice(0, 8);
   const debtPayments = last14.filter((transaction) => isDebtPaymentLike(transaction));
   const debtPaymentTotal = sum(debtPayments.map((transaction) => transaction.spend));
   const items = [];
@@ -1009,7 +1099,7 @@ function immediateImprovements(input) {
     debtPayment14: debtPaymentTotal,
     topMerchants: byMerchant,
     topCategories: byCategory,
-    spending: spendingTriage(byMerchant, byCategory),
+    spending: spendingTriage(flexible, flexible90, byCategory),
     items: items.slice(0, 6)
   };
 }
