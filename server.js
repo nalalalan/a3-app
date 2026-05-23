@@ -821,11 +821,12 @@ function spendingTriage(byMerchant, byCategory) {
       count: item.count,
       category: item.category,
       window: "14 days",
-      issue: `$${Math.round(item.total).toLocaleString("en-US")} across ${item.count} charge${item.count === 1 ? "" : "s"}.`,
+      issue: item.count > 1
+        ? `$${Math.round(item.total).toLocaleString("en-US")} across ${item.count} charges.`
+        : `$${Math.round(item.total).toLocaleString("en-US")} one purchase.`,
       next: spendAlternative(item.label, item.category),
       severity: item.total >= 100 ? "danger" : "watch"
     });
-    if (rows.length >= 5) break;
   }
 
   const food = byCategory.find((item) => /food/i.test(item.label));
@@ -844,7 +845,14 @@ function spendingTriage(byMerchant, byCategory) {
     });
   }
 
-  return rows.slice(0, 5);
+  return rows
+    .sort((a, b) => {
+      const aRepeat = Number(a.count || 0) > 1 ? 1 : 0;
+      const bRepeat = Number(b.count || 0) > 1 ? 1 : 0;
+      if (aRepeat !== bRepeat) return bRepeat - aRepeat;
+      return Number(b.monthlyImpact || b.amount || 0) - Number(a.monthlyImpact || a.amount || 0);
+    })
+    .slice(0, 5);
 }
 
 function easternDateKey(date = new Date()) {
