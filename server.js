@@ -786,37 +786,60 @@ function groupedSpend(transactions, keyFn) {
 function spendAlternative(label, category, context = {}) {
   const text = `${label || ""} ${category || ""}`.toLowerCase();
   const pattern = String(context.pattern || "").toLowerCase();
+  const count = Number(context.count || 0);
+  const recentCount = Number(context.recentCount || 0);
+  const amount90 = Number(context.amount90 || 0);
+  const amount14 = Number(context.amount14 || 0);
   const pastPurchase = /past purchase|one-off|large one-off/.test(pattern)
-    || (Number(context.count || 0) <= 2 && Number(context.recentCount || 0) === 0);
+    || (count <= 2 && recentCount === 0);
+  const countText = count > 0 ? `${count} charge${count === 1 ? "" : "s"} in 90d` : "";
+  const recentText = recentCount > 0 ? `${recentCount} recent charge${recentCount === 1 ? "" : "s"}` : "";
 
   if (/shar|music|instrument|violin/.test(text)) {
     return pastPurchase
-      ? "Use what you already bought before another accessory."
-      : "Use existing materials before another accessory.";
+      ? "Past music purchase. Use the part already bought before buying another accessory."
+      : `${countText || "Music gear spend"}. Use current strings, rosin, case, and setup before buying another accessory.`;
   }
   if (/chipotle|restaurant|food|coffee|cafe|fuel america|dining|takeout|delivery/.test(text)) {
-    return "Use food already paid for before another order.";
+    if (/chipotle/.test(text)) return `${countText || "Chipotle repeat spend"}. Bowl-and-chips pickup pattern; order only when it is the planned meal.`;
+    if (/doordash|thai|pho|goldenpiz|pizza/.test(text)) return `${countText || "Takeout spend"}. Delivery and takeout are showing up; use food already paid for first.`;
+    if (/fuel america/.test(text)) return `${countText || "Snack stop spend"}. Bring one drink or snack before another convenience stop.`;
+    return `${countText || "Food spend"}. Eat one already-paid meal first, then decide if this order is still needed.`;
   }
   if (/sleeplay|cpap|medical|health/.test(text)) {
-    return "Required sleep or health supplies only; skip upgrades and extras.";
+    if (/bodyspec/.test(text)) return `${countText || "Health check spend"}. Book only if the result changes a real health or training decision.`;
+    return `${countText || "Sleep-supply spend"}. Buy only the mask, cushion, or part that fixes sleep tonight; skip spare upgrades.`;
   }
-  if (/openai|chatgpt|subscription|software|app|internet|online/.test(text)) {
-    return "Cancel duplicate or unused plans; keep only the plan doing current work.";
+  if (/openai|chatgpt|netflix|spotify|capcut|datoromedia|adobe|github|notion|dropbox|patreon|substack|subscription|software|app|internet|online/.test(text)) {
+    if (/openai|chatgpt/.test(text)) return `${countText || "OpenAI charges"}. API auto-funding is the leak; Pro is already dropping to Plus, so keep the cap tight.`;
+    if (/netflix/.test(text)) return `${countText || "Netflix renewals"}. Pause unless you are actively watching it this month.`;
+    if (/spotify/.test(text)) return `${countText || "Spotify renewals"}. Email suggests active fan use; keep only if it still improves the day.`;
+    if (/capcut/.test(text)) return `${countText || "CapCut renewals"}. Receipt says Pro monthly; keep only for current video work.`;
+    if (/datoromedia/.test(text)) return `${countText || "Recurring media charge"}. Segpay receipt says monthly membership; cancel if it is not intentionally used.`;
+    return `${countText || "Recurring online charge"}. Open the account page and cancel anything not used this week.`;
   }
   if (/lyft|uber|taxi|rideshare|transport/.test(text)) {
-    return "Batch trips; use walking or transit when the schedule allows.";
+    return `${countText || "Ride spend"}. Receipts show short campus/home trips; batch rides or walk daytime routes when safe.`;
+  }
+  if (/amazon/.test(text)) {
+    return `${countText || "Amazon pattern"}. Recent receipts are small supplies and tools; order only one named essential at a time.`;
+  }
+  if (/lululemon|clothing|apparel/.test(text)) {
+    return `${countText || "Clothing spend"}. Promo emails are pushing tracksuits/accessories; replace only a daily item that is worn out.`;
   }
   if (/amazon|bestbuy|best buy|rebill|samsung|electronics|lululemon|clothing|apparel|shop|retail|merchandise/.test(text)) {
+    if (/best ?buy/.test(text)) return "Receipt shows the camera purchase was refunded. Keep this resolved; no accessory follow-up.";
+    if (/samsung/.test(text)) return "No recent Samsung receipt found in email. Treat as old electronics spend until matched.";
     return pastPurchase
-      ? "Treat this as a past spike; stop the follow-up cart."
-      : "Leave the cart open; buy only the required item.";
+      ? `$${Math.round(amount90).toLocaleString("en-US")} past spike. This is not a daily habit; block only follow-up accessories or financing.`
+      : `${recentText || countText || "Retail spend"}. Buy only the exact replacement item you can name before checkout.`;
   }
   if (/grocery|supermarket/.test(text)) {
     return "One grocery run, one list, one limit.";
   }
   return pastPurchase
-    ? "Treat this as already spent; do not repeat it."
-    : "Pause unless required for work, health, rent, transport, or food.";
+    ? `$${Math.round(amount90).toLocaleString("en-US")} already spent. Do not turn it into a second purchase.`
+    : `${amount14 > 0 ? `$${Math.round(amount14).toLocaleString("en-US")} recent spend` : countText || "Repeat spend"}. Check whether it is still needed before another charge.`;
 }
 
 function isNamedSubscription(label, category) {
@@ -896,7 +919,14 @@ function merchantSpendPicture(label, broadItems, recentItems, latestDate) {
     pattern,
     window: recentCount > 0 ? "14 + 90 days" : "90 days",
     issue: issueParts.join("; "),
-    next: spendAlternative(label, category, { pattern, count: broadCount, recentCount, amount90: broadTotal }),
+    next: spendAlternative(label, category, {
+      pattern,
+      count: broadCount,
+      recentCount,
+      amount90: broadTotal,
+      amount14: recentTotal,
+      monthlyImpact
+    }),
     severity: monthlyImpact >= 150 || namedSubscription || cadenceRecurring ? "danger" : "watch",
     priorityScore,
     latestDate: sortedBroad[0]?.date || latestDate || ""
@@ -941,7 +971,11 @@ function spendingTriage(flexible14, flexible90, byCategory) {
       pattern: "Category",
       window: "90 days",
       issue: `$${Math.round(food.total).toLocaleString("en-US")} / 90d; ${food.count} charges`,
-      next: spendAlternative("food", food.label),
+      next: spendAlternative("food", food.label, {
+        pattern: "Category",
+        count: food.count,
+        amount90: food.total
+      }),
       severity: "danger",
       priorityScore: food.total * (30 / 90) + 60
     });
