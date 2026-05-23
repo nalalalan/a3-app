@@ -13,7 +13,7 @@
     <link rel="icon" href="https://aolabs.io/favicon.svg?v=20260516-suite-bloom" type="image/svg+xml">
     <link rel="apple-touch-icon" href="https://aolabs.io/marks/ao-ink.svg?v=20260516-suite-bloom">
     <link rel="manifest" href="/site.webmanifest?v=20260516-a3-three-rings">
-    <link rel="stylesheet" href="/styles.css?v=20260522-a3-leaks">
+    <link rel="stylesheet" href="/styles.css?v=20260522-a3-spending">
   </head>
   <body class="locked-view">
     <header class="suite-topbar" aria-label="a3 navigation">
@@ -101,30 +101,33 @@
         </div>
       </section>
 
-      <section class="move-strip" aria-label="Financial moves">
-        <div class="move-card">
-          <strong id="moveOneLabel">A3 is checking</strong>
-          <span id="moveOneDetail">Plaid will be checked.</span>
-        </div>
-        <div class="move-card">
-          <strong id="moveTwoLabel">Do not move A3 cash</strong>
-          <span id="moveTwoDetail">Wait until Chase data is current.</span>
-        </div>
-        <div class="move-card">
-          <strong id="moveThreeLabel">Keep $500 cash</strong>
-          <span id="moveThreeDetail">Protect the cash floor.</span>
-        </div>
-      </section>
-
       <section class="action-panel" aria-label="Immediate financial fixes">
         <div class="action-panel-head">
-          <h2>Mistakes, leaks, moves</h2>
-          <span id="improvementState">Waiting for Chase.</span>
+          <span>Immediate triage</span>
+          <h2 id="primaryFixLabel">Connect Chase</h2>
+          <p id="primaryFixDetail">Current bank data is needed before moving A3 cash.</p>
+          <strong id="improvementState">Waiting for Chase.</strong>
         </div>
         <div id="improvementList" class="improvement-list">
           <div class="improvement-row">
             <strong>Missing</strong>
             <span>Connect Chase before moving A3 cash.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="spend-panel" aria-label="Spending leaks">
+        <div class="spend-panel-head">
+          <h2>Spending to stop</h2>
+          <span id="spendWindow">Last 14 days</span>
+        </div>
+        <div id="spendLeakList" class="spend-leak-list">
+          <div class="spend-leak-row">
+            <div>
+              <strong>Waiting</strong>
+              <span>Connect Chase.</span>
+            </div>
+            <p>No spending recommendations until current transactions are available.</p>
           </div>
         </div>
       </section>

@@ -33,14 +33,12 @@ const els = {
   advisorSummary: document.getElementById("advisorSummary"),
   advisorAction: document.getElementById("advisorAction"),
   advisorEffect: document.getElementById("advisorEffect"),
-  moveOneLabel: document.getElementById("moveOneLabel"),
-  moveOneDetail: document.getElementById("moveOneDetail"),
-  moveTwoLabel: document.getElementById("moveTwoLabel"),
-  moveTwoDetail: document.getElementById("moveTwoDetail"),
-  moveThreeLabel: document.getElementById("moveThreeLabel"),
-  moveThreeDetail: document.getElementById("moveThreeDetail"),
+  primaryFixLabel: document.getElementById("primaryFixLabel"),
+  primaryFixDetail: document.getElementById("primaryFixDetail"),
   improvementState: document.getElementById("improvementState"),
   improvementList: document.getElementById("improvementList"),
+  spendWindow: document.getElementById("spendWindow"),
+  spendLeakList: document.getElementById("spendLeakList"),
   watchList: document.getElementById("watchList"),
   bankList: document.getElementById("bankList"),
   eventList: document.getElementById("eventList"),
@@ -325,6 +323,7 @@ function financialMoves(analysis) {
 }
 
 function renderFinancialMoves(moves) {
+  if (!els.moveOneLabel) return;
   const slots = [
     [els.moveOneLabel, els.moveOneDetail],
     [els.moveTwoLabel, els.moveTwoDetail],
@@ -335,6 +334,105 @@ function renderFinancialMoves(moves) {
     labelNode.textContent = move.label;
     detailNode.textContent = move.detail;
   });
+}
+
+function itemDetail(item) {
+  return String(item?.detail || item?.body || "").trim();
+}
+
+function findImprovement(items, label) {
+  return items.find((item) => item.label === label);
+}
+
+function primaryFix(items, accounts) {
+  const biggestLeak = findImprovement(items, "Biggest leak");
+  if (biggestLeak) {
+    const detail = itemDetail(biggestLeak);
+    const match = detail.match(/^([^:]+):\s*(.+)$/);
+    if (match) {
+      return {
+        label: `Freeze ${match[1].trim()}`,
+        detail: match[2].trim(),
+        severity: biggestLeak.severity || "watch"
+      };
+    }
+    return { label: "Freeze biggest leak", detail, severity: biggestLeak.severity || "watch" };
+  }
+
+  const mistake = findImprovement(items, "Mistake to avoid");
+  if (mistake) return { label: "Do not move A3 cash", detail: itemDetail(mistake), severity: "danger" };
+
+  const first = items[0];
+  if (first) return { label: actionLabel(first), detail: itemDetail(first), severity: first.severity || "watch" };
+
+  return {
+    label: accounts.connected ? "Hold cash steady" : "Connect Chase",
+    detail: accounts.connected ? "A3 is waiting for current spending patterns." : "Current bank data is needed before moving A3 cash.",
+    severity: "watch"
+  };
+}
+
+function actionLabel(item) {
+  switch (item?.label) {
+    case "Mistake to avoid":
+      return "Do not move A3 cash";
+    case "Cash floor":
+      return "Keep cash floor";
+    case "Biggest leak":
+      return "Freeze biggest leak";
+    case "Food leak":
+      return "Cut food 7 days";
+    case "7-day rule":
+      return "Pause card spending";
+    case "Payment posted":
+      return "Already posted";
+    case "Payment pending":
+      return "Still pending";
+    case "Missing":
+      return "Connect Chase";
+    default:
+      return item?.label || "";
+  }
+}
+
+function orderedImprovements(items, primary) {
+  const labels = ["Mistake to avoid", "7-day rule", "Food leak", "Cash floor", "Payment posted", "Payment pending", "A3 cash", "Missing", "Floor"];
+  const ordered = [];
+  for (const label of labels) {
+    const item = findImprovement(items, label);
+    if (item && itemDetail(item) !== primary.detail) ordered.push(item);
+  }
+  for (const item of items) {
+    if (!ordered.includes(item) && itemDetail(item) !== primary.detail) ordered.push(item);
+  }
+  return ordered.slice(0, 3);
+}
+
+function renderSpendLeaks(improvements, accounts) {
+  const spending = Array.isArray(improvements.spending) ? improvements.spending : [];
+  els.spendWindow.textContent = accounts.connected ? "Last 14 days" : "Waiting for Chase";
+
+  if (!spending.length) {
+    els.spendLeakList.innerHTML = `<div class="spend-leak-row">
+      <div>
+        <strong>${accounts.connected ? "No leak list yet" : "Connect Chase"}</strong>
+        <span>${accounts.connected ? "A3 needs more current transactions." : "Bank data is needed."}</span>
+      </div>
+      <p>${accounts.connected ? "Keep the cash floor and wait for the next sync." : "No spending recommendations until current transactions are available."}</p>
+    </div>`;
+    return;
+  }
+
+  els.spendLeakList.innerHTML = spending.map((item) => `
+    <div class="spend-leak-row" data-severity="${escapeHtml(item.severity || "watch")}">
+      <div>
+        <strong>${escapeHtml(item.label)}</strong>
+        <span>${escapeHtml(item.issue || `${money.format(item.amount || 0)} / ${item.window || "14 days"}`)}</span>
+        <em>${escapeHtml(item.impactLabel || `+${money.format(item.monthlyImpact || 0)}/mo if cut`)}</em>
+      </div>
+      <p>${escapeHtml(item.next || "Freeze for 7 days unless it is necessary.")}</p>
+    </div>
+  `).join("");
 }
 
 function renderImprovements(analysis) {
@@ -364,13 +462,18 @@ function renderImprovements(analysis) {
         { label: "Floor", detail: `${money.format(floor)} stays untouched.`, severity: "watch" }
       ];
   const rows = (items.length ? items : fallback).slice(0, 6);
+  const primary = primaryFix(rows, accounts);
+  const ordered = orderedImprovements(rows, primary);
+  els.primaryFixLabel.textContent = primary.label;
+  els.primaryFixDetail.textContent = primary.detail;
   els.improvementState.textContent = improvements.state || (accounts.connected ? "Live Chase data." : "Chase not connected.");
-  els.improvementList.innerHTML = rows.map((item) => `
-    <div class="improvement-row" data-severity="${escapeHtml(item.severity || "watch")}">
-      <strong>${escapeHtml(item.label)}</strong>
-      <span>${escapeHtml(item.detail)}</span>
+  els.improvementList.innerHTML = ordered.map((item, index) => `
+    <div class="improvement-row" data-severity="${escapeHtml(item.severity || "watch")}" data-step="${String(index + 1).padStart(2, "0")}">
+      <strong>${escapeHtml(actionLabel(item))}</strong>
+      <span>${escapeHtml(itemDetail(item))}</span>
     </div>
   `).join("");
+  renderSpendLeaks(improvements, accounts);
 }
 
 async function loadState() {
@@ -426,7 +529,6 @@ function render(data) {
     els.advisorAction.textContent = plaidReviewPending ? "Chase tracking pending." : "Connect Chase first.";
     els.advisorSummary.textContent = "No sample numbers are used.";
     els.advisorEffect.textContent = plaidReviewPending ? "Spending plan starts after bank link." : "";
-    renderFinancialMoves(financialMoves(analysis));
     renderImprovements(analysis);
     renderRows(els.watchList, [{ label: "Bank off", detail: "No connected Chase data." }], (item) => [item.label, item.detail]);
     renderBankAccounts(accounts.items || []);
@@ -460,7 +562,6 @@ function render(data) {
   els.advisorAction.textContent = advisorDisplay.action;
   els.advisorSummary.textContent = advisorDisplay.summary;
   els.advisorEffect.textContent = advisorDisplay.effect;
-  renderFinancialMoves(financialMoves(analysis));
   renderImprovements(analysis);
 
   renderRows(els.watchList, analysis.watch, (item) => [item.label, item.detail]);

@@ -777,6 +777,73 @@ function groupedSpend(transactions, keyFn) {
   }).sort((a, b) => b.total - a.total);
 }
 
+function spendAlternative(label, category) {
+  const text = `${label || ""} ${category || ""}`.toLowerCase();
+  if (/shar|music|instrument|violin/.test(text)) {
+    return "Use existing materials for 14 days; buy nothing new.";
+  }
+  if (/chipotle|restaurant|food|coffee|cafe|dining|takeout|delivery/.test(text)) {
+    return "Groceries or food already at home for 7 days; no takeout.";
+  }
+  if (/openai|chatgpt|subscription|software|app|internet|online/.test(text)) {
+    return "Keep one useful plan; pause or cancel duplicate subscriptions.";
+  }
+  if (/lyft|uber|taxi|rideshare|transport/.test(text)) {
+    return "Batch trips or use transit; rideshare only when necessary.";
+  }
+  if (/lululemon|clothing|apparel|shop|retail|merchandise/.test(text)) {
+    return "No clothes or gear; wait 7 days before buying.";
+  }
+  if (/grocery|supermarket/.test(text)) {
+    return "One grocery run, one list, one limit.";
+  }
+  return "Freeze for 7 days unless it is required for work, health, rent, transport, or food.";
+}
+
+function spendingTriage(byMerchant, byCategory) {
+  const seen = new Set();
+  const rows = [];
+  for (const item of byMerchant) {
+    if (!item.label || item.total < 25) continue;
+    const key = item.label.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    rows.push({
+      label: item.label,
+      amount: item.total,
+      monthlyImpact: item.total * (30 / 14),
+      impactLabel: item.count > 1
+        ? `+$${Math.round(item.total * (30 / 14)).toLocaleString("en-US")}/mo if cut`
+        : `+$${Math.round(item.total).toLocaleString("en-US")} kept if not repeated`,
+      count: item.count,
+      category: item.category,
+      window: "14 days",
+      issue: `$${Math.round(item.total).toLocaleString("en-US")} across ${item.count} charge${item.count === 1 ? "" : "s"}.`,
+      next: spendAlternative(item.label, item.category),
+      severity: item.total >= 100 ? "danger" : "watch"
+    });
+    if (rows.length >= 5) break;
+  }
+
+  const food = byCategory.find((item) => /food/i.test(item.label));
+  if (food && !rows.some((row) => /chipotle|restaurant|food|coffee|cafe|dining|takeout|delivery/i.test(`${row.label} ${row.category}`))) {
+    rows.push({
+      label: "Food and drink",
+      amount: food.total,
+      monthlyImpact: food.total * (30 / 14),
+      impactLabel: `+$${Math.round(food.total * (30 / 14)).toLocaleString("en-US")}/mo if cut`,
+      count: food.count,
+      category: food.label,
+      window: "14 days",
+      issue: `$${Math.round(food.total).toLocaleString("en-US")} across ${food.count} charges.`,
+      next: spendAlternative("food", food.label),
+      severity: "danger"
+    });
+  }
+
+  return rows.slice(0, 5);
+}
+
 function immediateImprovements(input) {
   const { accounts, goal, settings, withFlow, latestDate, paymentStatus } = input;
   const cash = Number(accounts.cash || 0);
@@ -799,6 +866,7 @@ function immediateImprovements(input) {
       debtPayment14: 0,
       topMerchants: [],
       topCategories: [],
+      spending: [],
       items: [
         { label: "Missing", detail: "Connect Chase before moving A3 cash.", severity: "watch" },
         { label: "Floor", detail: `$${Math.round(floor).toLocaleString("en-US")} stays untouched.`, severity: "watch" }
@@ -868,6 +936,7 @@ function immediateImprovements(input) {
     debtPayment14: debtPaymentTotal,
     topMerchants: byMerchant,
     topCategories: byCategory,
+    spending: spendingTriage(byMerchant, byCategory),
     items: items.slice(0, 6)
   };
 }
