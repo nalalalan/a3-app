@@ -119,16 +119,52 @@ function clamp(value, min, max) {
 
 function replacementStep(item) {
   const text = `${item?.label || ""} ${item?.category || ""}`.toLowerCase();
-  if (/shar|music|instrument|violin/.test(text)) return "Open existing music or supplies.";
-  if (/chipotle|restaurant|food|coffee|cafe|dining|takeout|delivery/.test(text)) return "Eat something already available first.";
-  if (/openai|chatgpt|subscription|software|app|internet|online/.test(text)) return "Use the active plan only.";
-  if (/lyft|uber|taxi|rideshare|transport/.test(text)) return "Walk or transit first.";
-  if (/lululemon|clothing|apparel|shop|retail|merchandise/.test(text)) return "Close the cart and wait.";
+  if (/shar|music|instrument|violin/.test(text)) return "Use what is already on the stand.";
+  if (/chipotle|restaurant|food|coffee|cafe|dining|takeout|delivery/.test(text)) return "Eat food already paid for first.";
+  if (/openai|chatgpt|subscription|software|app|internet|online/.test(text)) return "Cancel duplicate or unused plans.";
+  if (/lyft|uber|taxi|rideshare|transport/.test(text)) return "Batch the trip or walk/transit.";
+  if (/amazon|bestbuy|best buy|samsung|electronics|lululemon|clothing|apparel|shop|retail|merchandise/.test(text)) return "Leave the cart open.";
   return "Use what is already paid for.";
 }
 
+function isRepeatableSpend(item) {
+  const pattern = String(item?.pattern || "").toLowerCase();
+  return Number(item?.recentCount || 0) > 0 || /subscription|recurring|repeated/.test(pattern);
+}
+
+function isPastSpend(item) {
+  const pattern = String(item?.pattern || "").toLowerCase();
+  return /past purchase|one-off/.test(pattern) && !isRepeatableSpend(item);
+}
+
+function displayMerchantLabel(label) {
+  const raw = String(label || "spending").trim();
+  const lower = raw.toLowerCase();
+  const titled = lower.replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
+  return titled
+    .replace(/\bOpenai\b/g, "OpenAI")
+    .replace(/\bCvs\b/g, "CVS")
+    .replace(/\bAtm\b/g, "ATM");
+}
+
 function primaryCutItem(spending) {
-  return spending[0] || null;
+  return spending.find(isRepeatableSpend) || spending[0] || null;
+}
+
+function primaryCutTitle(item) {
+  const text = `${item?.label || ""} ${item?.category || ""}`.toLowerCase();
+  const label = displayMerchantLabel(item?.label);
+  if (/openai|chatgpt|subscription|software|app|internet|online/.test(text)) return `Audit ${label}`;
+  if (/chipotle|restaurant|food|coffee|cafe|dining|takeout|delivery/.test(text)) return "Replace the next order";
+  if (/lyft|uber|taxi|rideshare|transport/.test(text)) return "Reduce the next ride";
+  if (isPastSpend(item)) return "Past spike, no repeat";
+  return `Start with ${label}`;
+}
+
+function primaryCutReason(item) {
+  const issue = item?.issue ? `${item.label}: ${item.issue}.` : "";
+  const impact = item?.impactLabel ? `${item.impactLabel}.` : "";
+  return [issue, impact, item?.next || ""].filter(Boolean).join(" ");
 }
 
 function renderGoalMeter(goal, sampleOnly, data) {
@@ -232,7 +268,7 @@ function compactAdvisor(latestRun, analysis) {
         : "A3 has not seen the payment in Plaid yet.";
     const summary = payment.amount > 0
       ? `${moneyExact.format(payment.amount)} payment ${payment.status === "pending" ? "is pending" : "is posted"} in Plaid.`
-      : `No extra A3 saving today. ${money.format(cash)} cash right now.`;
+      : `Hold A3 cash today. ${money.format(cash)} cash right now.`;
     return {
       status: payment.status === "pending" ? "A3 is watching" : payment.status === "not_visible" ? "A3 is checking" : "Already checked",
       action,
@@ -371,12 +407,12 @@ function primaryFix(items, accounts) {
     const match = detail.match(/^([^:]+):\s*(.+)$/);
     if (match) {
       return {
-        label: `Freeze ${match[1].trim()}`,
+        label: `Slow ${match[1].trim()}`,
         detail: match[2].trim(),
         severity: biggestLeak.severity || "watch"
       };
     }
-    return { label: "Freeze biggest leak", detail, severity: biggestLeak.severity || "watch" };
+    return { label: "Slow biggest leak", detail, severity: biggestLeak.severity || "watch" };
   }
 
   const mistake = findImprovement(items, "Mistake to avoid");
@@ -399,10 +435,11 @@ function actionLabel(item) {
     case "Cash floor":
       return "Keep cash floor";
     case "Biggest leak":
-      return "Freeze biggest leak";
+      return "Slow biggest leak";
     case "Food leak":
-      return "Cut food 7 days";
+      return "Replace takeout";
     case "7-day rule":
+    case "Card spend":
       return "Pause card spending";
     case "Payment posted":
       return "Already posted";
@@ -416,7 +453,7 @@ function actionLabel(item) {
 }
 
 function orderedImprovements(items, primary) {
-  const labels = ["Mistake to avoid", "7-day rule", "Food leak", "Cash floor", "Payment posted", "Payment pending", "A3 cash", "Missing", "Floor"];
+  const labels = ["Mistake to avoid", "Card spend", "Food leak", "Cash floor", "Payment posted", "Payment pending", "A3 cash", "Missing", "Floor"];
   const ordered = [];
   for (const label of labels) {
     const item = findImprovement(items, label);
@@ -444,18 +481,18 @@ function renderCutAssist(improvements, accounts) {
     return;
   }
 
-  els.cutTitle.textContent = `No ${first.label} today`;
-  els.cutReason.textContent = `${first.impactLabel || ""}. ${first.next || "Freeze this for 7 days."}`.trim();
+  els.cutTitle.textContent = primaryCutTitle(first);
+  els.cutReason.textContent = primaryCutReason(first);
   els.cutSteps.innerHTML = `
-    <li>Close checkout.</li>
+    <li>Open it only with a specific need.</li>
     <li>${escapeHtml(replacementStep(first))}</li>
-    <li>Wait 20 minutes.</li>
+    <li>Keep the cash floor intact.</li>
   `;
 }
 
 function renderSpendLeaks(improvements, accounts, locks = []) {
   const spending = Array.isArray(improvements.spending) ? improvements.spending : [];
-  els.spendWindow.textContent = accounts.connected ? "14d + 90d" : "Waiting for Chase";
+  els.spendWindow.textContent = accounts.connected ? "Repeatable first" : "Waiting for Chase";
   const visibleSpending = spending;
 
   if (!visibleSpending.length) {
@@ -478,9 +515,9 @@ function renderSpendLeaks(improvements, accounts, locks = []) {
         <div>
           <strong>${escapeHtml(item.label)}</strong>
           <span>${escapeHtml(`${pattern}${item.issue || `${money.format(item.amount || 0)} / ${item.window || "90 days"}`}`)}</span>
-          <em>${escapeHtml(item.impactLabel || `+${money.format(item.monthlyImpact || 0)}/mo if cut`)}</em>
+          <em>${escapeHtml(item.impactLabel || `+${money.format(item.monthlyImpact || 0)}/mo if reduced`)}</em>
         </div>
-        <p>${escapeHtml(item.next || "Freeze for 7 days unless it is necessary.")}</p>
+        <p>${escapeHtml(item.next || "Pause unless it is required for work, health, rent, transport, or food.")}</p>
       </div>
     `;
   }).join("");

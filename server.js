@@ -783,30 +783,40 @@ function groupedSpend(transactions, keyFn) {
   }).sort((a, b) => b.total - a.total);
 }
 
-function spendAlternative(label, category) {
+function spendAlternative(label, category, context = {}) {
   const text = `${label || ""} ${category || ""}`.toLowerCase();
+  const pattern = String(context.pattern || "").toLowerCase();
+  const pastPurchase = /past purchase|one-off|large one-off/.test(pattern)
+    || (Number(context.count || 0) <= 2 && Number(context.recentCount || 0) === 0);
+
   if (/shar|music|instrument|violin/.test(text)) {
-    return "Use existing materials for 14 days; buy nothing new.";
+    return pastPurchase
+      ? "Use what you already bought before another accessory."
+      : "Use existing materials before another accessory.";
   }
   if (/chipotle|restaurant|food|coffee|cafe|fuel america|dining|takeout|delivery/.test(text)) {
-    return "Groceries or food already at home for 7 days; no takeout.";
+    return "Use food already paid for before another order.";
   }
   if (/sleeplay|cpap|medical|health/.test(text)) {
-    return "Only buy if health-required; otherwise wait 14 days.";
+    return "Required sleep or health supplies only; skip upgrades and extras.";
   }
   if (/openai|chatgpt|subscription|software|app|internet|online/.test(text)) {
-    return "Pause duplicate plans.";
+    return "Cancel duplicate or unused plans; keep only the plan doing current work.";
   }
   if (/lyft|uber|taxi|rideshare|transport/.test(text)) {
-    return "Batch trips or use transit; rideshare only when necessary.";
+    return "Batch trips; use walking or transit when the schedule allows.";
   }
   if (/amazon|bestbuy|best buy|rebill|samsung|electronics|lululemon|clothing|apparel|shop|retail|merchandise/.test(text)) {
-    return "No devices, gear, clothes, or accessories for 14 days.";
+    return pastPurchase
+      ? "Treat this as a past spike; stop the follow-up cart."
+      : "Leave the cart open; buy only the required item.";
   }
   if (/grocery|supermarket/.test(text)) {
     return "One grocery run, one list, one limit.";
   }
-  return "Freeze for 7 days unless it is required for work, health, rent, transport, or food.";
+  return pastPurchase
+    ? "Treat this as already spent; do not repeat it."
+    : "Pause unless required for work, health, rent, transport, or food.";
 }
 
 function isNamedSubscription(label, category) {
@@ -840,27 +850,34 @@ function merchantSpendPicture(label, broadItems, recentItems, latestDate) {
   const cadenceRecurring = !namedSubscription && isRecurringCadence(broadCount, cadence);
   const repeat = broadCount >= 3 || recentCount >= 2;
   const oneOff = broadCount === 1;
-  const multiple = broadCount >= 2;
-  const activeMonthly = oneOff ? 0 : (recentCount > 0 ? recentTotal * (30 / 14) : 0);
-  const broadMonthly = oneOff ? broadTotal : broadTotal * (30 / 90);
+  const purchaseCluster = broadCount >= 2 && !namedSubscription && !cadenceRecurring && !repeat;
+  const activeMonthly = oneOff || purchaseCluster ? 0 : (recentCount > 0 ? recentTotal * (30 / 14) : 0);
+  const broadMonthly = oneOff || purchaseCluster ? 0 : broadTotal * (30 / 90);
   const monthlyImpact = Math.max(activeMonthly, broadMonthly);
+  const pastSpendScore = oneOff || purchaseCluster ? Math.min(broadTotal * 0.08, 450) : 0;
   const priorityScore = monthlyImpact
     + (namedSubscription ? 180 : 0)
     + (cadenceRecurring ? 120 : 0)
     + (repeat ? 80 : 0)
     + (recentCount > 0 ? 60 : 0)
-    - (oneOff ? 90 : 0);
+    + pastSpendScore
+    - (oneOff || purchaseCluster ? 180 : 0);
   const pattern = namedSubscription
     ? "Subscription"
     : cadenceRecurring
       ? "Recurring charge"
     : repeat
       ? "Repeated habit"
-      : multiple
-        ? "Multiple purchases"
-        : broadTotal >= 250
-          ? "Large one-off"
-          : "One-off";
+      : purchaseCluster || broadTotal >= 250
+        ? "Past purchase"
+        : oneOff
+          ? "One-off"
+          : "Purchase";
+  const impactLabel = namedSubscription
+    ? `+$${Math.round(monthlyImpact).toLocaleString("en-US")}/mo if canceled`
+    : repeat || cadenceRecurring
+      ? `+$${Math.round(monthlyImpact).toLocaleString("en-US")}/mo if reduced`
+      : `Past spend: $${Math.round(broadTotal).toLocaleString("en-US")}`;
   const issueParts = [];
   if (recentCount > 0) issueParts.push(`$${Math.round(recentTotal).toLocaleString("en-US")} / 14d`);
   issueParts.push(`$${Math.round(broadTotal).toLocaleString("en-US")} / 90d`);
@@ -871,9 +888,7 @@ function merchantSpendPicture(label, broadItems, recentItems, latestDate) {
     amount90: broadTotal,
     amount14: recentTotal,
     monthlyImpact,
-    impactLabel: oneOff
-      ? `+$${Math.round(broadTotal).toLocaleString("en-US")} kept if not repeated`
-      : `+$${Math.round(monthlyImpact).toLocaleString("en-US")}/mo if cut`,
+    impactLabel,
     count: broadCount,
     recentCount,
     category,
@@ -881,7 +896,7 @@ function merchantSpendPicture(label, broadItems, recentItems, latestDate) {
     pattern,
     window: recentCount > 0 ? "14 + 90 days" : "90 days",
     issue: issueParts.join("; "),
-    next: spendAlternative(label, category),
+    next: spendAlternative(label, category, { pattern, count: broadCount, recentCount, amount90: broadTotal }),
     severity: monthlyImpact >= 150 || namedSubscription || cadenceRecurring ? "danger" : "watch",
     priorityScore,
     latestDate: sortedBroad[0]?.date || latestDate || ""
@@ -919,7 +934,7 @@ function spendingTriage(flexible14, flexible90, byCategory) {
       amount90: food.total,
       amount14: 0,
       monthlyImpact: food.total * (30 / 90),
-      impactLabel: `+$${Math.round(food.total * (30 / 90)).toLocaleString("en-US")}/mo if cut`,
+      impactLabel: `+$${Math.round(food.total * (30 / 90)).toLocaleString("en-US")}/mo if reduced`,
       count: food.count,
       recentCount: 0,
       category: food.label,
@@ -932,15 +947,24 @@ function spendingTriage(flexible14, flexible90, byCategory) {
     });
   }
 
-  return rows
+  const sortedRows = rows
     .sort((a, b) => {
       if (Number(b.priorityScore || 0) !== Number(a.priorityScore || 0)) {
         return Number(b.priorityScore || 0) - Number(a.priorityScore || 0);
       }
       return Number(b.monthlyImpact || b.amount || 0) - Number(a.monthlyImpact || a.amount || 0);
-    })
-    .map((row, index) => ({ ...row, priorityRank: index + 1 }))
-    .slice(0, 18);
+    });
+  const repeatableRows = sortedRows.filter((row) => {
+    const pattern = String(row.pattern || "").toLowerCase();
+    return row.monthlyImpact > 0 || row.recentCount > 0 || /subscription|recurring|repeated|category/.test(pattern);
+  });
+  const pastRows = sortedRows
+    .filter((row) => !repeatableRows.includes(row))
+    .sort((a, b) => Number(b.amount90 || b.amount || 0) - Number(a.amount90 || a.amount || 0))
+    .slice(0, 4);
+  const repeatableLimit = 18 - pastRows.length;
+  return [...repeatableRows.slice(0, repeatableLimit), ...pastRows]
+    .map((row, index) => ({ ...row, priorityRank: index + 1 }));
 }
 
 function easternDateKey(date = new Date()) {
@@ -1061,7 +1085,7 @@ function immediateImprovements(input) {
   if (topMerchant && topMerchant.total >= 25) {
     items.push({
       label: "Biggest leak",
-      detail: `${topMerchant.label}: $${Math.round(topMerchant.total).toLocaleString("en-US")} / 14 days. Freeze 7 days.`,
+      detail: `${topMerchant.label}: $${Math.round(topMerchant.total).toLocaleString("en-US")} in the latest 14d. Slow the next charge.`,
       severity: "watch"
     });
   }
@@ -1070,15 +1094,15 @@ function immediateImprovements(input) {
   if (food && !items.some((item) => item.detail.includes(food.label))) {
     items.push({
       label: "Food leak",
-      detail: `$${Math.round(food.total).toLocaleString("en-US")} / 14 days, ${food.count} charges. Cut 7 days.`,
+      detail: `$${Math.round(food.total).toLocaleString("en-US")} in the latest 90d, ${food.count} charges. Use food already paid for before another order.`,
       severity: "watch"
     });
   }
 
   if (debtTotal > 0) {
     items.push({
-      label: "7-day rule",
-      detail: "No new card spend unless necessary.",
+      label: "Card spend",
+      detail: "Only necessary charges until the cash floor and balances improve.",
       severity: "danger"
     });
   }
