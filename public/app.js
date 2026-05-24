@@ -125,6 +125,15 @@ function monthLabel(value) {
   return new Date(`${value}-01T00:00:00Z`).toLocaleString([], { month: "short", year: "numeric", timeZone: "UTC" });
 }
 
+function moneyShort(value) {
+  const numeric = Number(value || 0);
+  const sign = numeric < 0 ? "-" : "";
+  const abs = Math.abs(numeric);
+  if (abs >= 1000000) return `${sign}$${(abs / 1000000).toFixed(abs >= 10000000 ? 0 : 1)}m`;
+  if (abs >= 1000) return `${sign}$${(abs / 1000).toFixed(abs >= 10000 ? 0 : 1)}k`;
+  return `${sign}$${Math.round(abs)}`;
+}
+
 function isSampleOnly(data) {
   return !(data.imports || []).some((item) => item.source !== "sample");
 }
@@ -608,26 +617,26 @@ function renderMonthlyNet(data) {
   els.netCurrent.textContent = money.format(current.net);
   els.netCurrent.dataset.net = current.net >= 0 ? "positive" : "negative";
   els.netAverage.textContent = `6-mo avg ${money.format(history.last6Average || 0)}`;
-  els.netRange.textContent = `${visible.length} ${monthWord} · best ${money.format(history.bestMonth?.net || 0)} / worst ${money.format(history.worstMonth?.net || 0)}`;
+  els.netRange.textContent = `${visible.length} ${monthWord} shown - best ${money.format(history.bestMonth?.net || 0)} / worst ${money.format(history.worstMonth?.net || 0)}`;
 
   const width = 720;
-  const height = 220;
-  const padX = 22;
-  const padY = 24;
-  const plotW = width - padX * 2;
-  const plotH = height - padY * 2;
+  const height = 260;
+  const plotLeft = 66;
+  const plotRight = width - 18;
+  const plotTop = 22;
+  const plotBottom = height - 42;
+  const plotW = plotRight - plotLeft;
+  const plotH = plotBottom - plotTop;
   const nets = visible.map((item) => Number(item.net || 0));
-  const min = Math.min(0, ...nets);
-  const max = Math.max(0, ...nets);
-  const spread = Math.max(1, max - min);
-  const yFor = (value) => padY + ((max - value) / spread) * plotH;
+  const maxAbs = Math.max(1, ...nets.map((value) => Math.abs(value))) * 1.08;
+  const yFor = (value) => plotTop + ((maxAbs - value) / (maxAbs * 2)) * plotH;
   const zeroY = yFor(0);
-  const step = visible.length > 1 ? plotW / (visible.length - 1) : plotW;
+  const step = plotW / visible.length;
   const barW = Math.max(1.2, Math.min(14, (plotW / visible.length) * .58));
 
   const bars = visible.map((item, index) => {
     const value = Number(item.net || 0);
-    const x = padX + index * step - barW / 2;
+    const x = plotLeft + index * step + (step - barW) / 2;
     const y = Math.min(zeroY, yFor(value));
     const barH = Math.max(1, Math.abs(zeroY - yFor(value)));
     const currentClass = item.month === current.month ? " is-current" : "";
@@ -637,23 +646,39 @@ function renderMonthlyNet(data) {
     </rect>`;
   }).join("");
 
-  const points = visible.map((item, index) => {
-    const x = padX + index * step;
-    const y = yFor(Number(item.net || 0));
-    return `${x.toFixed(2)},${y.toFixed(2)}`;
+  const gridValues = [maxAbs, maxAbs / 2, 0, -maxAbs / 2, -maxAbs];
+  const grid = gridValues.map((value) => {
+    const y = yFor(value);
+    const zeroClass = Math.abs(value) < 1 ? " is-zero" : "";
+    return `<g class="net-grid${zeroClass}">
+      <line x1="${plotLeft}" x2="${plotRight}" y1="${y.toFixed(2)}" y2="${y.toFixed(2)}"></line>
+      <text x="${plotLeft - 12}" y="${(y + 4).toFixed(2)}">${escapeHtml(moneyShort(value))}</text>
+    </g>`;
   }).join(" ");
+
+  const labelEvery = Math.max(1, Math.ceil(visible.length / 5));
+  const xLabels = visible.map((item, index) => {
+    const isEdge = index === 0 || index === visible.length - 1;
+    if (!isEdge && index % labelEvery !== 0) return "";
+    const x = plotLeft + index * step + step / 2;
+    const anchor = index === visible.length - 1 ? " end" : "";
+    return `<text class="net-axis-label${anchor}" x="${x.toFixed(2)}" y="${height - 12}">${escapeHtml(monthLabel(item.month))}</text>`;
+  }).join("");
+
   const foundCurrent = visible.findIndex((item) => item.month === current.month);
   const currentIndex = foundCurrent >= 0 ? foundCurrent : visible.length - 1;
-  const currentX = padX + currentIndex * step;
+  const currentX = plotLeft + currentIndex * step + step / 2;
   const currentY = yFor(Number(current.net || 0));
+  const currentLabelX = currentX > width - 120 ? currentX - 8 : currentX + 8;
+  const currentAnchor = currentX > width - 120 ? " end" : "";
 
   els.netChart.innerHTML = `
-    <line class="net-zero" x1="${padX}" x2="${width - padX}" y1="${zeroY.toFixed(2)}" y2="${zeroY.toFixed(2)}"></line>
+    ${grid}
     ${bars}
-    <polyline class="net-line" points="${points}"></polyline>
+    <line class="net-current-rule" x1="${currentX.toFixed(2)}" x2="${currentX.toFixed(2)}" y1="${plotTop}" y2="${plotBottom}"></line>
     <circle class="net-current-dot" cx="${currentX.toFixed(2)}" cy="${currentY.toFixed(2)}" r="5"></circle>
-    <text class="net-axis-label" x="${padX}" y="${height - 6}">${escapeHtml(monthLabel(visible[0].month))}</text>
-    <text class="net-axis-label net-axis-end" x="${width - padX}" y="${height - 6}">${escapeHtml(monthLabel(current.month))}</text>
+    <text class="net-current-label${currentAnchor}" x="${currentLabelX.toFixed(2)}" y="${Math.max(plotTop + 14, currentY - 10).toFixed(2)}">${escapeHtml(moneyShort(current.net))}</text>
+    ${xLabels}
   `;
 }
 

@@ -1180,7 +1180,7 @@ body.locked-view .lock-panel {
 
 .net-head strong {
   color: var(--ink);
-  font-size: clamp(2.2rem, 5vw, 4rem);
+  font-size: clamp(2rem, 4.4vw, 3.35rem);
   font-weight: 780;
   line-height: .9;
   letter-spacing: 0;
@@ -1197,11 +1197,10 @@ body.locked-view .lock-panel {
 
 .net-chart-frame {
   min-width: 0;
-  height: 230px;
+  height: 278px;
   border-top: 1px solid rgba(246, 239, 230, .08);
   border-bottom: 1px solid rgba(246, 239, 230, .08);
-  background:
-    linear-gradient(180deg, rgba(246, 239, 230, .035), transparent 46%, rgba(246, 239, 230, .025));
+  background: linear-gradient(180deg, rgba(246, 239, 230, .018), transparent 42%, rgba(246, 239, 230, .012));
 }
 
 .net-chart {
@@ -1211,34 +1210,44 @@ body.locked-view .lock-panel {
   overflow: visible;
 }
 
-.net-zero {
-  stroke: rgba(246, 239, 230, .22);
+.net-grid line {
+  stroke: rgba(246, 239, 230, .075);
   stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.net-grid.is-zero line {
+  stroke: rgba(246, 239, 230, .32);
+}
+
+.net-grid text {
+  fill: rgba(246, 239, 230, .46);
+  font-size: 10px;
+  font-weight: 700;
+  text-anchor: end;
 }
 
 .net-bar {
-  opacity: .58;
+  opacity: .86;
 }
 
 .net-bar.positive {
-  fill: rgba(143, 166, 147, .68);
+  fill: rgba(165, 190, 162, .78);
 }
 
 .net-bar.negative {
-  fill: rgba(193, 138, 130, .72);
+  fill: rgba(214, 142, 130, .72);
 }
 
 .net-bar.is-current {
-  opacity: .95;
+  opacity: 1;
   fill: var(--blue);
 }
 
-.net-line {
-  fill: none;
-  stroke: rgba(246, 239, 230, .52);
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.net-current-rule {
+  stroke: rgba(126, 146, 190, .32);
+  stroke-width: 1;
+  stroke-dasharray: 3 7;
 }
 
 .net-current-dot {
@@ -1247,13 +1256,23 @@ body.locked-view .lock-panel {
   stroke-width: 3;
 }
 
+.net-current-label {
+  fill: rgba(246, 239, 230, .9);
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.net-current-label.end {
+  text-anchor: end;
+}
+
 .net-axis-label {
-  fill: rgba(246, 239, 230, .46);
-  font-size: 11px;
+  fill: rgba(246, 239, 230, .5);
+  font-size: 10px;
   font-weight: 680;
 }
 
-.net-axis-end {
+.net-axis-label.end {
   text-anchor: end;
 }
 
@@ -1829,7 +1848,7 @@ details.panel {
   }
 
   .net-chart-frame {
-    height: 190px;
+    height: 230px;
   }
 
   .net-foot {
