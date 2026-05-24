@@ -642,13 +642,13 @@ function renderMonthlyNet(data) {
     return;
   }
 
-  const currentLabel = `${monthLabel(current.month)} to date`;
+  const currentLabel = `${monthLabel(current.month)} so far`;
   const monthWord = visible.length === 1 ? "month" : "months";
-  els.netWindow.textContent = `All available: ${monthLabel(visible[0].month)} - ${currentLabel}`;
+  els.netWindow.textContent = currentLabel;
   els.netCurrent.textContent = money.format(current.net);
   els.netCurrent.dataset.net = current.net >= 0 ? "positive" : "negative";
-  els.netAverage.textContent = `6-mo avg ${money.format(history.last6Average || 0)}`;
-  els.netRange.textContent = `${visible.length} ${monthWord} shown - best ${money.format(history.bestMonth?.net || 0)} / worst ${money.format(history.worstMonth?.net || 0)}`;
+  els.netAverage.textContent = `${money.format(current.inflow || 0)} in - ${money.format(current.spend || 0)} out`;
+  els.netRange.textContent = `6-mo avg ${money.format(history.last6Average || 0)} / ${visible.length} ${monthWord}`;
 
   const width = 720;
   const height = 260;
