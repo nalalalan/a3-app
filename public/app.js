@@ -188,6 +188,22 @@ function primaryCutReason(item) {
   return `${issue}. ${impact}.`;
 }
 
+function targetProgressText(goal) {
+  const target = Math.max(0, Number(goal?.downPaymentTarget || 0));
+  if (target <= 0) return "Target not set";
+  const saved = Math.max(0, Number(goal?.availableForDownPayment || 0));
+  return `${Math.round(clamp(saved / target, 0, 1) * 100)}% funded`;
+}
+
+function monthsToCloseText(gap, pace) {
+  const remaining = Math.max(0, Number(gap || 0));
+  const monthly = Math.max(0, Number(pace || 0));
+  if (remaining <= 0) return "target covered";
+  if (monthly <= 0) return "not closing at current pace";
+  const months = remaining / monthly;
+  return months < 1 ? "under 1 mo at 30d pace" : `${months.toFixed(1)} mo at 30d pace`;
+}
+
 function renderGoalMeter(goal, sampleOnly, data) {
   const target = Math.max(0, Number(goal.downPaymentTarget || 0));
   const saved = Math.max(0, Number(goal.availableForDownPayment || 0));
@@ -590,8 +606,6 @@ function renderReview(data) {
   const review = data.analysis?.review || {};
   const accounts = data.analysis?.accounts || {};
   const goal = data.analysis?.goal || {};
-  const spending = Array.isArray(data.analysis?.improvements?.spending) ? data.analysis.improvements.spending : [];
-  const first = primaryCutItem(spending);
   const autoUpdate = data.autoUpdate || {};
   const enabled = Boolean(autoUpdate.enabled);
   const lastSync = autoUpdate.lastSyncAt ? `last ${dateTimeLabel(autoUpdate.lastSyncAt)}` : "waiting for sync";
@@ -602,15 +616,14 @@ function renderReview(data) {
     els.reviewVerdict.textContent = "Connect Chase.";
     els.reviewSummary.textContent = "No live spending plan yet.";
   } else if (Number(accounts.debtTotal || 0) > 0) {
-    const parts = [
-      `${money.format(accounts.debtTotal || 0)} card/loan balance`,
-      `${money.format(goal.downPaymentGap || 0)} A3 gap`
-    ];
-    els.reviewVerdict.textContent = "Not A3-ready yet.";
-    els.reviewSummary.textContent = `${parts.join(" / ")}.`;
+    const pace = Math.max(0, Number(goal.monthlySavingsPace || 0));
+    const last6 = Number(data.analysis?.monthlyNet?.last6Average || 0);
+    els.reviewVerdict.textContent = `${money.format(goal.downPaymentGap || 0)} left`;
+    els.reviewSummary.textContent = `${targetProgressText(goal)}: ${money.format(goal.availableForDownPayment || 0)} usable / ${money.format(goal.downPaymentTarget || 0)} target. ${monthsToCloseText(goal.downPaymentGap, pace)}; 6-mo avg ${money.format(last6)}.`;
   } else if (Number(goal.downPaymentGap || 0) > 0) {
-    els.reviewVerdict.textContent = "Down payment not covered yet.";
-    els.reviewSummary.textContent = `${money.format(goal.downPaymentGap || 0)} left after the cash floor.`;
+    const pace = Math.max(0, Number(goal.monthlySavingsPace || 0));
+    els.reviewVerdict.textContent = `${money.format(goal.downPaymentGap || 0)} left`;
+    els.reviewSummary.textContent = `${targetProgressText(goal)}: ${money.format(goal.availableForDownPayment || 0)} usable / ${money.format(goal.downPaymentTarget || 0)} target. ${monthsToCloseText(goal.downPaymentGap, pace)}.`;
   } else {
     els.reviewVerdict.textContent = shortText(review.verdict || "Down payment target covered.", 96);
     els.reviewSummary.textContent = shortText(review.summary || "A3 can move from planning to price check.", 140);
@@ -826,13 +839,11 @@ function render(data) {
       : data.openaiConfigured
       ? "AI on"
       : "CSV data";
-  const targetProgress = goal.downPaymentTarget > 0
-    ? Math.round(clamp(goal.availableForDownPayment / goal.downPaymentTarget, 0, 1) * 100)
-    : 0;
-  els.stateLabel.textContent = goal.downPaymentGap <= 0 ? "A3 ready" : `${targetProgress}% funded`;
+  const targetProgress = targetProgressText(goal);
+  els.stateLabel.textContent = goal.downPaymentGap <= 0 ? "A3 ready" : `${money.format(goal.downPaymentGap || 0)} left`;
   els.stateReason.textContent = goal.downPaymentGap <= 0
     ? "Down payment target covered above floor."
-    : `${money.format(goal.downPaymentGap)} left for down payment target.`;
+    : `${targetProgress} / ${money.format(goal.availableForDownPayment || 0)} usable.`;
   els.gapValue.textContent = accounts.debtTotal > 0 ? money.format(accounts.debtTotal) : money.format(goal.downPaymentGap);
   els.gapLabel.textContent = accounts.connected
     ? `${money.format(accounts.cash || 0)} cash / ${dateTimeLabel(accounts.lastUpdatedAt)}`
