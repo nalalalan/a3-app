@@ -769,10 +769,10 @@ body.locked-view .lock-panel {
   position: relative;
   z-index: 4;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, .42fr);
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, .34fr);
+  gap: 14px;
   width: min(calc(100% - 72px), 940px);
-  margin: 18px auto 0;
+  margin: 14px auto 0;
   overflow: hidden;
   border: 1px solid rgba(246, 239, 230, .12);
   border-radius: 8px;
@@ -786,16 +786,16 @@ body.locked-view .lock-panel {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-content: center;
-  gap: 14px;
+  gap: 8px;
   min-width: 0;
-  padding: 28px;
+  padding: 22px 24px;
 }
 
 .cut-primary h2 {
   color: var(--ink);
-  font-size: clamp(1.88rem, 3.4vw, 3.18rem);
+  font-size: clamp(1.62rem, 3vw, 2.42rem);
   font-weight: 790;
-  line-height: .94;
+  line-height: .98;
   overflow-wrap: anywhere;
 }
 
@@ -813,9 +813,9 @@ body.locked-view .lock-panel {
 .cut-steps {
   display: grid;
   align-content: center;
-  gap: 8px;
+  gap: 7px;
   margin: 0;
-  padding: 24px 24px 24px 0;
+  padding: 20px 22px 20px 0;
   list-style: none;
 }
 
@@ -850,7 +850,7 @@ body.locked-view .lock-panel {
   display: grid;
   gap: 0;
   width: min(calc(100% - 72px), 940px);
-  margin: 18px auto 0;
+  margin: 16px auto 0;
   border-top: 1px solid rgba(246, 239, 230, .1);
 }
 
@@ -887,12 +887,12 @@ body.locked-view .lock-panel {
 
 .spend-leak-row {
   display: grid;
-  grid-template-columns: 44px minmax(190px, .72fr) minmax(220px, 1fr);
+  grid-template-columns: 40px minmax(188px, .66fr) minmax(220px, 1fr);
   column-gap: 22px;
   row-gap: 4px;
   align-items: start;
   min-width: 0;
-  padding: 18px 0;
+  padding: 14px 0;
 }
 
 .spend-leak-row + .spend-leak-row {
@@ -948,6 +948,11 @@ body.locked-view .lock-panel {
   overflow-wrap: anywhere;
 }
 
+.spend-leak-row.is-compact {
+  grid-template-columns: 40px minmax(160px, .55fr) minmax(200px, 1fr);
+  padding: 12px 0;
+}
+
 .spend-leak-row[data-severity="danger"] strong {
   color: #f1b8ad;
 }
@@ -955,22 +960,25 @@ body.locked-view .lock-panel {
 .receipt-breakdown {
   display: grid;
   gap: 14px;
-  padding: 18px 0 22px 44px;
+  padding: 12px 0 16px 40px;
   border-top: 1px solid rgba(246, 239, 230, .08);
+}
+
+.receipt-breakdown summary,
+.spend-more summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--ink);
+  font-size: .9rem;
+  font-weight: 760;
+  line-height: 1.14;
 }
 
 .receipt-breakdown-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
   align-items: baseline;
-}
-
-.receipt-breakdown-head strong {
-  color: var(--ink);
-  font-size: clamp(1.04rem, 1.6vw, 1.18rem);
-  font-weight: 760;
-  line-height: 1.08;
 }
 
 .receipt-breakdown-head span {
@@ -997,7 +1005,7 @@ body.locked-view .lock-panel {
   display: grid;
   grid-template-columns: minmax(210px, .74fr) minmax(250px, 1fr);
   gap: 22px;
-  padding: 13px 0;
+  padding: 11px 0;
   border-bottom: 1px solid rgba(246, 239, 230, .08);
 }
 
@@ -1030,14 +1038,25 @@ body.locked-view .lock-panel {
   font-weight: 680;
 }
 
+.spend-more {
+  padding: 12px 0 0 40px;
+  border-top: 1px solid rgba(246, 239, 230, .08);
+}
+
+.spend-more-list {
+  display: grid;
+  margin-top: 12px;
+  border-top: 1px solid rgba(246, 239, 230, .08);
+}
+
 .review-panel {
   position: relative;
   z-index: 4;
   display: grid;
-  gap: 15px;
+  gap: 8px;
   width: min(calc(100% - 72px), 940px);
-  margin: 18px auto 0;
-  padding: 22px 0 8px;
+  margin: 16px auto 0;
+  padding: 18px 0 2px;
   border-top: 1px solid rgba(246, 239, 230, .13);
 }
 
@@ -1065,25 +1084,25 @@ body.locked-view .lock-panel {
 }
 
 .review-panel > strong {
-  max-width: 36ch;
+  max-width: 32ch;
   color: var(--ink);
-  font-size: clamp(1.58rem, 4.4vw, 3.12rem);
+  font-size: clamp(1.44rem, 2.9vw, 2.28rem);
   font-weight: 780;
-  line-height: .98;
+  line-height: 1.02;
   letter-spacing: 0;
 }
 
 .review-panel > p {
-  max-width: 62ch;
+  max-width: 58ch;
   margin: 0;
   color: rgba(246, 239, 230, .62);
-  font-size: .96rem;
+  font-size: .9rem;
   font-weight: 680;
   line-height: 1.32;
 }
 
 .review-columns {
-  display: grid;
+  display: none;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   border-top: 1px solid rgba(246, 239, 230, .11);
   border-bottom: 1px solid rgba(246, 239, 230, .11);
@@ -1143,8 +1162,8 @@ body.locked-view .lock-panel {
   display: grid;
   gap: 12px;
   width: min(calc(100% - 72px), 940px);
-  margin: 18px auto 0;
-  padding: 18px 0 4px;
+  margin: 16px auto 0;
+  padding: 16px 0 4px;
   border-top: 1px solid rgba(246, 239, 230, .12);
 }
 
@@ -1180,7 +1199,7 @@ body.locked-view .lock-panel {
 
 .net-head strong {
   color: var(--ink);
-  font-size: clamp(2rem, 4.4vw, 3.35rem);
+  font-size: clamp(1.86rem, 3.6vw, 2.84rem);
   font-weight: 780;
   line-height: .9;
   letter-spacing: 0;
@@ -1197,7 +1216,7 @@ body.locked-view .lock-panel {
 
 .net-chart-frame {
   min-width: 0;
-  height: 278px;
+  height: 222px;
   border-top: 1px solid rgba(246, 239, 230, .08);
   border-bottom: 1px solid rgba(246, 239, 230, .08);
   background: linear-gradient(180deg, rgba(246, 239, 230, .018), transparent 42%, rgba(246, 239, 230, .012));
@@ -1733,15 +1752,15 @@ details.panel {
 
   .cut-primary {
     grid-template-columns: 1fr;
-    padding: 22px 20px 18px;
+    padding: 20px 18px 12px;
   }
 
   .cut-primary h2 {
-    font-size: clamp(1.82rem, 9vw, 2.48rem);
+    font-size: clamp(1.74rem, 8vw, 2.34rem);
   }
 
   .cut-steps {
-    padding: 0 20px 20px;
+    padding: 0 18px 18px;
     border-left: 0;
     border-top: 0;
   }
@@ -1782,6 +1801,10 @@ details.panel {
     padding-left: 0;
   }
 
+  .spend-more {
+    padding-left: 0;
+  }
+
   .receipt-breakdown-head,
   .receipt-category-row {
     grid-template-columns: 1fr;
@@ -1810,7 +1833,7 @@ details.panel {
 
   .review-panel > strong {
     max-width: calc(100vw - 42px);
-    font-size: clamp(1.84rem, 10vw, 2.7rem);
+    font-size: clamp(1.58rem, 8vw, 2.18rem);
   }
 
   .review-panel > p {
@@ -1848,7 +1871,7 @@ details.panel {
   }
 
   .net-chart-frame {
-    height: 230px;
+    height: 198px;
   }
 
   .net-foot {

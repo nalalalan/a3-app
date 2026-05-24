@@ -148,7 +148,7 @@ function replacementStep(item) {
   if (/chipotle|restaurant|food|coffee|cafe|dining|takeout|delivery/.test(text)) return "Eat food already paid for first.";
   if (/openai|chatgpt|subscription|software|app|internet|online/.test(text)) return "Cancel duplicate or unused plans.";
   if (/lyft|uber|taxi|rideshare|transport/.test(text)) return "Batch the trip or walk/transit.";
-  if (/amazon|bestbuy|best buy|samsung|electronics|lululemon|clothing|apparel|shop|retail|merchandise/.test(text)) return "Leave the cart open.";
+  if (/amazon|bestbuy|best buy|samsung|electronics|lululemon|clothing|apparel|shop|retail|merchandise/.test(text)) return "Buy only one named replacement.";
   return "Use what is already paid for.";
 }
 
@@ -177,19 +177,15 @@ function primaryCutItem(spending) {
 }
 
 function primaryCutTitle(item) {
-  const text = `${item?.label || ""} ${item?.category || ""}`.toLowerCase();
   const label = displayMerchantLabel(item?.label);
-  if (/openai|chatgpt|subscription|software|app|internet|online/.test(text)) return `Audit ${label}`;
-  if (/chipotle|restaurant|food|coffee|cafe|dining|takeout|delivery/.test(text)) return "Replace the next order";
-  if (/lyft|uber|taxi|rideshare|transport/.test(text)) return "Reduce the next ride";
-  if (isPastSpend(item)) return "Past spike, no repeat";
-  return `Start with ${label}`;
+  if (isPastSpend(item)) return `${label}: resolved`;
+  return label;
 }
 
 function primaryCutReason(item) {
-  const issue = item?.issue ? `${item.label}: ${item.issue}.` : "";
-  const impact = item?.impactLabel ? `${item.impactLabel}.` : "";
-  return [issue, impact, item?.next || ""].filter(Boolean).join(" ");
+  const issue = item?.issue || `${money.format(item?.amount || 0)} / ${item?.window || "90 days"}`;
+  const impact = item?.impactLabel || `+${money.format(item?.monthlyImpact || 0)}/mo if reduced`;
+  return `${issue}. ${impact}.`;
 }
 
 function renderGoalMeter(goal, sampleOnly, data) {
@@ -509,7 +505,6 @@ function renderCutAssist(improvements, accounts) {
   els.cutTitle.textContent = primaryCutTitle(first);
   els.cutReason.textContent = primaryCutReason(first);
   els.cutSteps.innerHTML = `
-    <li>Open it only with a specific need.</li>
     <li>${escapeHtml(replacementStep(first))}</li>
     <li>Keep the cash floor intact.</li>
   `;
@@ -517,8 +512,11 @@ function renderCutAssist(improvements, accounts) {
 
 function renderSpendLeaks(improvements, accounts, locks = []) {
   const spending = Array.isArray(improvements.spending) ? improvements.spending : [];
-  els.spendWindow.textContent = accounts.connected ? "Repeatable first" : "Waiting for Chase";
-  const visibleSpending = spending;
+  const visibleSpending = spending.slice(0, 6);
+  const hiddenSpending = spending.slice(6);
+  els.spendWindow.textContent = accounts.connected
+    ? `Top ${visibleSpending.length || 0}${hiddenSpending.length ? ` / ${hiddenSpending.length} more` : ""}`
+    : "Waiting for Chase";
 
   if (!visibleSpending.length) {
     els.spendLeakList.innerHTML = `<div class="spend-leak-row">
@@ -536,9 +534,9 @@ function renderSpendLeaks(improvements, accounts, locks = []) {
     const categories = Array.isArray(breakdown.categories) ? breakdown.categories : [];
     if (!categories.length) return "";
     return `
-      <div class="receipt-breakdown">
+      <details class="receipt-breakdown">
+        <summary>${escapeHtml(breakdown.title || `${item.label}: what it is`)}</summary>
         <div class="receipt-breakdown-head">
-          <strong>${escapeHtml(breakdown.title || `${item.label}: what it is`)}</strong>
           <span>${escapeHtml(breakdown.source || "")}</span>
         </div>
         <p>${escapeHtml(breakdown.rule || "")}</p>
@@ -553,15 +551,15 @@ function renderSpendLeaks(improvements, accounts, locks = []) {
             </div>
           `).join("")}
         </div>
-      </div>
+      </details>
     `;
   }
 
-  els.spendLeakList.innerHTML = visibleSpending.map((item) => {
+  function renderSpendRow(item, options = {}) {
     const rank = String(item.priorityRank || "").padStart(2, "0");
     const pattern = item.pattern ? `${item.pattern} - ` : "";
     return `
-      <div class="spend-leak-row" data-severity="${escapeHtml(item.severity || "watch")}">
+      <div class="spend-leak-row${options.compact ? " is-compact" : ""}" data-severity="${escapeHtml(item.severity || "watch")}">
         <span class="spend-rank">${escapeHtml(rank)}</span>
         <div>
           <strong>${escapeHtml(item.label)}</strong>
@@ -570,23 +568,56 @@ function renderSpendLeaks(improvements, accounts, locks = []) {
         </div>
         <p>${escapeHtml(item.next || "Pause unless it is required for work, health, rent, transport, or food.")}</p>
       </div>
-      ${renderReceiptBreakdown(item)}
     `;
-  }).join("");
+  }
+
+  const hiddenBlock = hiddenSpending.length
+    ? `<details class="spend-more">
+        <summary>${hiddenSpending.length} more lower-priority items</summary>
+        <div class="spend-more-list">
+          ${hiddenSpending.map((item) => renderSpendRow(item, { compact: true })).join("")}
+        </div>
+      </details>`
+    : "";
+
+  els.spendLeakList.innerHTML = [
+    ...visibleSpending.map((item) => `${renderSpendRow(item)}${renderReceiptBreakdown(item)}`),
+    hiddenBlock
+  ].filter(Boolean).join("");
 }
 
 function renderReview(data) {
   const review = data.analysis?.review || {};
+  const accounts = data.analysis?.accounts || {};
+  const goal = data.analysis?.goal || {};
+  const spending = Array.isArray(data.analysis?.improvements?.spending) ? data.analysis.improvements.spending : [];
+  const first = primaryCutItem(spending);
   const autoUpdate = data.autoUpdate || {};
   const enabled = Boolean(autoUpdate.enabled);
   const lastSync = autoUpdate.lastSyncAt ? `last ${dateTimeLabel(autoUpdate.lastSyncAt)}` : "waiting for sync";
   els.autoUpdateState.textContent = enabled
-    ? `Auto update on / every ${autoUpdate.intervalLabel || "15 min"} / ${lastSync}`
+    ? `Syncs every ${autoUpdate.intervalLabel || "15 min"} / ${lastSync}`
     : "Auto update off";
-  els.reviewVerdict.textContent = review.verdict || "No live review yet.";
-  els.reviewSummary.textContent = review.summary || "Connect Chase first. A3 should not guess.";
+  if (!accounts.connected) {
+    els.reviewVerdict.textContent = "Connect Chase.";
+    els.reviewSummary.textContent = "No live spending plan yet.";
+  } else if (Number(accounts.debtTotal || 0) > 0) {
+    const parts = [
+      `${money.format(accounts.debtTotal || 0)} card/loan balance`,
+      `${money.format(goal.downPaymentGap || 0)} A3 gap`
+    ];
+    els.reviewVerdict.textContent = "Not A3-ready yet.";
+    els.reviewSummary.textContent = `${parts.join(" / ")}.`;
+  } else if (Number(goal.downPaymentGap || 0) > 0) {
+    els.reviewVerdict.textContent = "Down payment not covered yet.";
+    els.reviewSummary.textContent = `${money.format(goal.downPaymentGap || 0)} left after the cash floor.`;
+  } else {
+    els.reviewVerdict.textContent = shortText(review.verdict || "Down payment target covered.", 96);
+    els.reviewSummary.textContent = shortText(review.summary || "A3 can move from planning to price check.", 140);
+  }
 
   function renderBullets(container, items, fallback) {
+    if (!container) return;
     const rows = Array.isArray(items) && items.length ? items : [fallback];
     container.innerHTML = rows.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
   }
