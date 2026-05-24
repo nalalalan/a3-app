@@ -1072,6 +1072,55 @@ function spendingTriage(flexible14, flexible90, byCategory) {
     .map((row, index) => ({ ...row, priorityRank: index + 1 }));
 }
 
+function dailyPurchaseAction(topLabel, items) {
+  const text = `${topLabel || ""} ${(items || []).map((item) => item.category || item.description || "").join(" ")}`.toLowerCase();
+  if (/amazon/.test(text)) return "One named item only; no cart browsing.";
+  if (/chipotle|restaurant|food|coffee|cafe|dining|takeout|delivery|supermarket|grocery/.test(text)) {
+    return "Use food already paid for before another order.";
+  }
+  if (/lyft|uber|taxi|rideshare|transport/.test(text)) return "Batch trips or walk/transit when safe.";
+  if (/openai|chatgpt|software|subscription|internet|online/.test(text)) return "Check the cap before another paid tool charge.";
+  if (/sleep|cpap|health|medical|pharmacy|cvs/.test(text)) return "Replacement only if it fixes tonight or this week.";
+  if (/best buy|samsung|electronics|camera|dji|gear|accessory|lululemon|clothing|apparel|shop|retail/.test(text)) {
+    return "Replacement only; skip backup gear and upgrades.";
+  }
+  return "Pause before the next purchase; give it one named reason.";
+}
+
+function dailyPurchaseScan(flexible14, latestDate) {
+  const days = 7;
+  const rows = [];
+  for (let index = 0; index < days; index += 1) {
+    const date = new Date(dateMs(latestDate) - (index * 86400000)).toISOString().slice(0, 10);
+    const items = (flexible14 || []).filter((transaction) => transaction.date === date && transaction.spend > 0);
+    if (!items.length) continue;
+    const total = sum(items.map((transaction) => transaction.spend));
+    const merchants = groupedSpend(items, (transaction) => transaction.merchant).slice(0, 3);
+    const top = merchants[0];
+    rows.push({
+      date,
+      total,
+      count: items.length,
+      merchants: merchants.map((merchant) => `${merchant.label} ${moneyText(merchant.total)}`),
+      topMerchant: top?.label || "",
+      next: dailyPurchaseAction(top?.label, items),
+      severity: total >= 160 || items.length >= 5 ? "danger" : total >= 60 || items.length >= 3 ? "watch" : "good"
+    });
+  }
+  const total = sum(rows.map((row) => row.total));
+  const byMerchant = groupedSpend(flexible14 || [], (transaction) => transaction.merchant).slice(0, 1);
+  return {
+    window: "latest 7 days",
+    days,
+    spendingDays: rows.length,
+    total,
+    dailyAverage: total / days,
+    averageSpendingDay: rows.length ? total / rows.length : 0,
+    topMerchant: byMerchant[0]?.label || "",
+    rows
+  };
+}
+
 function moneyText(value) {
   return `$${Math.round(Number(value || 0)).toLocaleString("en-US")}`;
 }
@@ -1143,7 +1192,7 @@ function overallReview(input) {
       : gap > 0
         ? "A3 is possible, but the down-payment gap still needs repeat-spend control."
         : "Price-check threshold covered. Buying still needs debt, cashflow, and monthly-cost fit.",
-    summary: `${moneyText(cardBalance)} card/loan balance, ${moneyText(cushion)} above floor, ${moneyText(gap)} A3 gap. $7k is not a buy signal.`,
+    summary: `${moneyText(cardBalance)} card/loan balance, ${moneyText(cushion)} usable after the ${moneyText(floor)} floor, ${moneyText(gap)} A3 gap. $7k is not a buy signal.`,
     good: good.slice(0, 4),
     bad: bad.slice(0, 5),
     must: must.slice(0, 6)
@@ -1306,6 +1355,7 @@ function immediateImprovements(input) {
     debtPayment14: debtPaymentTotal,
     topMerchants: byMerchant,
     topCategories: byCategory,
+    dailyScan: dailyPurchaseScan(flexible, latestDate),
     spending: spendingTriage(flexible, flexible90, byCategory),
     items: items.slice(0, 6)
   };
@@ -1409,7 +1459,7 @@ function watchItems(input) {
   if (balanceKnown && balance < cashFloor) {
     items.push({ label: "Below floor", detail: `$${Math.round(balance)} vs $${Math.round(cashFloor)} floor`, severity: "danger" });
   } else if (bufferDays !== null && bufferDays < 10) {
-    items.push({ label: "Thin buffer", detail: `${bufferDays.toFixed(1)} days above floor`, severity: "watch" });
+    items.push({ label: "Thin buffer", detail: `${bufferDays.toFixed(1)} days of cash cushion past the $${Math.round(cashFloor)} floor`, severity: "watch" });
   }
   if (spendChange !== null && spendChange > 18) {
     items.push({ label: "Spend up", detail: `${Math.round(spendChange)}% vs previous 30d`, severity: "watch" });
@@ -1492,6 +1542,7 @@ function analyze(store) {
     availableForDownPayment,
     downPaymentTarget: Number(settings.downPaymentTarget || 0),
     downPaymentGap,
+    cashFloor,
     monthlySavingsPace,
     monthlySavingsNeeded,
     monthlyRoom,
@@ -1558,7 +1609,7 @@ function readinessState(input) {
 function oneAction(input) {
   const { readiness, watch, recurring, categories, goal, balanceKnown, accounts } = input;
   if (!balanceKnown) return { label: "Add balance", detail: "A3 gap needs current cash" };
-  if (accounts?.debtTotal > 0) return { label: "Balance first", detail: `$${Math.round(accounts.debtTotal).toLocaleString("en-US")} connected credit/loan balance` };
+  if (accounts?.debtTotal > 0) return { label: "Balance first", detail: `$${Math.round(accounts.debtTotal).toLocaleString("en-US")} card/loan balance before A3 cash` };
   if (readiness.label === "danger") return { label: "Protect floor", detail: "Pause flexible spend until next deposit" };
   if (goal.downPaymentGap > 0 && goal.monthlyRoom < 0) {
     return { label: "Close A3 gap", detail: `$${Math.ceil(Math.abs(goal.monthlyRoom))}/mo short` };

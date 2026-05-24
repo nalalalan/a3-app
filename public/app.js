@@ -22,6 +22,9 @@ const els = {
   goalSaved: document.getElementById("goalSaved"),
   goalTarget: document.getElementById("goalTarget"),
   goalPace: document.getElementById("goalPace"),
+  termBalance: document.getElementById("termBalance"),
+  termFloor: document.getElementById("termFloor"),
+  termTarget: document.getElementById("termTarget"),
   gapValue: document.getElementById("gapValue"),
   gapLabel: document.getElementById("gapLabel"),
   actionLabel: document.getElementById("actionLabel"),
@@ -40,6 +43,8 @@ const els = {
   cutTitle: document.getElementById("cutTitle"),
   cutReason: document.getElementById("cutReason"),
   cutSteps: document.getElementById("cutSteps"),
+  dailyScanWindow: document.getElementById("dailyScanWindow"),
+  dailyScanList: document.getElementById("dailyScanList"),
   spendWindow: document.getElementById("spendWindow"),
   spendLeakList: document.getElementById("spendLeakList"),
   autoUpdateState: document.getElementById("autoUpdateState"),
@@ -204,13 +209,39 @@ function monthsToCloseText(gap, pace) {
   return months < 1 ? "under 1 mo at 30d pace" : `${months.toFixed(1)} mo at 30d pace`;
 }
 
+function renderPlainTerms(analysis, sampleOnly) {
+  const accounts = analysis?.accounts || {};
+  const settings = analysis?.settings || {};
+  const goal = analysis?.goal || {};
+  const floor = Number(goal.cashFloor ?? settings.cashFloor ?? 0);
+  const cash = Number(accounts.cash || 0);
+  const usable = Math.max(0, cash - floor);
+  const target = Math.max(0, Number(goal.downPaymentTarget || 0));
+
+  if (sampleOnly || !accounts.connected) {
+    els.termBalance.textContent = "Connect Chase before judging the A3 plan.";
+    els.termFloor.textContent = `${money.format(floor)} stays untouched.`;
+    els.termTarget.textContent = "First price-check threshold, not buy permission.";
+    return;
+  }
+
+  els.termBalance.textContent = accounts.debtTotal > 0
+    ? `${money.format(accounts.debtTotal)} card/loan balance comes before A3 cash.`
+    : "No connected card/loan balance blocking the A3 plan.";
+  els.termFloor.textContent = `${money.format(floor)} stays untouched; ${money.format(usable)} is usable.`;
+  els.termTarget.textContent = target > 0
+    ? `${money.format(target)} is a price-check threshold, not buy permission.`
+    : "Set a first price-check threshold.";
+}
+
 function renderGoalMeter(goal, sampleOnly, data) {
   const target = Math.max(0, Number(goal.downPaymentTarget || 0));
   const saved = Math.max(0, Number(goal.availableForDownPayment || 0));
+  const floor = Math.max(0, Number(goal.cashFloor ?? data?.analysis?.settings?.cashFloor ?? 0));
   const progress = !sampleOnly && target > 0 ? clamp(saved / target, 0, 1) : 0;
   els.goalMeterFill.style.width = `${Math.round(progress * 100)}%`;
-  els.goalSaved.textContent = sampleOnly ? "Bank link pending" : `${money.format(saved)} above floor`;
-  els.goalTarget.textContent = target > 0 ? `${money.format(target)} target` : "Target not set";
+  els.goalSaved.textContent = sampleOnly ? "Bank link pending" : `${money.format(saved)} usable after ${money.format(floor)} floor`;
+  els.goalTarget.textContent = target > 0 ? `${money.format(target)} price-check target` : "Target not set";
 
   if (sampleOnly) {
     els.goalPace.textContent = data.plaid?.productionReviewPending
@@ -526,6 +557,40 @@ function renderCutAssist(improvements, accounts) {
   `;
 }
 
+function renderDailyScan(improvements, accounts) {
+  const scan = improvements?.dailyScan || {};
+  const rows = Array.isArray(scan.rows) ? scan.rows : [];
+  els.dailyScanWindow.textContent = accounts.connected
+    ? `${money.format(scan.total || 0)} / ${scan.window || "latest 7 days"}`
+    : "Purchases only";
+
+  if (!rows.length) {
+    els.dailyScanList.innerHTML = `<div class="daily-scan-row" data-severity="good">
+      <time>${accounts.connected ? "Quiet" : "Waiting"}</time>
+      <div>
+        <strong>${accounts.connected ? "No flexible purchases found" : "Connect Chase"}</strong>
+        <span>${accounts.connected ? "Payments, transfers, and debt payments are excluded." : "Payments and transfers are excluded."}</span>
+      </div>
+      <p>${accounts.connected ? "Keep the cash floor intact." : "Daily purchase patterns will show here."}</p>
+    </div>`;
+    return;
+  }
+
+  els.dailyScanList.innerHTML = rows.map((row) => {
+    const merchants = Array.isArray(row.merchants) && row.merchants.length
+      ? row.merchants.join(" / ")
+      : row.topMerchant || "Purchases";
+    return `<div class="daily-scan-row" data-severity="${escapeHtml(row.severity || "watch")}">
+      <time>${escapeHtml(dateLabel(row.date))}</time>
+      <div>
+        <strong>${escapeHtml(money.format(row.total || 0))}</strong>
+        <span>${escapeHtml(`${row.count || 0} purchase${row.count === 1 ? "" : "s"}: ${merchants}`)}</span>
+      </div>
+      <p>${escapeHtml(row.next || "Pause before the next purchase; give it one named reason.")}</p>
+    </div>`;
+  }).join("");
+}
+
 function renderSpendLeaks(improvements, accounts, locks = []) {
   const spending = Array.isArray(improvements.spending) ? improvements.spending : [];
   const visibleSpending = spending.slice(0, 6);
@@ -765,6 +830,7 @@ function renderImprovements(analysis, locks = []) {
     </div>
   `).join("");
   renderCutAssist(improvements, accounts, locks);
+  renderDailyScan(improvements, accounts);
   renderSpendLeaks(improvements, accounts, locks);
 }
 
@@ -798,6 +864,7 @@ function render(data) {
 
   document.documentElement.dataset.state = sampleOnly ? "watch" : analysis.readiness.color;
   renderGoalMeter(goal, sampleOnly, data);
+  renderPlainTerms(analysis, sampleOnly);
 
   if (sampleOnly) {
     const plaidReviewPending = Boolean(data.plaid?.productionReviewPending);
@@ -842,7 +909,7 @@ function render(data) {
   const targetProgress = targetProgressText(goal);
   if (accounts.debtTotal > 0) {
     els.stateLabel.textContent = "Balance first";
-    els.stateReason.textContent = `${money.format(accounts.debtTotal)} connected balance blocks buy readiness.`;
+    els.stateReason.textContent = `${money.format(accounts.debtTotal)} card/loan balance before A3 cash.`;
   } else {
     els.stateLabel.textContent = goal.downPaymentGap <= 0 ? "Price check" : `${money.format(goal.downPaymentGap || 0)} left`;
     els.stateReason.textContent = goal.downPaymentGap <= 0
@@ -852,7 +919,7 @@ function render(data) {
   els.gapValue.textContent = accounts.debtTotal > 0 ? money.format(accounts.debtTotal) : money.format(goal.downPaymentGap);
   els.gapLabel.textContent = accounts.connected
     ? `${money.format(accounts.cash || 0)} cash / ${dateTimeLabel(accounts.lastUpdatedAt)}`
-    : `${money.format(goal.availableForDownPayment)} above floor`;
+    : `${money.format(goal.availableForDownPayment)} usable after floor`;
   const advisorDisplay = compactAdvisor(latestRun, analysis);
   els.actionLabel.textContent = accounts.debtTotal > 0 ? advisorDisplay.status : latestRun?.advice?.one_action || analysis.action.label;
   els.actionDetail.textContent = accounts.debtTotal > 0 ? advisorDisplay.summary : latestRun?.advice?.why || analysis.action.detail;

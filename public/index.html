@@ -13,7 +13,7 @@
     <link rel="icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons" type="image/svg+xml">
     <link rel="apple-touch-icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons">
     <link rel="manifest" href="/site.webmanifest?v=20260516-a3-three-rings">
-    <link rel="stylesheet" href="/styles.css?v=20260524-a3-net-chart">
+    <link rel="stylesheet" href="/styles.css?v=20260524-a3-daily-scan">
   </head>
   <body class="locked-view">
     <header class="suite-topbar" aria-label="a3 navigation">
@@ -66,12 +66,27 @@
             </div>
             <div class="goal-meter-row">
               <span id="goalSaved">Bank link pending</span>
-              <span id="goalTarget">$7,000 target</span>
+              <span id="goalTarget">$7,000 price-check target</span>
             </div>
             <span id="goalPace" class="goal-pace">Plaid review pending.</span>
           </div>
           <button id="connectBankPrimary" class="fund-connect" type="button" disabled>connect Chase</button>
         </section>
+      </section>
+
+      <section class="plain-panel" aria-label="A3 terms">
+        <div>
+          <strong>Balance first</strong>
+          <span id="termBalance">Connect Chase first.</span>
+        </div>
+        <div>
+          <strong>Cash floor</strong>
+          <span id="termFloor">$500 stays untouched.</span>
+        </div>
+        <div>
+          <strong>$7k target</strong>
+          <span id="termTarget">First price-check threshold, not buy permission.</span>
+        </div>
       </section>
 
       <section class="image-rhythm" aria-label="Audi A3 views">
@@ -126,6 +141,23 @@
           <li>Use what is already paid for.</li>
           <li>Keep the cash floor intact.</li>
         </ol>
+      </section>
+
+      <section class="daily-panel" aria-label="Daily purchase scan">
+        <div class="daily-panel-head">
+          <h2>Daily scan</h2>
+          <span id="dailyScanWindow">Purchases only</span>
+        </div>
+        <div id="dailyScanList" class="daily-scan-list">
+          <div class="daily-scan-row">
+            <time>Waiting</time>
+            <div>
+              <strong>Connect Chase</strong>
+              <span>Payments and transfers are excluded.</span>
+            </div>
+            <p>Daily purchase patterns will show here.</p>
+          </div>
+        </div>
       </section>
 
       <section class="review-panel" aria-label="Overall financial review">
