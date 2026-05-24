@@ -1142,8 +1142,8 @@ function overallReview(input) {
       ? "Not A3-ready yet. The blocker is the card/loan balance plus repeat spending."
       : gap > 0
         ? "A3 is possible, but the down-payment gap still needs repeat-spend control."
-        : "A3 down-payment target is covered above the cash floor.",
-    summary: `${moneyText(cardBalance)} card/loan balance, ${moneyText(cushion)} above floor, ${moneyText(gap)} A3 gap.`,
+        : "Price-check threshold covered. Buying still needs debt, cashflow, and monthly-cost fit.",
+    summary: `${moneyText(cardBalance)} card/loan balance, ${moneyText(cushion)} above floor, ${moneyText(gap)} A3 gap. $7k is not a buy signal.`,
     good: good.slice(0, 4),
     bad: bad.slice(0, 5),
     must: must.slice(0, 6)
@@ -1540,14 +1540,14 @@ function analyze(store) {
 function readinessState(input) {
   const { transactions, balanceKnown, balance, cashFloor, bufferDays, spendChange, watch, goal, accounts } = input;
   if (!transactions.length) return { label: "no data", reason: "Import Chase CSV", color: "muted" };
-  if (accounts?.debtTotal > 0 && goal.downPaymentGap > 0) {
-    return { label: "balance first", reason: "Connected balances are ahead of A3", color: "danger" };
+  if (accounts?.debtTotal > 0) {
+    return { label: "balance first", reason: "Connected balances block a responsible A3 buy", color: "danger" };
   }
   if ((balanceKnown && balance < cashFloor) || (bufferDays !== null && bufferDays < 5)) {
     return { label: "danger", reason: "Cash floor pressure", color: "danger" };
   }
   if (goal.downPaymentGap <= 0 && goal.monthlyRoom >= 0) {
-    return { label: "a3 ready", reason: "Down payment target covered", color: "good" };
+    return { label: "price check", reason: "Down payment covered; buy gate still separate", color: "watch" };
   }
   if ((bufferDays !== null && bufferDays < 14) || (spendChange !== null && spendChange > 18) || watch.length >= 3 || goal.monthlyRoom < 0) {
     return { label: "watch", reason: "A3 pace needs control", color: "watch" };
@@ -1593,7 +1593,7 @@ function advisorFallback(analysis) {
     why: analysis.action.detail,
     a3_effect: analysis.goal.downPaymentGap > 0
       ? `$${Math.round(analysis.goal.downPaymentGap)} still needed for the down payment target.`
-      : "Down payment target is covered by current cash above floor.",
+      : "Down-payment threshold is covered, but buying still needs the debt, cashflow, and monthly-cost check.",
     watch: analysis.watch.slice(0, 3).map((item) => item.label),
     confidence: openAiApiKey ? "fallback_after_error" : "deterministic_no_key"
   };

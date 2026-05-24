@@ -198,7 +198,7 @@ function targetProgressText(goal) {
 function monthsToCloseText(gap, pace) {
   const remaining = Math.max(0, Number(gap || 0));
   const monthly = Math.max(0, Number(pace || 0));
-  if (remaining <= 0) return "target covered";
+  if (remaining <= 0) return "price-check threshold covered";
   if (monthly <= 0) return "not closing at current pace";
   const months = remaining / monthly;
   return months < 1 ? "under 1 mo at 30d pace" : `${months.toFixed(1)} mo at 30d pace`;
@@ -227,7 +227,7 @@ function renderGoalMeter(goal, sampleOnly, data) {
   }
 
   if (goal.downPaymentGap <= 0) {
-    els.goalPace.textContent = "Down payment target covered.";
+    els.goalPace.textContent = "Price-check threshold covered; buy gate still separate.";
     return;
   }
 
@@ -625,8 +625,8 @@ function renderReview(data) {
     els.reviewVerdict.textContent = `${money.format(goal.downPaymentGap || 0)} left`;
     els.reviewSummary.textContent = `${targetProgressText(goal)}: ${money.format(goal.availableForDownPayment || 0)} usable / ${money.format(goal.downPaymentTarget || 0)} target. ${monthsToCloseText(goal.downPaymentGap, pace)}.`;
   } else {
-    els.reviewVerdict.textContent = shortText(review.verdict || "Down payment target covered.", 96);
-    els.reviewSummary.textContent = shortText(review.summary || "A3 can move from planning to price check.", 140);
+    els.reviewVerdict.textContent = shortText(review.verdict || "Price-check threshold covered.", 96);
+    els.reviewSummary.textContent = shortText(review.summary || "Do not buy from down payment alone; monthly cost still decides.", 140);
   }
 
   function renderBullets(container, items, fallback) {
@@ -840,10 +840,15 @@ function render(data) {
       ? "AI on"
       : "CSV data";
   const targetProgress = targetProgressText(goal);
-  els.stateLabel.textContent = goal.downPaymentGap <= 0 ? "A3 ready" : `${money.format(goal.downPaymentGap || 0)} left`;
-  els.stateReason.textContent = goal.downPaymentGap <= 0
-    ? "Down payment target covered above floor."
-    : `${targetProgress} / ${money.format(goal.availableForDownPayment || 0)} usable.`;
+  if (accounts.debtTotal > 0) {
+    els.stateLabel.textContent = "Balance first";
+    els.stateReason.textContent = `${money.format(accounts.debtTotal)} connected balance blocks buy readiness.`;
+  } else {
+    els.stateLabel.textContent = goal.downPaymentGap <= 0 ? "Price check" : `${money.format(goal.downPaymentGap || 0)} left`;
+    els.stateReason.textContent = goal.downPaymentGap <= 0
+      ? "Down payment covered; buy gate still separate."
+      : `${targetProgress} / ${money.format(goal.availableForDownPayment || 0)} usable.`;
+  }
   els.gapValue.textContent = accounts.debtTotal > 0 ? money.format(accounts.debtTotal) : money.format(goal.downPaymentGap);
   els.gapLabel.textContent = accounts.connected
     ? `${money.format(accounts.cash || 0)} cash / ${dateTimeLabel(accounts.lastUpdatedAt)}`
