@@ -590,7 +590,7 @@ function renderReview(data) {
 function renderMonthlyNet(data) {
   const history = data.analysis?.monthlyNet || {};
   const months = Array.isArray(history.months) ? history.months : [];
-  const visible = months.length > 60 ? months.slice(-60) : months;
+  const visible = months;
   const current = history.current || visible[visible.length - 1] || null;
 
   if (!visible.length || !current) {
@@ -603,11 +603,12 @@ function renderMonthlyNet(data) {
   }
 
   const currentLabel = `${monthLabel(current.month)} to date`;
-  els.netWindow.textContent = `${monthLabel(visible[0].month)} - ${currentLabel}`;
+  const monthWord = visible.length === 1 ? "month" : "months";
+  els.netWindow.textContent = `All available: ${monthLabel(visible[0].month)} - ${currentLabel}`;
   els.netCurrent.textContent = money.format(current.net);
   els.netCurrent.dataset.net = current.net >= 0 ? "positive" : "negative";
   els.netAverage.textContent = `6-mo avg ${money.format(history.last6Average || 0)}`;
-  els.netRange.textContent = `Best ${money.format(history.bestMonth?.net || 0)} / worst ${money.format(history.worstMonth?.net || 0)}`;
+  els.netRange.textContent = `${visible.length} ${monthWord} · best ${money.format(history.bestMonth?.net || 0)} / worst ${money.format(history.worstMonth?.net || 0)}`;
 
   const width = 720;
   const height = 220;
@@ -622,7 +623,7 @@ function renderMonthlyNet(data) {
   const yFor = (value) => padY + ((max - value) / spread) * plotH;
   const zeroY = yFor(0);
   const step = visible.length > 1 ? plotW / (visible.length - 1) : plotW;
-  const barW = Math.max(3, Math.min(14, (plotW / visible.length) * .58));
+  const barW = Math.max(1.2, Math.min(14, (plotW / visible.length) * .58));
 
   const bars = visible.map((item, index) => {
     const value = Number(item.net || 0);
@@ -641,7 +642,9 @@ function renderMonthlyNet(data) {
     const y = yFor(Number(item.net || 0));
     return `${x.toFixed(2)},${y.toFixed(2)}`;
   }).join(" ");
-  const currentX = padX + (visible.length - 1) * step;
+  const foundCurrent = visible.findIndex((item) => item.month === current.month);
+  const currentIndex = foundCurrent >= 0 ? foundCurrent : visible.length - 1;
+  const currentX = padX + currentIndex * step;
   const currentY = yFor(Number(current.net || 0));
 
   els.netChart.innerHTML = `

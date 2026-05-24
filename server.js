@@ -1332,8 +1332,9 @@ function addMonths(month, amount) {
 
 function monthRange(start, end) {
   const months = [];
+  if (!/^\d{4}-\d{2}$/.test(start) || !/^\d{4}-\d{2}$/.test(end)) return months;
   let cursor = start;
-  while (cursor && cursor <= end && months.length < 120) {
+  while (cursor && cursor <= end) {
     months.push(cursor);
     cursor = addMonths(cursor, 1);
   }
