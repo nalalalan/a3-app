@@ -42,6 +42,12 @@ const els = {
   cutSteps: document.getElementById("cutSteps"),
   spendWindow: document.getElementById("spendWindow"),
   spendLeakList: document.getElementById("spendLeakList"),
+  autoUpdateState: document.getElementById("autoUpdateState"),
+  reviewVerdict: document.getElementById("reviewVerdict"),
+  reviewSummary: document.getElementById("reviewSummary"),
+  reviewGood: document.getElementById("reviewGood"),
+  reviewBad: document.getElementById("reviewBad"),
+  reviewMust: document.getElementById("reviewMust"),
   watchList: document.getElementById("watchList"),
   bankList: document.getElementById("bankList"),
   eventList: document.getElementById("eventList"),
@@ -550,6 +556,27 @@ function renderSpendLeaks(improvements, accounts, locks = []) {
   }).join("");
 }
 
+function renderReview(data) {
+  const review = data.analysis?.review || {};
+  const autoUpdate = data.autoUpdate || {};
+  const enabled = Boolean(autoUpdate.enabled);
+  const lastSync = autoUpdate.lastSyncAt ? `last ${dateTimeLabel(autoUpdate.lastSyncAt)}` : "waiting for sync";
+  els.autoUpdateState.textContent = enabled
+    ? `Auto update on / every ${autoUpdate.intervalLabel || "15 min"} / ${lastSync}`
+    : "Auto update off";
+  els.reviewVerdict.textContent = review.verdict || "No live review yet.";
+  els.reviewSummary.textContent = review.summary || "Connect Chase first. A3 should not guess.";
+
+  function renderBullets(container, items, fallback) {
+    const rows = Array.isArray(items) && items.length ? items : [fallback];
+    container.innerHTML = rows.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+  }
+
+  renderBullets(els.reviewGood, review.good, "Live bank connection required.");
+  renderBullets(els.reviewBad, review.bad, "No current spending picture yet.");
+  renderBullets(els.reviewMust, review.must, "Connect Chase, then review the first live plan.");
+}
+
 function renderImprovements(analysis, locks = []) {
   const improvements = analysis.improvements || {};
   const accounts = analysis.accounts || {};
@@ -647,6 +674,7 @@ function render(data) {
     els.advisorSummary.textContent = "No sample numbers are used.";
     els.advisorEffect.textContent = plaidReviewPending ? "Spending plan starts after bank link." : "";
     renderImprovements(analysis, data.spendingLocks || []);
+    renderReview(data);
     renderRows(els.watchList, [{ label: "Bank off", detail: "No connected Chase data." }], (item) => [item.label, item.detail]);
     renderBankAccounts(accounts.items || []);
     renderRows(els.eventList, data.events, (item) => [item.label, item.type]);
@@ -680,6 +708,7 @@ function render(data) {
   els.advisorSummary.textContent = advisorDisplay.summary;
   els.advisorEffect.textContent = advisorDisplay.effect;
   renderImprovements(analysis, data.spendingLocks || []);
+  renderReview(data);
 
   renderRows(els.watchList, analysis.watch, (item) => [item.label, item.detail]);
   renderBankAccounts(accounts.items || []);

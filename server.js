@@ -309,6 +309,33 @@ function plaidStatus(store) {
   };
 }
 
+function intervalText(ms) {
+  const value = Number(ms || 0);
+  if (!Number.isFinite(value) || value < 60000) return "off";
+  const minutes = Math.round(value / 60000);
+  if (minutes < 60) return `${minutes} min`;
+  const hours = value / 3600000;
+  if (hours < 24) return `${Number.isInteger(hours) ? hours : hours.toFixed(1)} hr`;
+  const days = hours / 24;
+  return `${Number.isInteger(days) ? days : days.toFixed(1)} day`;
+}
+
+function autoUpdateStatus(store) {
+  const enabled = Number.isFinite(monitorIntervalMs) && monitorIntervalMs >= 60000;
+  const syncs = [...(store.bankSyncs || [])]
+    .filter((item) => !item.provider || item.provider === "plaid")
+    .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+  const latestConnection = [...(store.bankConnections || [])]
+    .sort((a, b) => String(b.lastSyncAt || b.updatedAt || "").localeCompare(String(a.lastSyncAt || a.updatedAt || "")))[0];
+  return {
+    enabled,
+    intervalMs: enabled ? monitorIntervalMs : 0,
+    intervalLabel: enabled ? intervalText(monitorIntervalMs) : "off",
+    lastSyncAt: syncs[0]?.createdAt || latestConnection?.lastSyncAt || "",
+    lastError: syncs[0]?.error || latestConnection?.lastError || ""
+  };
+}
+
 function sendFile(res, filePath) {
   fs.readFile(filePath, (error, data) => {
     if (error) {
@@ -887,7 +914,7 @@ function merchantReceiptBreakdown(label) {
 
 function isNamedSubscription(label, category) {
   const text = `${label || ""} ${category || ""}`.toLowerCase();
-  return /openai|chatgpt|spotify|netflix|hulu|youtube|apple|icloud|google|microsoft|adobe|github|notion|dropbox|patreon|substack|subscription|membership|software|internet|online/.test(text);
+  return /openai|chatgpt|spotify|netflix|hulu|youtube|apple|icloud|google|microsoft|adobe|github|notion|dropbox|patreon|substack|capcut|subscription|membership|software|internet|online/.test(text);
 }
 
 function isRecurringCadence(count, cadence) {
@@ -1043,6 +1070,84 @@ function spendingTriage(flexible14, flexible90, byCategory) {
   const repeatableLimit = 18 - pastRows.length;
   return [...repeatableRows.slice(0, repeatableLimit), ...pastRows]
     .map((row, index) => ({ ...row, priorityRank: index + 1 }));
+}
+
+function moneyText(value) {
+  return `$${Math.round(Number(value || 0)).toLocaleString("en-US")}`;
+}
+
+function firstSpendMatch(spending, pattern) {
+  return (spending || []).find((item) => pattern.test(`${item.label || ""} ${item.category || ""} ${item.pattern || ""}`));
+}
+
+function overallReview(input) {
+  const { accounts, goal, settings, improvements, paymentStatus } = input;
+  const spending = improvements?.spending || [];
+  const cash = Number(accounts.cash || 0);
+  const floor = Number(settings.cashFloor || 0);
+  const cushion = Math.max(0, cash - floor);
+  const cardBalance = Number(accounts.debtTotal || 0);
+  const gap = Number(goal.downPaymentGap || 0);
+  const flexible14 = Number(improvements?.flexible14 || 0);
+  const amazon = firstSpendMatch(spending, /amazon/i);
+  const openai = firstSpendMatch(spending, /openai|chatgpt/i);
+  const food = firstSpendMatch(spending, /chipotle|food|restaurant|dining|takeout|coffee|cafe/i);
+  const foodCategory = (improvements?.topCategories || []).find((item) => /food/i.test(item.label || ""));
+  const lyft = firstSpendMatch(spending, /lyft|uber|rideshare|transport/i);
+  const subscriptions = spending
+    .filter((item) => isNamedSubscription(item.label, item.category || item.pattern))
+    .map((item) => item.label)
+    .filter(Boolean)
+    .slice(0, 5);
+
+  if (!accounts.connected) {
+    return {
+      verdict: "No live review yet.",
+      summary: "Connect Chase first. A3 should not guess.",
+      good: ["The page is waiting for bank data instead of using fake sample numbers."],
+      bad: ["No current balances or transactions are connected."],
+      must: ["Connect Chase, then review the first live spending picture before moving A3 cash."]
+    };
+  }
+
+  const good = [
+    "Chase is connected; the page is using live Plaid data.",
+    `${moneyText(cushion)} is above the ${moneyText(floor)} cash floor.`
+  ];
+  if (paymentStatus?.amount > 0 && paymentStatus.status !== "pending") {
+    good.push(`${moneyText(paymentStatus.amount)} payment is already visible in Plaid.`);
+  }
+  if (goal.monthlyRoom > 0) {
+    good.push(`${moneyText(goal.monthlyRoom)} monthly room exists if repeat spending is controlled.`);
+  }
+
+  const bad = [];
+  if (cardBalance > 0) bad.push(`${moneyText(cardBalance)} card/loan balance is ahead of the A3 fund.`);
+  if (gap > 0) bad.push(`${moneyText(gap)} still has to be created for the down payment target.`);
+  if (flexible14 > 0) bad.push(`${moneyText(flexible14)} flexible spend in the latest 14 days is too high for an A3 push.`);
+  if (amazon) bad.push(`Amazon is the largest repeatable leak: ${moneyText(amazon.amount90)} in 90 days across ${amazon.count} charges.`);
+  if (foodCategory || food) bad.push(`Food and drink is still leaking: ${moneyText(foodCategory?.total || food.amount90 || food.amount)} in 90 days.`);
+
+  const must = [];
+  if (cardBalance > 0) must.push(`Keep A3 cash parked until the ${moneyText(cardBalance)} card/loan balance is lower.`);
+  if (amazon) must.push("Amazon: buy only required supplies with a named use; no cart drift.");
+  if (openai) must.push("OpenAI: remove duplicate plans or API auto-funding that is not doing current work.");
+  if (food) must.push("Food: use food already paid for before another order.");
+  if (lyft) must.push("Rides: batch trips; walk or transit when the schedule allows.");
+  if (subscriptions.length) must.push(`Subscription audit: ${subscriptions.join(", ")}.`);
+  if (!must.length) must.push("Keep the cash floor intact and move only confirmed surplus toward A3.");
+
+  return {
+    verdict: cardBalance > 0
+      ? "Not A3-ready yet. The blocker is the card/loan balance plus repeat spending."
+      : gap > 0
+        ? "A3 is possible, but the down-payment gap still needs repeat-spend control."
+        : "A3 down-payment target is covered above the cash floor.",
+    summary: `${moneyText(cardBalance)} card/loan balance, ${moneyText(cushion)} above floor, ${moneyText(gap)} A3 gap.`,
+    good: good.slice(0, 4),
+    bad: bad.slice(0, 5),
+    must: must.slice(0, 6)
+  };
 }
 
 function easternDateKey(date = new Date()) {
@@ -1322,6 +1427,7 @@ function analyze(store) {
   const action = oneAction({ readiness, watch, recurring, categories, goal, balanceKnown, accounts });
   const paymentStatus = creditPaymentStatus(withFlow, latestDate);
   const improvements = immediateImprovements({ accounts, goal, settings, withFlow, latestDate, paymentStatus });
+  const review = overallReview({ accounts, goal, settings, improvements, paymentStatus });
   return {
     goal,
     accounts,
@@ -1345,6 +1451,7 @@ function analyze(store) {
     action,
     paymentStatus,
     improvements,
+    review,
     weeks: weeklySpend(withFlow, latestDate),
     recurring,
     categories,
@@ -1734,6 +1841,7 @@ async function handleApi(req, res, requestUrl) {
     const store = await readStore();
     const analysis = analyze(store);
     const plaid = plaidStatus(store);
+    const autoUpdate = autoUpdateStatus(store);
     sendJson(res, 200, {
       ok: true,
       app: "a3.aolabs.io",
@@ -1745,6 +1853,7 @@ async function handleApi(req, res, requestUrl) {
       plaidConnected: plaid.connected,
       accounts: plaid.accountCount,
       transactions: analysis.totals.transactionCount,
+      autoUpdate,
       checkedAt: new Date().toISOString()
     });
     return true;
@@ -1779,6 +1888,7 @@ async function handleApi(req, res, requestUrl) {
       openaiConfigured: Boolean(openAiApiKey),
       model: openAiModel,
       plaid: plaidStatus(store),
+      autoUpdate: autoUpdateStatus(store),
       analysis,
       spendingLocks: spendingLockStatuses(store, analysis),
       imports: store.imports.slice(-10).reverse(),
