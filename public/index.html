@@ -13,7 +13,7 @@
     <link rel="icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons" type="image/svg+xml">
     <link rel="apple-touch-icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons">
     <link rel="manifest" href="/site.webmanifest?v=20260516-a3-three-rings">
-    <link rel="stylesheet" href="/styles.css?v=20260523-a3-review-auto">
+    <link rel="stylesheet" href="/styles.css?v=20260523-a3-monthly-net">
   </head>
   <body class="locked-view">
     <header class="suite-topbar" aria-label="a3 navigation">
@@ -151,6 +151,23 @@
         </div>
       </section>
 
+      <section class="net-panel" aria-label="Monthly net chart">
+        <div class="net-head">
+          <div>
+            <h2>Net per month</h2>
+            <span id="netWindow">Waiting for transactions</span>
+          </div>
+          <strong id="netCurrent">--</strong>
+        </div>
+        <div class="net-chart-frame">
+          <svg id="netChart" class="net-chart" viewBox="0 0 720 220" role="img" aria-label="Monthly net history"></svg>
+        </div>
+        <div class="net-foot">
+          <span id="netAverage">No history yet.</span>
+          <span id="netRange">Connect Chase.</span>
+        </div>
+      </section>
+
       <section class="spend-panel" aria-label="Spending leaks">
         <div class="spend-panel-head">
           <h2>Spending picture</h2>
@@ -248,6 +265,6 @@
     </main>
 
     <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
-    <script src="/app.js?v=20260523-a3-review-auto" defer></script>
+    <script src="/app.js?v=20260523-a3-monthly-net" defer></script>
   </body>
 </html>

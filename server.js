@@ -1324,6 +1324,81 @@ function weeklySpend(transactions, latestDate) {
   return weeks;
 }
 
+function addMonths(month, amount) {
+  const date = new Date(`${month}-01T00:00:00Z`);
+  date.setUTCMonth(date.getUTCMonth() + amount);
+  return date.toISOString().slice(0, 7);
+}
+
+function monthRange(start, end) {
+  const months = [];
+  let cursor = start;
+  while (cursor && cursor <= end && months.length < 120) {
+    months.push(cursor);
+    cursor = addMonths(cursor, 1);
+  }
+  return months;
+}
+
+function monthlyNetHistory(transactions, latestDate) {
+  const byMonth = new Map();
+  for (const transaction of transactions || []) {
+    if (!transaction.date) continue;
+    const month = String(transaction.date).slice(0, 7);
+    if (!/^\d{4}-\d{2}$/.test(month)) continue;
+    if (!byMonth.has(month)) {
+      byMonth.set(month, { month, inflow: 0, spend: 0, net: 0, count: 0 });
+    }
+    const row = byMonth.get(month);
+    const inflow = Number(transaction.inflow || 0);
+    const spend = Number(transaction.spend || 0);
+    row.inflow += inflow;
+    row.spend += spend;
+    row.net += inflow - spend;
+    row.count += 1;
+  }
+  const keys = [...byMonth.keys()].sort();
+  if (!keys.length) {
+    return {
+      startMonth: "",
+      endMonth: "",
+      current: null,
+      months: [],
+      minNet: 0,
+      maxNet: 0,
+      last6Average: 0
+    };
+  }
+  const startMonth = keys[0];
+  const endMonth = latestDate ? String(latestDate).slice(0, 7) : keys[keys.length - 1];
+  const months = monthRange(startMonth, endMonth).map((month) => {
+    const row = byMonth.get(month) || { month, inflow: 0, spend: 0, net: 0, count: 0 };
+    return {
+      month,
+      inflow: Number(row.inflow.toFixed(2)),
+      spend: Number(row.spend.toFixed(2)),
+      net: Number(row.net.toFixed(2)),
+      count: row.count
+    };
+  });
+  const nets = months.map((item) => item.net);
+  const nonEmpty = months.filter((item) => item.count > 0);
+  const bestMonth = [...nonEmpty].sort((a, b) => b.net - a.net)[0] || null;
+  const worstMonth = [...nonEmpty].sort((a, b) => a.net - b.net)[0] || null;
+  const last6 = nonEmpty.slice(-6);
+  return {
+    startMonth,
+    endMonth,
+    current: months[months.length - 1] || null,
+    months,
+    minNet: Math.min(0, ...nets),
+    maxNet: Math.max(0, ...nets),
+    bestMonth,
+    worstMonth,
+    last6Average: last6.length ? Number((sum(last6.map((item) => item.net)) / last6.length).toFixed(2)) : 0
+  };
+}
+
 function watchItems(input) {
   const { withFlow, last30, latestDate, balanceKnown, balance, cashFloor, bufferDays, spendChange, recurring, goal, accounts } = input;
   const items = [];
@@ -1453,6 +1528,7 @@ function analyze(store) {
     improvements,
     review,
     weeks: weeklySpend(withFlow, latestDate),
+    monthlyNet: monthlyNetHistory(withFlow, latestDate),
     recurring,
     categories,
     watch,

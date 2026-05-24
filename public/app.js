@@ -48,6 +48,11 @@ const els = {
   reviewGood: document.getElementById("reviewGood"),
   reviewBad: document.getElementById("reviewBad"),
   reviewMust: document.getElementById("reviewMust"),
+  netWindow: document.getElementById("netWindow"),
+  netCurrent: document.getElementById("netCurrent"),
+  netChart: document.getElementById("netChart"),
+  netAverage: document.getElementById("netAverage"),
+  netRange: document.getElementById("netRange"),
   watchList: document.getElementById("watchList"),
   bankList: document.getElementById("bankList"),
   eventList: document.getElementById("eventList"),
@@ -113,6 +118,11 @@ function dateLabel(date) {
 function dateTimeLabel(value) {
   if (!value) return "not synced";
   return new Date(value).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+}
+
+function monthLabel(value) {
+  if (!value) return "--";
+  return new Date(`${value}-01T00:00:00Z`).toLocaleString([], { month: "short", year: "numeric", timeZone: "UTC" });
 }
 
 function isSampleOnly(data) {
@@ -577,6 +587,73 @@ function renderReview(data) {
   renderBullets(els.reviewMust, review.must, "Connect Chase, then review the first live plan.");
 }
 
+function renderMonthlyNet(data) {
+  const history = data.analysis?.monthlyNet || {};
+  const months = Array.isArray(history.months) ? history.months : [];
+  const visible = months.length > 60 ? months.slice(-60) : months;
+  const current = history.current || visible[visible.length - 1] || null;
+
+  if (!visible.length || !current) {
+    els.netWindow.textContent = "Waiting for transactions";
+    els.netCurrent.textContent = "--";
+    els.netChart.innerHTML = "";
+    els.netAverage.textContent = "No monthly net history yet.";
+    els.netRange.textContent = "Connect Chase.";
+    return;
+  }
+
+  const currentLabel = `${monthLabel(current.month)} to date`;
+  els.netWindow.textContent = `${monthLabel(visible[0].month)} - ${currentLabel}`;
+  els.netCurrent.textContent = money.format(current.net);
+  els.netCurrent.dataset.net = current.net >= 0 ? "positive" : "negative";
+  els.netAverage.textContent = `6-mo avg ${money.format(history.last6Average || 0)}`;
+  els.netRange.textContent = `Best ${money.format(history.bestMonth?.net || 0)} / worst ${money.format(history.worstMonth?.net || 0)}`;
+
+  const width = 720;
+  const height = 220;
+  const padX = 22;
+  const padY = 24;
+  const plotW = width - padX * 2;
+  const plotH = height - padY * 2;
+  const nets = visible.map((item) => Number(item.net || 0));
+  const min = Math.min(0, ...nets);
+  const max = Math.max(0, ...nets);
+  const spread = Math.max(1, max - min);
+  const yFor = (value) => padY + ((max - value) / spread) * plotH;
+  const zeroY = yFor(0);
+  const step = visible.length > 1 ? plotW / (visible.length - 1) : plotW;
+  const barW = Math.max(3, Math.min(14, (plotW / visible.length) * .58));
+
+  const bars = visible.map((item, index) => {
+    const value = Number(item.net || 0);
+    const x = padX + index * step - barW / 2;
+    const y = Math.min(zeroY, yFor(value));
+    const barH = Math.max(1, Math.abs(zeroY - yFor(value)));
+    const currentClass = item.month === current.month ? " is-current" : "";
+    const signClass = value >= 0 ? "positive" : "negative";
+    return `<rect class="net-bar ${signClass}${currentClass}" x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${barW.toFixed(2)}" height="${barH.toFixed(2)}" rx="2">
+      <title>${escapeHtml(monthLabel(item.month))}: ${escapeHtml(money.format(value))} net</title>
+    </rect>`;
+  }).join("");
+
+  const points = visible.map((item, index) => {
+    const x = padX + index * step;
+    const y = yFor(Number(item.net || 0));
+    return `${x.toFixed(2)},${y.toFixed(2)}`;
+  }).join(" ");
+  const currentX = padX + (visible.length - 1) * step;
+  const currentY = yFor(Number(current.net || 0));
+
+  els.netChart.innerHTML = `
+    <line class="net-zero" x1="${padX}" x2="${width - padX}" y1="${zeroY.toFixed(2)}" y2="${zeroY.toFixed(2)}"></line>
+    ${bars}
+    <polyline class="net-line" points="${points}"></polyline>
+    <circle class="net-current-dot" cx="${currentX.toFixed(2)}" cy="${currentY.toFixed(2)}" r="5"></circle>
+    <text class="net-axis-label" x="${padX}" y="${height - 6}">${escapeHtml(monthLabel(visible[0].month))}</text>
+    <text class="net-axis-label net-axis-end" x="${width - padX}" y="${height - 6}">${escapeHtml(monthLabel(current.month))}</text>
+  `;
+}
+
 function renderImprovements(analysis, locks = []) {
   const improvements = analysis.improvements || {};
   const accounts = analysis.accounts || {};
@@ -675,6 +752,7 @@ function render(data) {
     els.advisorEffect.textContent = plaidReviewPending ? "Spending plan starts after bank link." : "";
     renderImprovements(analysis, data.spendingLocks || []);
     renderReview(data);
+    renderMonthlyNet(data);
     renderRows(els.watchList, [{ label: "Bank off", detail: "No connected Chase data." }], (item) => [item.label, item.detail]);
     renderBankAccounts(accounts.items || []);
     renderRows(els.eventList, data.events, (item) => [item.label, item.type]);
@@ -709,6 +787,7 @@ function render(data) {
   els.advisorEffect.textContent = advisorDisplay.effect;
   renderImprovements(analysis, data.spendingLocks || []);
   renderReview(data);
+  renderMonthlyNet(data);
 
   renderRows(els.watchList, analysis.watch, (item) => [item.label, item.detail]);
   renderBankAccounts(accounts.items || []);
