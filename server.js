@@ -1160,13 +1160,13 @@ function overallReview(input) {
       summary: "Connect Chase first. A3 should not guess.",
       good: ["The page is waiting for bank data instead of using fake sample numbers."],
       bad: ["No current balances or transactions are connected."],
-      must: ["Connect Chase, then review the first live spending picture before moving A3 cash."]
+      must: ["Connect Chase, then review the first live full-purchase picture."]
     };
   }
 
   const good = [
     "Chase is connected; the page is using live Plaid data.",
-    `${moneyText(cushion)} is usable after keeping ${moneyText(floor)} untouched.`
+    `${moneyText(cash)} current cash is included in the full-purchase check.`
   ];
   if (paymentStatus?.amount > 0 && paymentStatus.status !== "pending") {
     good.push(`${moneyText(paymentStatus.amount)} payment is already visible in Plaid.`);
@@ -1176,28 +1176,28 @@ function overallReview(input) {
   }
 
   const bad = [];
-  if (cardBalance > 0) bad.push(`${moneyText(cardBalance)} card/loan balance is ahead of the A3 fund.`);
-  if (gap > 0) bad.push(`${moneyText(gap)} still has to be created for the down payment target.`);
+  if (cardBalance > 0) bad.push(`${moneyText(cardBalance)} card/loan balance is ahead of any car decision.`);
+  if (gap > 0) bad.push(`${moneyText(gap)} short of the planning cash amount before the full purchase is reviewed.`);
   if (flexible14 > 0) bad.push(`${moneyText(flexible14)} flexible spend in the latest 14 days is too high for an A3 push.`);
   if (amazon) bad.push(`Amazon is the largest repeatable leak: ${moneyText(amazon.amount90)} in 90 days across ${amazon.count} charges.`);
   if (foodCategory || food) bad.push(`Food and drink is still leaking: ${moneyText(foodCategory?.total || food.amount90 || food.amount)} in 90 days.`);
 
   const must = [];
-  if (cardBalance > 0) must.push(`Keep A3 cash parked until the ${moneyText(cardBalance)} card/loan balance is lower.`);
+  if (cardBalance > 0) must.push(`Do not treat cash as car money until the ${moneyText(cardBalance)} card/loan balance is lower.`);
   if (amazon) must.push("Amazon: buy only required supplies with a named use; no cart drift.");
   if (openai) must.push("OpenAI: remove duplicate plans or API auto-funding that is not doing current work.");
   if (food) must.push("Food: use food already paid for before another order.");
   if (lyft) must.push("Rides: batch trips; walk or transit when the schedule allows.");
   if (subscriptions.length) must.push(`Subscription audit: ${subscriptions.join(", ")}.`);
-  if (!must.length) must.push(`Keep ${moneyText(floor)} untouched and move only confirmed surplus toward A3.`);
+  if (!must.length) must.push("Keep cash steady and review the full A3 purchase before committing.");
 
   return {
     verdict: cardBalance > 0
       ? "Not A3-ready yet. The blocker is the card/loan balance plus repeat spending."
       : gap > 0
-        ? "A3 is possible, but the down-payment gap still needs repeat-spend control."
-        : "Price-check threshold covered. Buying still needs debt, cashflow, and monthly-cost fit.",
-    summary: `${moneyText(cardBalance)} card/loan balance, ${moneyText(cushion)} usable after keeping ${moneyText(floor)} untouched, ${moneyText(gap)} A3 gap. $7k is not a buy signal.`,
+        ? "A3 is possible only if the full purchase still fits after repeat-spend control."
+        : "Planning cash covered. Buying still needs payment, insurance, debt, and cashflow fit.",
+    summary: `Whole purchase: ${moneyText(A3_GOAL.priceAsBuilt)}. Current picture: ${moneyText(cardBalance)} card/loan balance, ${moneyText(cash)} cash, ${moneyText(gap)} planning-cash gap.`,
     good: good.slice(0, 4),
     bad: bad.slice(0, 5),
     must: must.slice(0, 6)
@@ -1292,8 +1292,8 @@ function immediateImprovements(input) {
       topCategories: [],
       spending: [],
       items: [
-        { label: "Missing", detail: "Connect Chase before moving A3 cash.", severity: "watch" },
-        { label: "Untouched cash", detail: `$${Math.round(floor).toLocaleString("en-US")} stays untouched.`, severity: "watch" }
+        { label: "Connect Chase", detail: "The full A3 decision needs current balances and purchases.", severity: "watch" },
+        { label: "Planning cash", detail: "Wait for real account data before treating any cash as car money.", severity: "watch" }
       ]
     };
   }
@@ -1301,20 +1301,20 @@ function immediateImprovements(input) {
   if (debtTotal > 0) {
     items.push({
       label: "Mistake to avoid",
-      detail: `Hold A3 cash while $${Math.round(debtTotal).toLocaleString("en-US")} card/loan balance remains.`,
+      detail: `Do not treat cash as car money while $${Math.round(debtTotal).toLocaleString("en-US")} card/loan balance remains.`,
       severity: "danger"
     });
   } else if (gap > 0) {
     items.push({
-      label: "A3 cash",
-      detail: `Keep $${Math.round(floor).toLocaleString("en-US")} untouched; move only confirmed surplus toward the $${Math.round(gap).toLocaleString("en-US")} gap.`,
+      label: "Cash plan",
+      detail: `$${Math.round(gap).toLocaleString("en-US")} short of the planning cash amount before the full purchase check.`,
       severity: "good"
     });
   }
 
   items.push({
-    label: "Untouched cash",
-    detail: `$${Math.round(floor).toLocaleString("en-US")} stays untouched; $${Math.round(cushion).toLocaleString("en-US")} is usable.`,
+    label: "Cash today",
+    detail: `$${Math.round(cash).toLocaleString("en-US")} current cash. Cash does not change the balance blocker.`,
     severity: cushion < 500 ? "danger" : "watch"
   });
 
@@ -1355,7 +1355,7 @@ function immediateImprovements(input) {
   }
 
   return {
-    state: `$${Math.round(debtTotal).toLocaleString("en-US")} balance; $${Math.round(gap).toLocaleString("en-US")} A3 gap.`,
+    state: `$${Math.round(debtTotal).toLocaleString("en-US")} balance; $${Math.round(cash).toLocaleString("en-US")} cash against a $${Math.round(A3_GOAL.priceAsBuilt).toLocaleString("en-US")} car.`,
     flexible14: sum(flexible.map((transaction) => transaction.spend)),
     debtPayment14: debtPaymentTotal,
     topMerchants: byMerchant,
@@ -1462,15 +1462,15 @@ function watchItems(input) {
     items.push({ label: "Connected balance", detail: `$${Math.round(accounts.debtTotal)} across credit/loan accounts`, severity: "danger" });
   }
   if (balanceKnown && balance < cashFloor) {
-    items.push({ label: "Below untouched cash", detail: `$${Math.round(balance)} vs ${moneyText(cashFloor)} that should stay untouched`, severity: "danger" });
+    items.push({ label: "Below cash buffer", detail: `${moneyText(balance)} current cash is below the planning buffer`, severity: "danger" });
   } else if (bufferDays !== null && bufferDays < 10) {
-    items.push({ label: "Thin buffer", detail: `${bufferDays.toFixed(1)} days of cash cushion past the ${moneyText(cashFloor)} untouched cash`, severity: "watch" });
+    items.push({ label: "Thin buffer", detail: `${bufferDays.toFixed(1)} days of cash cushion at current spend`, severity: "watch" });
   }
   if (spendChange !== null && spendChange > 18) {
     items.push({ label: "Spend up", detail: `${Math.round(spendChange)}% vs previous 30d`, severity: "watch" });
   }
   if (goal.downPaymentGap > 0 && goal.monthlySavingsPace < goal.monthlySavingsNeeded) {
-    items.push({ label: "A3 pace short", detail: `$${Math.round(goal.monthlySavingsPace)} saved/mo vs $${Math.round(goal.monthlySavingsNeeded)} needed`, severity: "watch" });
+    items.push({ label: "Monthly fit short", detail: `$${Math.round(goal.monthlySavingsPace)} saved/mo vs $${Math.round(goal.monthlySavingsNeeded)} needed for the planning cash amount`, severity: "watch" });
   }
   const byMerchant = new Map();
   for (const transaction of withFlow) {
@@ -1603,7 +1603,7 @@ function readinessState(input) {
     return { label: "danger", reason: "Cash cushion pressure", color: "danger" };
   }
   if (goal.downPaymentGap <= 0 && goal.monthlyRoom >= 0) {
-    return { label: "price check", reason: "Down payment covered; buy gate still separate", color: "watch" };
+    return { label: "full-cost check", reason: "Planning cash covered; payment, insurance, and cashflow still decide", color: "watch" };
   }
   if ((bufferDays !== null && bufferDays < 14) || (spendChange !== null && spendChange > 18) || watch.length >= 3 || goal.monthlyRoom < 0) {
     return { label: "watch", reason: "A3 pace needs control", color: "watch" };
@@ -1613,11 +1613,11 @@ function readinessState(input) {
 
 function oneAction(input) {
   const { readiness, watch, recurring, categories, goal, balanceKnown, accounts } = input;
-  if (!balanceKnown) return { label: "Add balance", detail: "A3 gap needs current cash" };
+  if (!balanceKnown) return { label: "Add balance", detail: "Full A3 decision needs current cash" };
   if (accounts?.debtTotal > 0) return { label: "Do not buy yet", detail: `$${Math.round(accounts.debtTotal).toLocaleString("en-US")} card/loan balance has to come down first` };
   if (readiness.label === "danger") return { label: "Protect cash", detail: "Pause flexible spend until next deposit" };
   if (goal.downPaymentGap > 0 && goal.monthlyRoom < 0) {
-    return { label: "Close A3 gap", detail: `$${Math.ceil(Math.abs(goal.monthlyRoom))}/mo short` };
+    return { label: "Cash plan short", detail: `$${Math.ceil(Math.abs(goal.monthlyRoom))}/mo short of the planning cash amount` };
   }
   if (watch[0]?.label === "Spend up") return { label: "Slow spend", detail: watch[0].detail };
   if (watch[0]) return { label: "Check pattern", detail: watch[0].label };
@@ -1633,7 +1633,7 @@ function changeSummary(previous, current) {
     ["readiness", previous.readiness?.label, current.readiness?.label],
     ["30d spend", Math.round(previous.totals?.spend30 || 0), Math.round(current.totals?.spend30 || 0)],
     ["net 30d", Math.round(previous.totals?.net30 || 0), Math.round(current.totals?.net30 || 0)],
-    ["A3 gap", Math.round(previous.goal?.downPaymentGap || 0), Math.round(current.goal?.downPaymentGap || 0)]
+    ["cash plan gap", Math.round(previous.goal?.downPaymentGap || 0), Math.round(current.goal?.downPaymentGap || 0)]
   ];
   for (const [label, before, after] of fields) {
     if (before !== after) changes.push(`${label}: ${before} -> ${after}`);
@@ -1648,8 +1648,8 @@ function advisorFallback(analysis) {
     one_action: analysis.action.label,
     why: analysis.action.detail,
     a3_effect: analysis.goal.downPaymentGap > 0
-      ? `$${Math.round(analysis.goal.downPaymentGap)} still needed for the down payment target.`
-      : "Down-payment threshold is covered, but buying still needs the debt, cashflow, and monthly-cost check.",
+      ? `$${Math.round(analysis.goal.downPaymentGap)} still needed for the planning cash amount.`
+      : "Planning cash is covered, but buying still needs the debt, cashflow, and monthly-cost check.",
     watch: analysis.watch.slice(0, 3).map((item) => item.label),
     confidence: openAiApiKey ? "fallback_after_error" : "deterministic_no_key"
   };
@@ -1678,9 +1678,11 @@ async function callOpenAiForAdvice({ analysis, events, messages }) {
       model: openAiModel,
       instructions: [
         "You are the private financial planning layer inside a boring A3 goal app.",
-        "The goal is to increase the realistic possibility of buying the specified Audi A3 without destabilizing cash flow.",
+        "The goal is to judge whether the whole Audi A3 purchase is realistic without destabilizing cash flow.",
         "Do not claim to be a licensed financial advisor. Do not give investment, tax, insurance, or loan approval guarantees.",
         "Use the provided source-backed numbers only. If a required number is missing, say what is missing.",
+        "Do not describe planning cash as a checkpoint, buy permission, usable car money, or untouched cash.",
+        "Frame the decision around full price, current cash, credit/loan balance, repeat spending, monthly payment, insurance, and cashflow.",
         "Return one calm action. Keep it concrete, low-stress, and measurable.",
         "Do not write paragraphs. status is 1-3 words. one_action is at most 12 words.",
         "Do not recommend a specific extra payment amount unless that exact amount is present in the source data or settings.",
@@ -1959,7 +1961,7 @@ async function monitorTick(reason = "interval") {
     createdAt: snapshot.createdAt,
     type: "snapshot",
     label: changes[0],
-    detail: `${analysis.readiness.label} / A3 gap $${Math.round(analysis.goal.downPaymentGap)}`
+    detail: `${analysis.readiness.label} / cash plan gap $${Math.round(analysis.goal.downPaymentGap)}`
   }];
   const materialChange = !previous || changes.some((change) => change !== "No material change");
   if (materialChange && store.settings.advisorCadence !== "manual") {

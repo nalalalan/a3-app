@@ -13,7 +13,7 @@
     <link rel="icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons" type="image/svg+xml">
     <link rel="apple-touch-icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons">
     <link rel="manifest" href="/site.webmanifest?v=20260516-a3-three-rings">
-    <link rel="stylesheet" href="/styles.css?v=20260524-a3-watchouts">
+    <link rel="stylesheet" href="/styles.css?v=20260525-a3-whole-purchase">
   </head>
   <body class="locked-view">
     <header class="suite-topbar" aria-label="a3 navigation">
@@ -66,7 +66,7 @@
             </div>
             <div class="goal-meter-row">
               <span id="goalSaved">Bank link pending</span>
-              <span id="goalTarget">$7,000 checkpoint, not buy permission</span>
+              <span id="goalTarget">$46,690 whole purchase</span>
             </div>
             <span id="goalPace" class="goal-pace">Plaid review pending.</span>
           </div>
@@ -118,13 +118,13 @@
         <div class="action-panel-head">
           <span>Immediate triage</span>
           <h2 id="primaryFixLabel">Connect Chase</h2>
-          <p id="primaryFixDetail">Current bank data is needed before moving A3 cash.</p>
+          <p id="primaryFixDetail">Current bank data is needed before the car decision.</p>
           <strong id="improvementState">Waiting for Chase.</strong>
         </div>
         <div id="improvementList" class="improvement-list">
           <div class="improvement-row">
             <strong>Missing</strong>
-            <span>Connect Chase before moving A3 cash.</span>
+            <span>Connect Chase before the car decision.</span>
           </div>
         </div>
       </section>
@@ -137,7 +137,7 @@
         <ol id="cutSteps" class="cut-steps">
           <li>Open it only with a specific need.</li>
           <li>Use what is already paid for.</li>
-          <li>Keep $500 untouched.</li>
+          <li>Keep cash steady.</li>
         </ol>
       </section>
 
@@ -232,11 +232,11 @@
             <input id="balanceInput" type="text" inputmode="decimal" placeholder="optional">
           </label>
           <label>
-            <span class="label">Untouched cash</span>
+            <span class="label">Cash buffer</span>
             <input id="floorInput" type="text" inputmode="decimal">
           </label>
           <label>
-            <span class="label">Down payment</span>
+            <span class="label">Planning cash</span>
             <input id="downPaymentInput" type="text" inputmode="decimal">
           </label>
           <label>
@@ -281,6 +281,6 @@
     </main>
 
     <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
-    <script src="/app.js?v=20260524-a3-buy-gate" defer></script>
+    <script src="/app.js?v=20260525-a3-whole-purchase" defer></script>
   </body>
 </html>

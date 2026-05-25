@@ -195,28 +195,26 @@ function primaryCutReason(item) {
 
 function targetProgressText(goal) {
   const target = Math.max(0, Number(goal?.downPaymentTarget || 0));
-  if (target <= 0) return "Target not set";
+  if (target <= 0) return "Cash plan not set";
   const saved = Math.max(0, Number(goal?.availableForDownPayment || 0));
-  return `${Math.round(clamp(saved / target, 0, 1) * 100)}% funded`;
+  return `${Math.round(clamp(saved / target, 0, 1) * 100)}% cash plan`;
 }
 
 function monthsToCloseText(gap, pace) {
   const remaining = Math.max(0, Number(gap || 0));
   const monthly = Math.max(0, Number(pace || 0));
-  if (remaining <= 0) return "price-check threshold covered";
-  if (monthly <= 0) return "not closing at current pace";
+  if (remaining <= 0) return "cash plan covered";
+  if (monthly <= 0) return "cash plan not moving";
   const months = remaining / monthly;
-  return months < 1 ? "under 1 mo at 30d pace" : `${months.toFixed(1)} mo at 30d pace`;
+  return months < 1 ? "cash plan under 1 mo at 30d pace" : `cash plan ${months.toFixed(1)} mo at 30d pace`;
 }
 
 function renderBlockers(analysis, sampleOnly) {
   const accounts = analysis?.accounts || {};
   const settings = analysis?.settings || {};
   const goal = analysis?.goal || {};
-  const floor = Number(goal.cashFloor ?? settings.cashFloor ?? 0);
   const cash = Number(accounts.cash || 0);
-  const usable = Math.max(0, cash - floor);
-  const target = Math.max(0, Number(goal.downPaymentTarget || 0));
+  const a3Price = Math.max(0, Number(goal.a3?.priceAsBuilt || 46690));
   const spending = Array.isArray(analysis?.improvements?.spending) ? analysis.improvements.spending : [];
   const biggestRepeat = spending.find((item) => item?.category !== "Past purchase") || spending[0];
 
@@ -234,32 +232,32 @@ function renderBlockers(analysis, sampleOnly) {
     els.blockerSummary.textContent = "The app needs live Chase data first.";
     setRows([
       { label: "Connect Chase", detail: "Balances and purchases decide whether the A3 is realistic." },
-      { label: "$7k checkpoint", detail: "Reaching it starts a price check; it is not permission to buy." }
+      { label: "Whole purchase", detail: `${money.format(a3Price)} car decision needs current cash, balances, payment, insurance, and monthly cashflow.` }
     ]);
     return;
   }
 
   if (Number(accounts.debtTotal || 0) > 0) {
     els.blockerTitle.textContent = "Do not buy yet.";
-    els.blockerSummary.textContent = "These are the things blocking the A3 right now.";
+    els.blockerSummary.textContent = "Current balances block the purchase.";
   } else if (Number(goal.downPaymentGap || 0) > 0) {
     els.blockerTitle.textContent = "Still not buy-ready.";
-    els.blockerSummary.textContent = "Cash has to grow before the next price check.";
+    els.blockerSummary.textContent = "Cash has to support the full purchase, not a saved-number milestone.";
   } else {
-    els.blockerTitle.textContent = "Checkpoint reached.";
-    els.blockerSummary.textContent = "Buying still needs a monthly-cost check.";
+    els.blockerTitle.textContent = "Full-cost check.";
+    els.blockerSummary.textContent = "Cash is only one input; payment, insurance, debt, and cashflow still decide.";
   }
 
   const rows = [];
   if (Number(accounts.debtTotal || 0) > 0) {
     rows.push({
       label: "Card/loan balance",
-      detail: `${money.format(accounts.debtTotal)} has to come down before A3 cash moves.`
+      detail: `${money.format(accounts.debtTotal)} has to come down first.`
     });
   }
   rows.push({
-    label: "$500 untouched",
-    detail: `${money.format(floor)} stays untouched; ${money.format(usable)} is usable, but not car money while balances are high.`
+    label: "Cash today",
+    detail: `${money.format(cash)} current cash. Cash does not change the balance blocker.`
   });
   if (biggestRepeat?.label) {
     rows.push({
@@ -268,8 +266,8 @@ function renderBlockers(analysis, sampleOnly) {
     });
   }
   rows.push({
-    label: "$7k checkpoint",
-    detail: `${target > 0 ? money.format(target) : "$7k"} only starts a price check; payment, insurance, debt, and cashflow still decide.`
+    label: "Whole purchase",
+    detail: `${money.format(a3Price)} A3 as built. Payment, insurance, debt, and cashflow decide.`
   });
 
   setRows(rows);
@@ -278,11 +276,12 @@ function renderBlockers(analysis, sampleOnly) {
 function renderGoalMeter(goal, sampleOnly, data) {
   const target = Math.max(0, Number(goal.downPaymentTarget || 0));
   const saved = Math.max(0, Number(goal.availableForDownPayment || 0));
-  const floor = Math.max(0, Number(goal.cashFloor ?? data?.analysis?.settings?.cashFloor ?? 0));
+  const cash = Math.max(0, Number(data?.analysis?.accounts?.cash ?? 0));
+  const a3Price = Math.max(0, Number(data?.goal?.priceAsBuilt || goal.a3?.priceAsBuilt || 46690));
   const progress = !sampleOnly && target > 0 ? clamp(saved / target, 0, 1) : 0;
   els.goalMeterFill.style.width = `${Math.round(progress * 100)}%`;
-  els.goalSaved.textContent = sampleOnly ? "Bank link pending" : `${money.format(saved)} usable; keep ${money.format(floor)} untouched`;
-  els.goalTarget.textContent = target > 0 ? `${money.format(target)} checkpoint, not buy permission` : "Target not set";
+  els.goalSaved.textContent = sampleOnly ? "Bank link pending" : `${money.format(cash)} current cash`;
+  els.goalTarget.textContent = `${money.format(a3Price)} whole purchase`;
 
   if (sampleOnly) {
     els.goalPace.textContent = data.plaid?.productionReviewPending
@@ -294,12 +293,12 @@ function renderGoalMeter(goal, sampleOnly, data) {
   }
 
   if (target <= 0) {
-    els.goalPace.textContent = "Set a down payment target.";
+    els.goalPace.textContent = "Set a planning cash amount.";
     return;
   }
 
   if (goal.downPaymentGap <= 0) {
-    els.goalPace.textContent = "Price-check threshold covered; buy gate still separate.";
+    els.goalPace.textContent = "Planning cash covered; payment, insurance, and cashflow still decide.";
     return;
   }
 
@@ -307,7 +306,7 @@ function renderGoalMeter(goal, sampleOnly, data) {
   const needed = Math.max(0, Number(goal.monthlySavingsNeeded || 0));
   els.goalPace.textContent = goal.targetDate
     ? `${money.format(pace)}/mo pace / ${money.format(Math.ceil(needed))}/mo needed`
-    : `${money.format(goal.downPaymentGap)} remaining`;
+    : `${money.format(goal.downPaymentGap)} cash-plan gap`;
 }
 
 function setBusy(text) {
@@ -361,11 +360,9 @@ function renderBankControls(data) {
 
 function compactAdvisor(latestRun, analysis) {
   const accounts = analysis.accounts || {};
-  const settings = analysis.settings || {};
   const connected = Boolean(accounts.connected);
   const creditLoanBalance = Number(accounts.debtTotal || 0);
   const cash = Number(accounts.cash || 0);
-  const floor = Number(settings.cashFloor || 0);
   const advice = latestRun?.advice || {};
 
   if (connected && creditLoanBalance > 0) {
@@ -377,7 +374,7 @@ function compactAdvisor(latestRun, analysis) {
         : "A3 has not seen the payment in Plaid yet.";
     const summary = payment.amount > 0
       ? `${moneyExact.format(payment.amount)} payment ${payment.status === "pending" ? "is pending" : "is posted"} in Plaid.`
-      : `Hold A3 cash today. ${money.format(cash)} cash right now.`;
+      : `Hold cash today. ${money.format(cash)} cash right now.`;
     return {
       status: payment.status === "pending" ? "A3 is watching" : payment.status === "not_visible" ? "A3 is checking" : "Already checked",
       action,
@@ -434,12 +431,9 @@ function paymentStatus(analysis) {
 
 function financialMoves(analysis) {
   const accounts = analysis.accounts || {};
-  const settings = analysis.settings || {};
   const goal = analysis.goal || {};
-  const floor = Number(settings.cashFloor || 0);
   const cash = Number(accounts.cash || 0);
   const creditLoanBalance = Number(accounts.debtTotal || 0);
-  const cashRoom = Math.max(0, cash - floor);
   const payment = paymentStatus(analysis);
   const moves = [];
 
@@ -455,8 +449,8 @@ function financialMoves(analysis) {
       detail: `${moneyExact.format(payment.amount)} ${payment.status === "pending" ? "pending" : "posted"} in Plaid.`
     });
     moves.push({
-      label: "Do not move A3 cash",
-      detail: payment.status === "pending" ? "Wait for posted status." : "Keep the floor while balance remains."
+      label: "Do not count car cash",
+      detail: payment.status === "pending" ? "Wait for posted status." : "Current balance still blocks the purchase."
     });
   } else if (accounts.connected) {
     moves.push({
@@ -466,18 +460,18 @@ function financialMoves(analysis) {
   }
   if (creditLoanBalance > 0) {
     moves.push({
-      label: `Keep ${money.format(floor)} cash`,
-      detail: `${money.format(cashRoom)} cushion right now`
+      label: "Cash is context",
+      detail: `${money.format(cash)} current cash right now`
     });
   } else if (goal.downPaymentGap > 0) {
     moves.push({
-      label: "A3 down payment",
-      detail: `${money.format(goal.downPaymentGap)} left after keeping cash untouched`
+      label: "Cash plan",
+      detail: `${money.format(goal.downPaymentGap)} short before the full purchase check`
     });
   }
   const fallbackMoves = [
     { label: "Keep cash steady", detail: "Do not guess with old numbers." },
-    { label: "A3 down payment", detail: "Wait for current Chase data." },
+    { label: "Full purchase", detail: "Wait for current Chase data." },
     { label: "One move", detail: "No extra action until data is current." }
   ];
   for (const fallback of fallbackMoves) {
@@ -525,14 +519,14 @@ function primaryFix(items, accounts) {
   }
 
   const mistake = findImprovement(items, "Mistake to avoid");
-  if (mistake) return { label: "Do not move A3 cash", detail: itemDetail(mistake), severity: "danger" };
+  if (mistake) return { label: "Do not count car cash", detail: itemDetail(mistake), severity: "danger" };
 
   const first = items[0];
   if (first) return { label: actionLabel(first), detail: itemDetail(first), severity: first.severity || "watch" };
 
   return {
     label: accounts.connected ? "Hold cash steady" : "Connect Chase",
-    detail: accounts.connected ? "A3 is waiting for current spending patterns." : "Current bank data is needed before moving A3 cash.",
+    detail: accounts.connected ? "A3 is waiting for current spending patterns." : "Current bank data is needed before the car decision.",
     severity: "watch"
   };
 }
@@ -540,10 +534,11 @@ function primaryFix(items, accounts) {
 function actionLabel(item) {
   switch (item?.label) {
     case "Mistake to avoid":
-      return "Do not move A3 cash";
+      return "Do not count car cash";
     case "Cash floor":
-    case "Untouched cash":
-      return "Keep cash untouched";
+    case "Cash today":
+    case "Planning cash":
+      return "Keep cash steady";
     case "Biggest leak":
       return "Slow biggest leak";
     case "Food leak":
@@ -563,7 +558,7 @@ function actionLabel(item) {
 }
 
 function orderedImprovements(items, primary) {
-  const labels = ["Mistake to avoid", "Card spend", "Food leak", "Untouched cash", "Cash floor", "Payment posted", "Payment pending", "A3 cash", "Missing", "Floor"];
+  const labels = ["Mistake to avoid", "Card spend", "Food leak", "Cash today", "Planning cash", "Cash floor", "Payment posted", "Payment pending", "Cash plan", "Missing", "Floor"];
   const ordered = [];
   for (const label of labels) {
     const item = findImprovement(items, label);
@@ -584,8 +579,8 @@ function renderCutAssist(improvements, accounts) {
     els.cutTitle.textContent = accounts.connected ? "Hold spending" : "Connect Chase";
     els.cutReason.textContent = accounts.connected ? "A3 needs more current transactions." : "Current transactions are needed first.";
     els.cutSteps.innerHTML = `
-      <li>Keep $500 untouched.</li>
       <li>Do not add new card spend.</li>
+      <li>Keep cash steady.</li>
       <li>Sync again tomorrow.</li>
     `;
     return;
@@ -595,7 +590,7 @@ function renderCutAssist(improvements, accounts) {
   els.cutReason.textContent = primaryCutReason(first);
   els.cutSteps.innerHTML = `
     <li>${escapeHtml(replacementStep(first))}</li>
-    <li>Keep $500 untouched.</li>
+    <li>Keep cash steady.</li>
   `;
 }
 
@@ -613,7 +608,7 @@ function renderDailyScan(improvements, accounts) {
         <strong>${accounts.connected ? "No flexible purchases found" : "Connect Chase"}</strong>
         <span>${accounts.connected ? "Payments, transfers, and debt payments are excluded." : "Payments and transfers are excluded."}</span>
       </div>
-      <p>${accounts.connected ? "Keep $500 untouched." : "Daily purchase patterns will show here."}</p>
+      <p>${accounts.connected ? "Keep cash steady." : "Daily purchase patterns will show here."}</p>
     </div>`;
     return;
   }
@@ -647,7 +642,7 @@ function renderSpendLeaks(improvements, accounts, locks = []) {
         <strong>${accounts.connected ? "No leak list yet" : "Connect Chase"}</strong>
         <span>${accounts.connected ? "A3 needs more current transactions." : "Bank data is needed."}</span>
       </div>
-      <p>${accounts.connected ? "Keep $500 untouched and wait for the next sync." : "No spending recommendations until current transactions are available."}</p>
+      <p>${accounts.connected ? "Keep cash steady and wait for the next sync." : "No spending recommendations until current transactions are available."}</p>
     </div>`;
     return;
   }
@@ -723,17 +718,18 @@ function renderReview(data) {
     els.reviewVerdict.textContent = "Connect Chase.";
     els.reviewSummary.textContent = "No live spending plan yet.";
   } else if (Number(accounts.debtTotal || 0) > 0) {
-    const pace = Math.max(0, Number(goal.monthlySavingsPace || 0));
     const last6 = Number(data.analysis?.monthlyNet?.last6Average || 0);
-    els.reviewVerdict.textContent = `${money.format(goal.downPaymentGap || 0)} left`;
-    els.reviewSummary.textContent = `${targetProgressText(goal)}: ${money.format(goal.availableForDownPayment || 0)} usable / ${money.format(goal.downPaymentTarget || 0)} target. ${monthsToCloseText(goal.downPaymentGap, pace)}; 6-mo avg ${money.format(last6)}.`;
+    const a3Price = Number(data.goal?.priceAsBuilt || goal.a3?.priceAsBuilt || 46690);
+    els.reviewVerdict.textContent = "Do not buy yet.";
+    els.reviewSummary.textContent = `Whole purchase: ${money.format(a3Price)}. Current cash ${money.format(accounts.cash || 0)}; card/loan balance ${money.format(accounts.debtTotal || 0)}; 6-mo avg ${money.format(last6)}.`;
   } else if (Number(goal.downPaymentGap || 0) > 0) {
     const pace = Math.max(0, Number(goal.monthlySavingsPace || 0));
-    els.reviewVerdict.textContent = `${money.format(goal.downPaymentGap || 0)} left`;
-    els.reviewSummary.textContent = `${targetProgressText(goal)}: ${money.format(goal.availableForDownPayment || 0)} usable / ${money.format(goal.downPaymentTarget || 0)} target. ${monthsToCloseText(goal.downPaymentGap, pace)}.`;
+    const a3Price = Number(data.goal?.priceAsBuilt || goal.a3?.priceAsBuilt || 46690);
+    els.reviewVerdict.textContent = "Cash not ready.";
+    els.reviewSummary.textContent = `Whole purchase: ${money.format(a3Price)}. Current cash ${money.format(accounts.cash || 0)}; cash plan short by ${money.format(goal.downPaymentGap || 0)}. ${monthsToCloseText(goal.downPaymentGap, pace)}.`;
   } else {
-    els.reviewVerdict.textContent = shortText(review.verdict || "Price-check threshold covered.", 96);
-    els.reviewSummary.textContent = shortText(review.summary || "Do not buy from down payment alone; monthly cost still decides.", 140);
+    els.reviewVerdict.textContent = shortText(review.verdict || "Full-cost check.", 96);
+    els.reviewSummary.textContent = shortText(review.summary || "Do not buy from cash alone; monthly payment, insurance, debt, and cashflow still decide.", 140);
   }
 
   function renderBullets(container, items, fallback) {
@@ -837,27 +833,25 @@ function renderImprovements(analysis, locks = []) {
   const improvements = analysis.improvements || {};
   const accounts = analysis.accounts || {};
   const goal = analysis.goal || {};
-  const settings = analysis.settings || {};
-  const floor = Number(settings.cashFloor || 0);
   const items = Array.isArray(improvements.items) ? improvements.items : [];
   const fallback = accounts.connected
     ? [
         {
           label: "Mistake to avoid",
           detail: accounts.debtTotal > 0
-            ? `Do not add A3 cash while ${money.format(accounts.debtTotal)} card/loan balance remains.`
-            : `Keep ${money.format(floor)} untouched before moving A3 cash.`,
+            ? `Do not treat cash as car money while ${money.format(accounts.debtTotal)} card/loan balance remains.`
+            : "Keep cash steady before the full purchase check.",
           severity: accounts.debtTotal > 0 ? "danger" : "watch"
         },
         {
-          label: "Missing",
-          detail: `${money.format(goal.downPaymentGap || 0)} A3 gap after keeping cash untouched.`,
+          label: "Cash plan",
+          detail: `${money.format(goal.downPaymentGap || 0)} short before the full purchase check.`,
           severity: "watch"
         }
       ]
     : [
-        { label: "Missing", detail: "Connect Chase before moving A3 cash.", severity: "watch" },
-        { label: "Untouched cash", detail: `${money.format(floor)} stays untouched.`, severity: "watch" }
+        { label: "Missing", detail: "Connect Chase before the car decision.", severity: "watch" },
+        { label: "Planning cash", detail: "Wait for real account data before treating cash as car money.", severity: "watch" }
       ];
   const rows = (items.length ? items : fallback).slice(0, 6);
   const primary = primaryFix(rows, accounts);
@@ -953,15 +947,15 @@ function render(data) {
     els.stateLabel.textContent = "Not ready yet";
     els.stateReason.textContent = `${money.format(accounts.debtTotal)} card/loan balance has to come down first.`;
   } else {
-    els.stateLabel.textContent = goal.downPaymentGap <= 0 ? "Checkpoint reached" : `${money.format(goal.downPaymentGap || 0)} left`;
+    els.stateLabel.textContent = goal.downPaymentGap <= 0 ? "Full-cost check" : `${money.format(goal.downPaymentGap || 0)} cash-plan gap`;
     els.stateReason.textContent = goal.downPaymentGap <= 0
-      ? "Buying still needs payment, insurance, and cashflow check."
-      : `${targetProgress} / ${money.format(goal.availableForDownPayment || 0)} usable.`;
+      ? "Payment, insurance, and cashflow still decide."
+      : `${targetProgress} / ${money.format(accounts.cash || 0)} current cash.`;
   }
   els.gapValue.textContent = accounts.debtTotal > 0 ? money.format(accounts.debtTotal) : money.format(goal.downPaymentGap);
   els.gapLabel.textContent = accounts.connected
     ? `${money.format(accounts.cash || 0)} cash / ${dateTimeLabel(accounts.lastUpdatedAt)}`
-    : `${money.format(goal.availableForDownPayment)} usable after keeping cash untouched`;
+    : `${money.format(data.goal.priceAsBuilt)} whole purchase needs live cash data`;
   const advisorDisplay = compactAdvisor(latestRun, analysis);
   els.actionLabel.textContent = accounts.debtTotal > 0 ? advisorDisplay.status : latestRun?.advice?.one_action || analysis.action.label;
   els.actionDetail.textContent = accounts.debtTotal > 0 ? advisorDisplay.summary : latestRun?.advice?.why || analysis.action.detail;

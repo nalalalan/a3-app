@@ -618,6 +618,10 @@ body.locked-view .lock-panel {
   padding: 16px 0 15px;
 }
 
+.blocker-head > * {
+  min-width: 0;
+}
+
 .blocker-head h2 {
   margin: 0;
   color: var(--ink);
@@ -634,6 +638,7 @@ body.locked-view .lock-panel {
   font-weight: 720;
   line-height: 1.25;
   text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .blocker-list {
@@ -1752,6 +1757,10 @@ details.panel {
 
   .suite-topbar-actions .storage-state,
   .suite-topbar-actions .file-button {
+    display: none;
+  }
+
+  .suite-topbar-actions #connectBank {
     display: none;
   }
 
