@@ -1074,13 +1074,17 @@ function spendingTriage(flexible14, flexible90, byCategory) {
 
 function dailyPurchaseAction(topLabel, items) {
   const text = `${topLabel || ""} ${(items || []).map((item) => item.category || item.description || "").join(" ")}`.toLowerCase();
+  if (/shar music|violin|string|music/.test(text)) return "Only if it directly fixes this week's named practice or build.";
+  if (/bodyspec|body.?spec|fitness/.test(text)) return "Only if the scan changes a real health decision.";
+  if (/pharmacy|medical|health|sleep|cpap|cvs/.test(text)) return "Replacement only if it fixes tonight or this week.";
+  if (/amc|theatre|theater|movie|entertainment/.test(text)) return "Entertainment only if planned before checkout.";
+  if (/mbta|transit|train|bus/.test(text)) return "Transit is fine; keep it separate from rideshare.";
   if (/amazon/.test(text)) return "One named item only; no cart browsing.";
   if (/chipotle|restaurant|food|coffee|cafe|dining|takeout|delivery|supermarket|grocery/.test(text)) {
     return "Use food already paid for before another order.";
   }
   if (/lyft|uber|taxi|rideshare|transport/.test(text)) return "Batch trips or walk/transit when safe.";
   if (/openai|chatgpt|software|subscription|internet|online/.test(text)) return "Check the cap before another paid tool charge.";
-  if (/sleep|cpap|health|medical|pharmacy|cvs/.test(text)) return "Replacement only if it fixes tonight or this week.";
   if (/best buy|samsung|electronics|camera|dji|gear|accessory|lululemon|clothing|apparel|shop|retail/.test(text)) {
     return "Replacement only; skip backup gear and upgrades.";
   }
@@ -1097,13 +1101,14 @@ function dailyPurchaseScan(flexible14, latestDate) {
     const total = sum(items.map((transaction) => transaction.spend));
     const merchants = groupedSpend(items, (transaction) => transaction.merchant).slice(0, 3);
     const top = merchants[0];
+    const topItems = top ? items.filter((transaction) => transaction.merchant === top.label) : items;
     rows.push({
       date,
       total,
       count: items.length,
       merchants: merchants.map((merchant) => `${merchant.label} ${moneyText(merchant.total)}`),
       topMerchant: top?.label || "",
-      next: dailyPurchaseAction(top?.label, items),
+      next: dailyPurchaseAction(top?.label, topItems),
       severity: total >= 160 || items.length >= 5 ? "danger" : total >= 60 || items.length >= 3 ? "watch" : "good"
     });
   }
@@ -1161,7 +1166,7 @@ function overallReview(input) {
 
   const good = [
     "Chase is connected; the page is using live Plaid data.",
-    `${moneyText(cushion)} is above the ${moneyText(floor)} cash floor.`
+    `${moneyText(cushion)} is usable after keeping ${moneyText(floor)} untouched.`
   ];
   if (paymentStatus?.amount > 0 && paymentStatus.status !== "pending") {
     good.push(`${moneyText(paymentStatus.amount)} payment is already visible in Plaid.`);
@@ -1184,7 +1189,7 @@ function overallReview(input) {
   if (food) must.push("Food: use food already paid for before another order.");
   if (lyft) must.push("Rides: batch trips; walk or transit when the schedule allows.");
   if (subscriptions.length) must.push(`Subscription audit: ${subscriptions.join(", ")}.`);
-  if (!must.length) must.push("Keep the cash floor intact and move only confirmed surplus toward A3.");
+  if (!must.length) must.push(`Keep ${moneyText(floor)} untouched and move only confirmed surplus toward A3.`);
 
   return {
     verdict: cardBalance > 0
@@ -1192,7 +1197,7 @@ function overallReview(input) {
       : gap > 0
         ? "A3 is possible, but the down-payment gap still needs repeat-spend control."
         : "Price-check threshold covered. Buying still needs debt, cashflow, and monthly-cost fit.",
-    summary: `${moneyText(cardBalance)} card/loan balance, ${moneyText(cushion)} usable after the ${moneyText(floor)} floor, ${moneyText(gap)} A3 gap. $7k is not a buy signal.`,
+    summary: `${moneyText(cardBalance)} card/loan balance, ${moneyText(cushion)} usable after keeping ${moneyText(floor)} untouched, ${moneyText(gap)} A3 gap. $7k is not a buy signal.`,
     good: good.slice(0, 4),
     bad: bad.slice(0, 5),
     must: must.slice(0, 6)
@@ -1288,7 +1293,7 @@ function immediateImprovements(input) {
       spending: [],
       items: [
         { label: "Missing", detail: "Connect Chase before moving A3 cash.", severity: "watch" },
-        { label: "Floor", detail: `$${Math.round(floor).toLocaleString("en-US")} stays untouched.`, severity: "watch" }
+        { label: "Untouched cash", detail: `$${Math.round(floor).toLocaleString("en-US")} stays untouched.`, severity: "watch" }
       ]
     };
   }
@@ -1302,14 +1307,14 @@ function immediateImprovements(input) {
   } else if (gap > 0) {
     items.push({
       label: "A3 cash",
-      detail: `Move cash above the $${Math.round(floor).toLocaleString("en-US")} floor toward the $${Math.round(gap).toLocaleString("en-US")} gap.`,
+      detail: `Keep $${Math.round(floor).toLocaleString("en-US")} untouched; move only confirmed surplus toward the $${Math.round(gap).toLocaleString("en-US")} gap.`,
       severity: "good"
     });
   }
 
   items.push({
-    label: "Cash floor",
-    detail: `$${Math.round(cushion).toLocaleString("en-US")} above the $${Math.round(floor).toLocaleString("en-US")} floor.`,
+    label: "Untouched cash",
+    detail: `$${Math.round(floor).toLocaleString("en-US")} stays untouched; $${Math.round(cushion).toLocaleString("en-US")} is usable.`,
     severity: cushion < 500 ? "danger" : "watch"
   });
 
@@ -1334,7 +1339,7 @@ function immediateImprovements(input) {
   if (debtTotal > 0) {
     items.push({
       label: "Card spend",
-      detail: "Only necessary charges until the cash floor and balances improve.",
+      detail: "Only necessary charges until cash and balances improve.",
       severity: "danger"
     });
   }
@@ -1457,9 +1462,9 @@ function watchItems(input) {
     items.push({ label: "Connected balance", detail: `$${Math.round(accounts.debtTotal)} across credit/loan accounts`, severity: "danger" });
   }
   if (balanceKnown && balance < cashFloor) {
-    items.push({ label: "Below floor", detail: `$${Math.round(balance)} vs $${Math.round(cashFloor)} floor`, severity: "danger" });
+    items.push({ label: "Below untouched cash", detail: `$${Math.round(balance)} vs ${moneyText(cashFloor)} that should stay untouched`, severity: "danger" });
   } else if (bufferDays !== null && bufferDays < 10) {
-    items.push({ label: "Thin buffer", detail: `${bufferDays.toFixed(1)} days of cash cushion past the $${Math.round(cashFloor)} floor`, severity: "watch" });
+    items.push({ label: "Thin buffer", detail: `${bufferDays.toFixed(1)} days of cash cushion past the ${moneyText(cashFloor)} untouched cash`, severity: "watch" });
   }
   if (spendChange !== null && spendChange > 18) {
     items.push({ label: "Spend up", detail: `${Math.round(spendChange)}% vs previous 30d`, severity: "watch" });
@@ -1592,10 +1597,10 @@ function readinessState(input) {
   const { transactions, balanceKnown, balance, cashFloor, bufferDays, spendChange, watch, goal, accounts } = input;
   if (!transactions.length) return { label: "no data", reason: "Import Chase CSV", color: "muted" };
   if (accounts?.debtTotal > 0) {
-    return { label: "balance first", reason: "Connected balances block a responsible A3 buy", color: "danger" };
+    return { label: "not ready", reason: "Connected balances block a responsible A3 buy", color: "danger" };
   }
   if ((balanceKnown && balance < cashFloor) || (bufferDays !== null && bufferDays < 5)) {
-    return { label: "danger", reason: "Cash floor pressure", color: "danger" };
+    return { label: "danger", reason: "Cash cushion pressure", color: "danger" };
   }
   if (goal.downPaymentGap <= 0 && goal.monthlyRoom >= 0) {
     return { label: "price check", reason: "Down payment covered; buy gate still separate", color: "watch" };
@@ -1609,8 +1614,8 @@ function readinessState(input) {
 function oneAction(input) {
   const { readiness, watch, recurring, categories, goal, balanceKnown, accounts } = input;
   if (!balanceKnown) return { label: "Add balance", detail: "A3 gap needs current cash" };
-  if (accounts?.debtTotal > 0) return { label: "Balance first", detail: `$${Math.round(accounts.debtTotal).toLocaleString("en-US")} card/loan balance before A3 cash` };
-  if (readiness.label === "danger") return { label: "Protect floor", detail: "Pause flexible spend until next deposit" };
+  if (accounts?.debtTotal > 0) return { label: "Do not buy yet", detail: `$${Math.round(accounts.debtTotal).toLocaleString("en-US")} card/loan balance has to come down first` };
+  if (readiness.label === "danger") return { label: "Protect cash", detail: "Pause flexible spend until next deposit" };
   if (goal.downPaymentGap > 0 && goal.monthlyRoom < 0) {
     return { label: "Close A3 gap", detail: `$${Math.ceil(Math.abs(goal.monthlyRoom))}/mo short` };
   }

@@ -13,7 +13,7 @@
     <link rel="icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons" type="image/svg+xml">
     <link rel="apple-touch-icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons">
     <link rel="manifest" href="/site.webmanifest?v=20260516-a3-three-rings">
-    <link rel="stylesheet" href="/styles.css?v=20260524-a3-daily-scan">
+    <link rel="stylesheet" href="/styles.css?v=20260524-a3-watchouts">
   </head>
   <body class="locked-view">
     <header class="suite-topbar" aria-label="a3 navigation">
@@ -66,7 +66,7 @@
             </div>
             <div class="goal-meter-row">
               <span id="goalSaved">Bank link pending</span>
-              <span id="goalTarget">$7,000 price-check target</span>
+              <span id="goalTarget">$7,000 checkpoint, not buy permission</span>
             </div>
             <span id="goalPace" class="goal-pace">Plaid review pending.</span>
           </div>
@@ -74,18 +74,16 @@
         </section>
       </section>
 
-      <section class="plain-panel" aria-label="A3 terms">
-        <div>
-          <strong>Balance first</strong>
-          <span id="termBalance">Connect Chase first.</span>
+      <section class="blocker-panel" aria-label="Why not A3 yet">
+        <div class="blocker-head">
+          <h2 id="blockerTitle">Do not buy yet.</h2>
+          <span id="blockerSummary">Connect Chase first.</span>
         </div>
-        <div>
-          <strong>Cash floor</strong>
-          <span id="termFloor">$500 stays untouched.</span>
-        </div>
-        <div>
-          <strong>$7k target</strong>
-          <span id="termTarget">First price-check threshold, not buy permission.</span>
+        <div id="blockerList" class="blocker-list">
+          <div class="blocker-row">
+            <strong>Connect Chase</strong>
+            <span>Live balances are needed before A3 decisions.</span>
+          </div>
         </div>
       </section>
 
@@ -139,7 +137,7 @@
         <ol id="cutSteps" class="cut-steps">
           <li>Open it only with a specific need.</li>
           <li>Use what is already paid for.</li>
-          <li>Keep the cash floor intact.</li>
+          <li>Keep $500 untouched.</li>
         </ol>
       </section>
 
@@ -234,7 +232,7 @@
             <input id="balanceInput" type="text" inputmode="decimal" placeholder="optional">
           </label>
           <label>
-            <span class="label">Floor</span>
+            <span class="label">Untouched cash</span>
             <input id="floorInput" type="text" inputmode="decimal">
           </label>
           <label>

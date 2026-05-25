@@ -22,9 +22,9 @@ const els = {
   goalSaved: document.getElementById("goalSaved"),
   goalTarget: document.getElementById("goalTarget"),
   goalPace: document.getElementById("goalPace"),
-  termBalance: document.getElementById("termBalance"),
-  termFloor: document.getElementById("termFloor"),
-  termTarget: document.getElementById("termTarget"),
+  blockerTitle: document.getElementById("blockerTitle"),
+  blockerSummary: document.getElementById("blockerSummary"),
+  blockerList: document.getElementById("blockerList"),
   gapValue: document.getElementById("gapValue"),
   gapLabel: document.getElementById("gapLabel"),
   actionLabel: document.getElementById("actionLabel"),
@@ -209,7 +209,7 @@ function monthsToCloseText(gap, pace) {
   return months < 1 ? "under 1 mo at 30d pace" : `${months.toFixed(1)} mo at 30d pace`;
 }
 
-function renderPlainTerms(analysis, sampleOnly) {
+function renderBlockers(analysis, sampleOnly) {
   const accounts = analysis?.accounts || {};
   const settings = analysis?.settings || {};
   const goal = analysis?.goal || {};
@@ -217,21 +217,62 @@ function renderPlainTerms(analysis, sampleOnly) {
   const cash = Number(accounts.cash || 0);
   const usable = Math.max(0, cash - floor);
   const target = Math.max(0, Number(goal.downPaymentTarget || 0));
+  const spending = Array.isArray(analysis?.improvements?.spending) ? analysis.improvements.spending : [];
+  const biggestRepeat = spending.find((item) => item?.category !== "Past purchase") || spending[0];
+
+  function setRows(rows) {
+    els.blockerList.innerHTML = rows.map((row) => `
+      <div class="blocker-row">
+        <strong>${escapeHtml(row.label)}</strong>
+        <span>${escapeHtml(row.detail)}</span>
+      </div>
+    `).join("");
+  }
 
   if (sampleOnly || !accounts.connected) {
-    els.termBalance.textContent = "Connect Chase before judging the A3 plan.";
-    els.termFloor.textContent = `${money.format(floor)} stays untouched.`;
-    els.termTarget.textContent = "First price-check threshold, not buy permission.";
+    els.blockerTitle.textContent = "Do not buy yet.";
+    els.blockerSummary.textContent = "The app needs live Chase data first.";
+    setRows([
+      { label: "Connect Chase", detail: "Balances and purchases decide whether the A3 is realistic." },
+      { label: "$7k checkpoint", detail: "Reaching it starts a price check; it is not permission to buy." }
+    ]);
     return;
   }
 
-  els.termBalance.textContent = accounts.debtTotal > 0
-    ? `${money.format(accounts.debtTotal)} card/loan balance comes before A3 cash.`
-    : "No connected card/loan balance blocking the A3 plan.";
-  els.termFloor.textContent = `${money.format(floor)} stays untouched; ${money.format(usable)} is usable.`;
-  els.termTarget.textContent = target > 0
-    ? `${money.format(target)} is a price-check threshold, not buy permission.`
-    : "Set a first price-check threshold.";
+  if (Number(accounts.debtTotal || 0) > 0) {
+    els.blockerTitle.textContent = "Do not buy yet.";
+    els.blockerSummary.textContent = "These are the things blocking the A3 right now.";
+  } else if (Number(goal.downPaymentGap || 0) > 0) {
+    els.blockerTitle.textContent = "Still not buy-ready.";
+    els.blockerSummary.textContent = "Cash has to grow before the next price check.";
+  } else {
+    els.blockerTitle.textContent = "Checkpoint reached.";
+    els.blockerSummary.textContent = "Buying still needs a monthly-cost check.";
+  }
+
+  const rows = [];
+  if (Number(accounts.debtTotal || 0) > 0) {
+    rows.push({
+      label: "Card/loan balance",
+      detail: `${money.format(accounts.debtTotal)} has to come down before A3 cash moves.`
+    });
+  }
+  rows.push({
+    label: "$500 untouched",
+    detail: `${money.format(floor)} stays untouched; ${money.format(usable)} is usable, but not car money while balances are high.`
+  });
+  if (biggestRepeat?.label) {
+    rows.push({
+      label: "Repeat spending",
+      detail: `${biggestRepeat.label} is the biggest repeat pattern: ${biggestRepeat.issue || biggestRepeat.impactLabel || biggestRepeat.next || "review before another purchase"}.`
+    });
+  }
+  rows.push({
+    label: "$7k checkpoint",
+    detail: `${target > 0 ? money.format(target) : "$7k"} only starts a price check; payment, insurance, debt, and cashflow still decide.`
+  });
+
+  setRows(rows);
 }
 
 function renderGoalMeter(goal, sampleOnly, data) {
@@ -240,8 +281,8 @@ function renderGoalMeter(goal, sampleOnly, data) {
   const floor = Math.max(0, Number(goal.cashFloor ?? data?.analysis?.settings?.cashFloor ?? 0));
   const progress = !sampleOnly && target > 0 ? clamp(saved / target, 0, 1) : 0;
   els.goalMeterFill.style.width = `${Math.round(progress * 100)}%`;
-  els.goalSaved.textContent = sampleOnly ? "Bank link pending" : `${money.format(saved)} usable after ${money.format(floor)} floor`;
-  els.goalTarget.textContent = target > 0 ? `${money.format(target)} price-check target` : "Target not set";
+  els.goalSaved.textContent = sampleOnly ? "Bank link pending" : `${money.format(saved)} usable; keep ${money.format(floor)} untouched`;
+  els.goalTarget.textContent = target > 0 ? `${money.format(target)} checkpoint, not buy permission` : "Target not set";
 
   if (sampleOnly) {
     els.goalPace.textContent = data.plaid?.productionReviewPending
@@ -431,7 +472,7 @@ function financialMoves(analysis) {
   } else if (goal.downPaymentGap > 0) {
     moves.push({
       label: "A3 down payment",
-      detail: `${money.format(goal.downPaymentGap)} left after cash floor`
+      detail: `${money.format(goal.downPaymentGap)} left after keeping cash untouched`
     });
   }
   const fallbackMoves = [
@@ -501,7 +542,8 @@ function actionLabel(item) {
     case "Mistake to avoid":
       return "Do not move A3 cash";
     case "Cash floor":
-      return "Keep cash floor";
+    case "Untouched cash":
+      return "Keep cash untouched";
     case "Biggest leak":
       return "Slow biggest leak";
     case "Food leak":
@@ -521,7 +563,7 @@ function actionLabel(item) {
 }
 
 function orderedImprovements(items, primary) {
-  const labels = ["Mistake to avoid", "Card spend", "Food leak", "Cash floor", "Payment posted", "Payment pending", "A3 cash", "Missing", "Floor"];
+  const labels = ["Mistake to avoid", "Card spend", "Food leak", "Untouched cash", "Cash floor", "Payment posted", "Payment pending", "A3 cash", "Missing", "Floor"];
   const ordered = [];
   for (const label of labels) {
     const item = findImprovement(items, label);
@@ -542,7 +584,7 @@ function renderCutAssist(improvements, accounts) {
     els.cutTitle.textContent = accounts.connected ? "Hold spending" : "Connect Chase";
     els.cutReason.textContent = accounts.connected ? "A3 needs more current transactions." : "Current transactions are needed first.";
     els.cutSteps.innerHTML = `
-      <li>Keep the cash floor.</li>
+      <li>Keep $500 untouched.</li>
       <li>Do not add new card spend.</li>
       <li>Sync again tomorrow.</li>
     `;
@@ -553,7 +595,7 @@ function renderCutAssist(improvements, accounts) {
   els.cutReason.textContent = primaryCutReason(first);
   els.cutSteps.innerHTML = `
     <li>${escapeHtml(replacementStep(first))}</li>
-    <li>Keep the cash floor intact.</li>
+    <li>Keep $500 untouched.</li>
   `;
 }
 
@@ -571,7 +613,7 @@ function renderDailyScan(improvements, accounts) {
         <strong>${accounts.connected ? "No flexible purchases found" : "Connect Chase"}</strong>
         <span>${accounts.connected ? "Payments, transfers, and debt payments are excluded." : "Payments and transfers are excluded."}</span>
       </div>
-      <p>${accounts.connected ? "Keep the cash floor intact." : "Daily purchase patterns will show here."}</p>
+      <p>${accounts.connected ? "Keep $500 untouched." : "Daily purchase patterns will show here."}</p>
     </div>`;
     return;
   }
@@ -605,7 +647,7 @@ function renderSpendLeaks(improvements, accounts, locks = []) {
         <strong>${accounts.connected ? "No leak list yet" : "Connect Chase"}</strong>
         <span>${accounts.connected ? "A3 needs more current transactions." : "Bank data is needed."}</span>
       </div>
-      <p>${accounts.connected ? "Keep the cash floor and wait for the next sync." : "No spending recommendations until current transactions are available."}</p>
+      <p>${accounts.connected ? "Keep $500 untouched and wait for the next sync." : "No spending recommendations until current transactions are available."}</p>
     </div>`;
     return;
   }
@@ -809,13 +851,13 @@ function renderImprovements(analysis, locks = []) {
         },
         {
           label: "Missing",
-          detail: `${money.format(goal.downPaymentGap || 0)} A3 gap after the cash floor.`,
+          detail: `${money.format(goal.downPaymentGap || 0)} A3 gap after keeping cash untouched.`,
           severity: "watch"
         }
       ]
     : [
         { label: "Missing", detail: "Connect Chase before moving A3 cash.", severity: "watch" },
-        { label: "Floor", detail: `${money.format(floor)} stays untouched.`, severity: "watch" }
+        { label: "Untouched cash", detail: `${money.format(floor)} stays untouched.`, severity: "watch" }
       ];
   const rows = (items.length ? items : fallback).slice(0, 6);
   const primary = primaryFix(rows, accounts);
@@ -864,7 +906,7 @@ function render(data) {
 
   document.documentElement.dataset.state = sampleOnly ? "watch" : analysis.readiness.color;
   renderGoalMeter(goal, sampleOnly, data);
-  renderPlainTerms(analysis, sampleOnly);
+  renderBlockers(analysis, sampleOnly);
 
   if (sampleOnly) {
     const plaidReviewPending = Boolean(data.plaid?.productionReviewPending);
@@ -908,18 +950,18 @@ function render(data) {
       : "CSV data";
   const targetProgress = targetProgressText(goal);
   if (accounts.debtTotal > 0) {
-    els.stateLabel.textContent = "Balance first";
-    els.stateReason.textContent = `${money.format(accounts.debtTotal)} card/loan balance before A3 cash.`;
+    els.stateLabel.textContent = "Not ready yet";
+    els.stateReason.textContent = `${money.format(accounts.debtTotal)} card/loan balance has to come down first.`;
   } else {
-    els.stateLabel.textContent = goal.downPaymentGap <= 0 ? "Price check" : `${money.format(goal.downPaymentGap || 0)} left`;
+    els.stateLabel.textContent = goal.downPaymentGap <= 0 ? "Checkpoint reached" : `${money.format(goal.downPaymentGap || 0)} left`;
     els.stateReason.textContent = goal.downPaymentGap <= 0
-      ? "Down payment covered; buy gate still separate."
+      ? "Buying still needs payment, insurance, and cashflow check."
       : `${targetProgress} / ${money.format(goal.availableForDownPayment || 0)} usable.`;
   }
   els.gapValue.textContent = accounts.debtTotal > 0 ? money.format(accounts.debtTotal) : money.format(goal.downPaymentGap);
   els.gapLabel.textContent = accounts.connected
     ? `${money.format(accounts.cash || 0)} cash / ${dateTimeLabel(accounts.lastUpdatedAt)}`
-    : `${money.format(goal.availableForDownPayment)} usable after floor`;
+    : `${money.format(goal.availableForDownPayment)} usable after keeping cash untouched`;
   const advisorDisplay = compactAdvisor(latestRun, analysis);
   els.actionLabel.textContent = accounts.debtTotal > 0 ? advisorDisplay.status : latestRun?.advice?.one_action || analysis.action.label;
   els.actionDetail.textContent = accounts.debtTotal > 0 ? advisorDisplay.summary : latestRun?.advice?.why || analysis.action.detail;
