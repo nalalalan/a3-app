@@ -1663,6 +1663,74 @@ body.locked-view .lock-panel {
   color: rgba(241, 184, 173, .95);
 }
 
+.net-mode-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  border-top: 1px solid rgba(246, 239, 230, .1);
+  border-bottom: 1px solid rgba(246, 239, 230, .1);
+}
+
+.net-mode-button {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 12px 14px 13px;
+  border: 0;
+  border-radius: 0;
+  border-left: 1px solid rgba(246, 239, 230, .08);
+  background: transparent;
+  color: rgba(246, 239, 230, .54);
+  text-align: left;
+  cursor: pointer;
+}
+
+.net-mode-button:first-child {
+  border-left: 0;
+}
+
+.net-mode-button span {
+  min-width: 0;
+  color: rgba(246, 239, 230, .5);
+  font-size: .72rem;
+  font-weight: 790;
+  line-height: 1.08;
+}
+
+.net-mode-button strong {
+  min-width: 0;
+  color: rgba(246, 239, 230, .78);
+  font-size: clamp(1rem, 1.8vw, 1.28rem);
+  font-weight: 780;
+  line-height: .98;
+  overflow-wrap: anywhere;
+}
+
+.net-mode-button strong[data-net="positive"] {
+  color: rgba(187, 204, 184, .9);
+}
+
+.net-mode-button strong[data-net="negative"] {
+  color: rgba(241, 184, 173, .92);
+}
+
+.net-mode-button.is-active {
+  background: rgba(246, 239, 230, .045);
+}
+
+.net-mode-button.is-active span,
+.net-mode-button.is-active strong {
+  color: var(--ink);
+}
+
+.net-mode-button.is-active strong[data-net="positive"] {
+  color: rgba(187, 204, 184, .95);
+}
+
+.net-mode-button.is-active strong[data-net="negative"] {
+  color: rgba(241, 184, 173, .96);
+}
+
 .net-chart-frame {
   min-width: 0;
   height: 222px;
@@ -2411,6 +2479,18 @@ details.panel {
   .net-head strong {
     text-align: left;
     font-size: clamp(2.2rem, 14vw, 3.4rem);
+  }
+
+  .net-mode-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .net-mode-button:nth-child(odd) {
+    border-left: 0;
+  }
+
+  .net-mode-button:nth-child(n + 3) {
+    border-top: 1px solid rgba(246, 239, 230, .08);
   }
 
   .net-chart-frame {

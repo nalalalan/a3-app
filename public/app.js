@@ -70,6 +70,7 @@ const els = {
   reviewMust: document.getElementById("reviewMust"),
   netWindow: document.getElementById("netWindow"),
   netCurrent: document.getElementById("netCurrent"),
+  netModeButtons: Array.from(document.querySelectorAll("[data-net-mode]")),
   netChart: document.getElementById("netChart"),
   netAverage: document.getElementById("netAverage"),
   netRange: document.getElementById("netRange"),
@@ -82,6 +83,7 @@ const els = {
 let lastState = null;
 let activeCutItem = null;
 const downPaymentSimStorageKey = "a3DownPaymentTodayAmount";
+let activeNetMode = localStorage.getItem("a3NetMode") || "week";
 
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -786,9 +788,10 @@ function renderDailyScan(improvements, accounts) {
 
 function renderSpendLeaks(improvements, accounts, locks = []) {
   const spending = Array.isArray(improvements.spending) ? improvements.spending : [];
-  const visibleSpending = spending.slice(0, 3);
+  const visibleSpending = spending.slice(0, 6);
+  const hiddenSpending = spending.slice(6);
   els.spendWindow.textContent = accounts.connected
-    ? (visibleSpending.length ? `Top ${visibleSpending.length} repeat item${visibleSpending.length === 1 ? "" : "s"}` : "No repeat items")
+    ? (visibleSpending.length ? `Top ${visibleSpending.length}${hiddenSpending.length ? ` / ${hiddenSpending.length} more` : ""}` : "No repeat items")
     : "Waiting for bank data";
 
   if (!visibleSpending.length) {
@@ -843,7 +846,19 @@ function renderSpendLeaks(improvements, accounts, locks = []) {
     `;
   }
 
-  els.spendLeakList.innerHTML = visibleSpending.map((item) => renderSpendRow(item)).join("");
+  const hiddenBlock = hiddenSpending.length
+    ? `<details class="spend-more">
+        <summary>${hiddenSpending.length} more lower-priority items</summary>
+        <div class="spend-more-list">
+          ${hiddenSpending.map((item) => renderSpendRow(item, { compact: true })).join("")}
+        </div>
+      </details>`
+    : "";
+
+  els.spendLeakList.innerHTML = [
+    ...visibleSpending.map((item) => renderSpendRow(item)),
+    hiddenBlock
+  ].filter(Boolean).join("");
 }
 
 function renderReview(data) {
@@ -879,28 +894,162 @@ function renderReview(data) {
   renderBullets(els.reviewMust, review.must, "Live balances are required before the car decision.");
 }
 
+function yearlyNetFromMonthly(monthlyNet) {
+  const months = Array.isArray(monthlyNet?.months) ? monthlyNet.months : [];
+  const byYear = new Map();
+  for (const item of months) {
+    const year = Number(String(item.month || "").slice(0, 4));
+    if (!Number.isFinite(year)) continue;
+    if (!byYear.has(year)) byYear.set(year, { year, period: String(year), inflow: 0, spend: 0, net: 0, count: 0 });
+    const row = byYear.get(year);
+    row.inflow += Number(item.inflow || 0);
+    row.spend += Number(item.spend || 0);
+    row.net += Number(item.net || 0);
+    row.count += Number(item.count || 0);
+  }
+  const rows = [...byYear.values()]
+    .sort((a, b) => a.year - b.year)
+    .map((item) => ({
+      ...item,
+      inflow: Number(item.inflow.toFixed(2)),
+      spend: Number(item.spend.toFixed(2)),
+      net: Number(item.net.toFixed(2))
+    }));
+  const nonEmpty = rows.filter((item) => item.count > 0);
+  const last3 = nonEmpty.slice(-3);
+  return {
+    rows,
+    current: rows[rows.length - 1] || null,
+    last3Average: last3.length ? Number((last3.reduce((total, item) => total + Number(item.net || 0), 0) / last3.length).toFixed(2)) : 0
+  };
+}
+
+function allTimeNetFromWeekly(weeklyNet) {
+  const weeks = Array.isArray(weeklyNet?.weeks) ? weeklyNet.weeks : [];
+  let inflow = 0;
+  let spend = 0;
+  let net = 0;
+  let count = 0;
+  const rows = weeks.map((item) => {
+    inflow += Number(item.inflow || 0);
+    spend += Number(item.spend || 0);
+    net += Number(item.net || 0);
+    count += Number(item.count || 0);
+    return {
+      week: item.week,
+      year: Number(item.year || String(item.week || "").slice(0, 4)),
+      inflow: Number(inflow.toFixed(2)),
+      spend: Number(spend.toFixed(2)),
+      net: Number(net.toFixed(2)),
+      count
+    };
+  });
+  return {
+    rows,
+    current: rows[rows.length - 1] || null,
+    start: rows[0]?.week || ""
+  };
+}
+
+function netModeData(data) {
+  const weekly = data.analysis?.weeklyNet || {};
+  const monthly = data.analysis?.monthlyNet || {};
+  const weekRows = Array.isArray(weekly.weeks) ? weekly.weeks : [];
+  const monthRows = Array.isArray(monthly.months) ? monthly.months : [];
+  const yearly = yearlyNetFromMonthly(monthly);
+  const allTime = allTimeNetFromWeekly(weekly);
+  return {
+    week: {
+      title: "Weekly net",
+      rows: weekRows.slice(-104),
+      current: weekly.current || weekRows[weekRows.length - 1] || null,
+      key: "week",
+      pointLabel: (item) => weekLabel(item.week),
+      currentLabel: (item) => `${weekLabel(item.week)} so far`,
+      rangeLabel: (rows) => `12-wk avg ${money.format(weekly.last12Average || 0)} / ${rows.length} ${rows.length === 1 ? "week" : "weeks"}`
+    },
+    month: {
+      title: "Monthly net",
+      rows: monthRows.slice(-36),
+      current: monthly.current || monthRows[monthRows.length - 1] || null,
+      key: "month",
+      pointLabel: (item) => monthLabel(item.month),
+      currentLabel: (item) => `${monthLabel(item.month)} so far`,
+      rangeLabel: (rows) => `6-mo avg ${money.format(monthly.last6Average || 0)} / ${rows.length} ${rows.length === 1 ? "month" : "months"}`
+    },
+    year: {
+      title: "Yearly net",
+      rows: yearly.rows,
+      current: yearly.current,
+      key: "period",
+      pointLabel: (item) => String(item.year || item.period || ""),
+      currentLabel: (item) => `${item.year || item.period} so far`,
+      rangeLabel: (rows) => `3-yr avg ${money.format(yearly.last3Average || 0)} / ${rows.length} ${rows.length === 1 ? "year" : "years"}`
+    },
+    all: {
+      title: "All-time net",
+      rows: allTime.rows,
+      current: allTime.current,
+      key: "week",
+      pointLabel: (item) => weekLabel(item.week),
+      currentLabel: () => allTime.start ? `Since ${dateLabel(allTime.start)}` : "All connected history",
+      rangeLabel: (rows) => `${rows.length} ${rows.length === 1 ? "week" : "weeks"} / cumulative`
+    }
+  };
+}
+
+function itemYear(item) {
+  const direct = Number(item.year);
+  if (Number.isFinite(direct)) return direct;
+  const source = item.week || item.month || item.period || "";
+  const year = Number(String(source).slice(0, 4));
+  return Number.isFinite(year) ? year : null;
+}
+
+function renderNetModeButtons(modes) {
+  for (const button of els.netModeButtons) {
+    const modeKey = button.dataset.netMode || "week";
+    const mode = modes[modeKey];
+    const current = mode?.current || null;
+    const value = button.querySelector("strong");
+    const isActive = modeKey === activeNetMode;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+    if (value) {
+      value.textContent = current ? money.format(current.net || 0) : "--";
+      if (current) {
+        value.dataset.net = Number(current.net || 0) >= 0 ? "positive" : "negative";
+      } else {
+        delete value.dataset.net;
+      }
+    }
+  }
+}
+
 function renderMonthlyNet(data) {
-  const history = data.analysis?.weeklyNet || {};
-  const weeks = Array.isArray(history.weeks) ? history.weeks : [];
-  const visible = weeks.slice(-104);
-  const current = history.current || visible[visible.length - 1] || null;
+  const modes = netModeData(data);
+  if (!modes[activeNetMode]) activeNetMode = "week";
+  const mode = modes[activeNetMode] || modes.week;
+  const visible = Array.isArray(mode.rows) ? mode.rows : [];
+  const current = mode.current || visible[visible.length - 1] || null;
+  renderNetModeButtons(modes);
 
   if (!visible.length || !current) {
     els.netWindow.textContent = "Waiting for transactions";
     els.netCurrent.textContent = "--";
     els.netChart.innerHTML = "";
-    els.netAverage.textContent = "No weekly net history yet.";
+    els.netAverage.textContent = "No net history yet.";
     els.netRange.textContent = "Live bank data required.";
     return;
   }
 
-  const currentLabel = `${weekLabel(current.week)} so far`;
-  const weekWord = visible.length === 1 ? "week" : "weeks";
-  els.netWindow.textContent = currentLabel;
+  els.netWindow.textContent = mode.currentLabel(current);
   els.netCurrent.textContent = money.format(current.net);
   els.netCurrent.dataset.net = current.net >= 0 ? "positive" : "negative";
   els.netAverage.textContent = `${money.format(current.inflow || 0)} in - ${money.format(current.spend || 0)} out`;
-  els.netRange.textContent = `12-wk avg ${money.format(history.last12Average || 0)} / ${visible.length} ${weekWord}`;
+  els.netRange.textContent = mode.rangeLabel(visible);
+  document.querySelector(".net-head h2").textContent = mode.title;
+  els.netChart.setAttribute("aria-label", `${mode.title} history`);
 
   const width = 720;
   const height = 260;
@@ -924,10 +1073,10 @@ function renderMonthlyNet(data) {
 
   const points = visible.map((item, index) => {
     const value = Number(item.net || 0);
-    const currentClass = item.week === current.week ? " is-current" : "";
+    const currentClass = mode.key && item[mode.key] === current[mode.key] ? " is-current" : "";
     const signClass = value >= 0 ? "positive" : "negative";
     return `<circle class="net-point ${signClass}${currentClass}" cx="${xFor(index).toFixed(2)}" cy="${yFor(value).toFixed(2)}" r="${currentClass ? 4.5 : 2.15}">
-      <title>${escapeHtml(weekLabel(item.week))}: ${escapeHtml(money.format(value))} net</title>
+      <title>${escapeHtml(mode.pointLabel(item))}: ${escapeHtml(money.format(value))} net</title>
     </circle>`;
   }).join("");
 
@@ -943,17 +1092,19 @@ function renderMonthlyNet(data) {
 
   const years = [];
   for (let index = 0; index < visible.length; index += 1) {
-    const year = Number(visible[index].year || String(visible[index].week || "").slice(0, 4));
+    const year = itemYear(visible[index]);
     if (!Number.isFinite(year)) continue;
-    if (!years.some((item) => item.year === year)) years.push({ year, index });
+    if (activeNetMode === "year" || !years.some((item) => item.year === year)) years.push({ year, index });
   }
+  const labelEvery = activeNetMode === "year" ? Math.max(1, Math.ceil(years.length / 6)) : 1;
   const xLabels = years.map((item, labelIndex) => {
+    if (activeNetMode === "year" && labelIndex % labelEvery !== 0 && labelIndex !== years.length - 1) return "";
     const anchor = item.index === visible.length - 1 ? " end" : "";
     const x = xFor(item.index);
     return `<text class="net-axis-label${anchor}" x="${x.toFixed(2)}" y="${height - 12}">${escapeHtml(String(item.year))}</text>`;
   }).join("");
 
-  const foundCurrent = visible.findIndex((item) => item.week === current.week);
+  const foundCurrent = mode.key ? visible.findIndex((item) => item[mode.key] === current[mode.key]) : -1;
   const currentIndex = foundCurrent >= 0 ? foundCurrent : visible.length - 1;
   const currentX = xFor(currentIndex);
   const currentY = yFor(Number(current.net || 0));
@@ -1251,6 +1402,14 @@ if (els.simDownPaymentInput) {
     if (lastState) renderPurchaseSimulation(lastState, isSampleOnly(lastState));
   });
 }
+
+els.netModeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    activeNetMode = button.dataset.netMode || "week";
+    localStorage.setItem("a3NetMode", activeNetMode);
+    if (lastState) renderMonthlyNet(lastState);
+  });
+});
 
 els.csvInput.addEventListener("change", async (event) => {
   const file = event.target.files?.[0];
