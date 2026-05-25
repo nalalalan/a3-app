@@ -150,6 +150,10 @@ function moneyShort(value) {
   return `${sign}$${Math.round(abs)}`;
 }
 
+function setText(element, value) {
+  if (element) element.textContent = value;
+}
+
 function isSampleOnly(data) {
   return !(data.imports || []).some((item) => item.source !== "sample");
 }
@@ -160,12 +164,12 @@ function clamp(value, min, max) {
 
 function replacementStep(item) {
   const text = `${item?.label || ""} ${item?.category || ""}`.toLowerCase();
-  if (/shar|music|instrument|violin/.test(text)) return "Use what is already on the stand.";
-  if (/chipotle|restaurant|food|coffee|cafe|dining|takeout|delivery/.test(text)) return "Eat food already paid for first.";
-  if (/openai|chatgpt|subscription|software|app|internet|online/.test(text)) return "Cancel duplicate or unused plans.";
-  if (/lyft|uber|taxi|rideshare|transport/.test(text)) return "Batch the trip or walk/transit.";
-  if (/amazon|bestbuy|best buy|samsung|electronics|lululemon|clothing|apparel|shop|retail|merchandise/.test(text)) return "Buy only one named replacement.";
-  return "Use what is already paid for.";
+  if (/shar|music|instrument|violin/.test(text)) return "Music repeat.";
+  if (/chipotle|restaurant|food|coffee|cafe|dining|takeout|delivery/.test(text)) return "Food repeat.";
+  if (/openai|chatgpt|subscription|software|app|internet|online/.test(text)) return "Subscription repeat.";
+  if (/lyft|uber|taxi|rideshare|transport/.test(text)) return "Ride repeat.";
+  if (/amazon|bestbuy|best buy|samsung|electronics|lululemon|clothing|apparel|shop|retail|merchandise/.test(text)) return "Retail repeat.";
+  return "Repeat spend.";
 }
 
 function isRepeatableSpend(item) {
@@ -186,6 +190,14 @@ function displayMerchantLabel(label) {
     .replace(/\bOpenai\b/g, "OpenAI")
     .replace(/\bCvs\b/g, "CVS")
     .replace(/\bAtm\b/g, "ATM");
+}
+
+function displaySafeText(value) {
+  return String(value ?? "")
+    .replace(/Connect Chase/gi, "Live bank data")
+    .replace(/Chase not connected/gi, "Bank data unavailable")
+    .replace(/live Chase data/gi, "live bank data")
+    .replace(/\bChase\b/g, "bank");
 }
 
 function primaryCutItem(spending) {
@@ -244,42 +256,42 @@ function renderPurchaseSimulation(data, sampleOnly) {
   const carAfter = Math.max(0, a3Price - downPayment);
 
   if (!connected) {
-    els.simStatus.textContent = "Needs live Chase data.";
+    els.simStatus.textContent = "Needs live data.";
     els.simCashAfter.textContent = "No live cash.";
     els.simDebtAfter.textContent = "No live balance.";
     els.simCarAfter.textContent = `${money.format(a3Price)} before tax, fees, insurance, and interest.`;
-    els.simHealth.textContent = "No financial-health read until Chase is unlocked.";
+    els.simHealth.textContent = "No live read.";
     els.simHealthRow.dataset.severity = "watch";
     return;
   }
 
-  els.simStatus.textContent = "Immediate cash damage.";
+  els.simStatus.textContent = `${money.format(downPayment)} tested.`;
   els.simCashAfter.textContent = missingCash > 0
-    ? `${money.format(0)} cash; ${money.format(missingCash)} short`
+    ? `${money.format(0)} cash / ${money.format(missingCash)} short`
     : `${money.format(cashAfter)} cash left`;
   els.simDebtAfter.textContent = `${money.format(balance)} unchanged`;
   els.simCarAfter.textContent = `${money.format(carAfter)} before tax, fees, insurance, and interest`;
 
   if (downPayment <= 0) {
-    els.simHealth.textContent = "No down payment simulated.";
+    els.simHealth.textContent = "No amount tested.";
     els.simHealthRow.dataset.severity = "watch";
   } else if (missingCash > 0) {
-    els.simHealth.textContent = `Impossible today: ${money.format(missingCash)} cash short; ${money.format(balance)} balance unchanged.`;
+    els.simHealth.textContent = `No: ${money.format(missingCash)} cash short; ${money.format(balance)} balance remains.`;
     els.simHealthRow.dataset.severity = "danger";
   } else if (balance > 0 && cashAfter <= cashFloor) {
-    els.simHealth.textContent = `Breaks health: ${money.format(cashAfter)} cash left; ${money.format(balance)} balance remains.`;
+    els.simHealth.textContent = `No: ${money.format(cashAfter)} cash left; ${money.format(balance)} balance remains.`;
     els.simHealthRow.dataset.severity = "danger";
   } else if (balance > 0) {
-    els.simHealth.textContent = `Worsens health: ${money.format(cashAfter)} cash left; ${money.format(balance)} balance remains.`;
+    els.simHealth.textContent = `No: ${money.format(balance)} balance remains.`;
     els.simHealthRow.dataset.severity = "danger";
   } else if (cashAfter <= cashFloor) {
-    els.simHealth.textContent = `Cash cushion breaks: ${money.format(cashAfter)} left before loan costs.`;
+    els.simHealth.textContent = `No: ${money.format(cashAfter)} cash left.`;
     els.simHealthRow.dataset.severity = "danger";
   } else if (cashAfter <= cashFloor + 1000) {
-    els.simHealth.textContent = `Fragile: ${money.format(cashAfter)} left before loan costs.`;
+    els.simHealth.textContent = `Maybe not: ${money.format(cashAfter)} cash left.`;
     els.simHealthRow.dataset.severity = "watch";
   } else {
-    els.simHealth.textContent = `${money.format(cashAfter)} left; loan, insurance, tax, fees, and interest still decide.`;
+    els.simHealth.textContent = `Maybe: ${money.format(cashAfter)} cash left before loan costs.`;
     els.simHealthRow.dataset.severity = "watch";
   }
 }
@@ -304,9 +316,9 @@ function renderBlockers(analysis, sampleOnly) {
 
   if (sampleOnly || !accounts.connected) {
     els.blockerTitle.textContent = "Do not buy yet.";
-    els.blockerSummary.textContent = "The app needs live Chase data first.";
+    els.blockerSummary.textContent = "Live balances are required first.";
     setRows([
-      { label: "Connect Chase", detail: "Current cash, balance, and payment decide." },
+      { label: "Live balances", detail: "Current cash, balance, and payment decide." },
       { label: "Whole purchase", detail: `${money.format(a3Price)} before tax, fees, insurance, and interest.` }
     ]);
     return;
@@ -351,17 +363,17 @@ function renderGoalMeter(goal, sampleOnly, data) {
   const progress = !sampleOnly && a3Price > 0 ? clamp(cash / a3Price, 0, 1) : 0;
   els.goalMeterFill.style.width = `${Math.round(progress * 100)}%`;
   els.goalSaved.textContent = sampleOnly ? "Bank link pending" : money.format(cash);
-  els.heroCashMeta.textContent = sampleOnly ? "Connect Chase." : "current cash";
+  els.heroCashMeta.textContent = sampleOnly ? "no live cash" : "current cash";
   els.heroA3Price.textContent = money.format(a3Price);
   els.heroA5Price.textContent = "$60,590";
   els.goalTarget.textContent = `${money.format(a3Price)} whole purchase`;
 
   if (sampleOnly) {
     els.goalPace.textContent = data.plaid?.productionReviewPending
-      ? "Plaid approval is the next step."
+      ? "Bank approval is the next step."
       : data.plaid?.configured
-        ? "Connect Chase to start tracking."
-        : "Plaid setup needed before Chase can connect.";
+        ? "Bank link required."
+        : "Bank link setup needed.";
     return;
   }
 
@@ -403,17 +415,17 @@ function renderBankControls(data) {
   els.connectBank.textContent = plaid.connected ? needsRelink ? "relink" : "linked" : "connect";
   els.connectBank.disabled = plaid.connected && !needsRelink;
   if (els.connectBankPrimary) {
-    els.connectBankPrimary.textContent = needsRelink ? "relink Chase" : "connect Chase";
+    els.connectBankPrimary.textContent = needsRelink ? "relink bank" : "connect bank";
     els.connectBankPrimary.hidden = plaid.connected && !needsRelink;
   }
   els.syncBank.hidden = !plaid.connected;
   const title = plaid.productionReviewPending
-    ? "Plaid review pending"
+    ? "Bank review pending"
     : plaid.connected && !needsRelink
-      ? "Bank linked through Plaid"
+      ? "Bank linked"
       : plaid.configured
-      ? "Connect bank through Plaid"
-      : "Plaid setup needed";
+      ? "Connect bank"
+      : "Bank link setup needed";
   connectButtons().forEach((button) => { button.title = title; });
 }
 
@@ -427,12 +439,12 @@ function compactAdvisor(latestRun, analysis) {
   if (connected && creditLoanBalance > 0) {
     const payment = paymentStatus(analysis);
     const action = payment.status === "posted" || payment.status === "posted_partial"
-      ? "No Chase login needed."
+      ? "Payment visible."
       : payment.status === "pending"
-        ? `${moneyExact.format(payment.amount)} is pending in Plaid.`
-        : "A3 has not seen the payment in Plaid yet.";
+        ? `${moneyExact.format(payment.amount)} is pending.`
+        : "A3 has not seen the payment yet.";
     const summary = payment.amount > 0
-      ? `${moneyExact.format(payment.amount)} payment ${payment.status === "pending" ? "is pending" : "is posted"} in Plaid.`
+      ? `${moneyExact.format(payment.amount)} payment ${payment.status === "pending" ? "is pending" : "is posted"}.`
       : `Hold cash today. ${money.format(cash)} cash right now.`;
     return {
       status: payment.status === "pending" ? "A3 is watching" : payment.status === "not_visible" ? "A3 is checking" : "Already checked",
@@ -484,7 +496,7 @@ function paymentStatus(analysis) {
     status: payment.pending ? "pending" : "posted_partial",
     amount: Math.max(Number(payment.spend || 0), Number(payment.inflow || 0)),
     date: payment.date,
-    detail: payment.pending ? "Plaid sees it pending." : "Plaid sees it posted."
+    detail: payment.pending ? "Payment pending." : "Payment posted."
   };
 }
 
@@ -498,14 +510,14 @@ function financialMoves(analysis) {
 
   if (!accounts.connected) {
     moves.push({
-      label: "Connect Chase",
+      label: "Live balances",
       detail: "Use current balances."
     });
   }
   if (accounts.connected && creditLoanBalance > 0 && payment.status !== "not_visible") {
     moves.push({
       label: payment.status === "pending" ? "A3 is watching" : "Already checked",
-      detail: `${moneyExact.format(payment.amount)} ${payment.status === "pending" ? "pending" : "posted"} in Plaid.`
+      detail: `${moneyExact.format(payment.amount)} ${payment.status === "pending" ? "pending" : "posted"}.`
     });
     moves.push({
       label: "Do not count car cash",
@@ -514,7 +526,7 @@ function financialMoves(analysis) {
   } else if (accounts.connected) {
     moves.push({
       label: "A3 is checking",
-      detail: "Plaid will be checked again."
+      detail: "Payment visibility will be checked again."
     });
   }
   if (creditLoanBalance > 0) {
@@ -525,7 +537,7 @@ function financialMoves(analysis) {
   }
   const fallbackMoves = [
     { label: "Keep cash steady", detail: "Do not guess with old numbers." },
-    { label: "Full purchase", detail: "Wait for current Chase data." },
+    { label: "Full purchase", detail: "Wait for current bank data." },
     { label: "One move", detail: "No extra action until data is current." }
   ];
   for (const fallback of fallbackMoves) {
@@ -579,7 +591,7 @@ function primaryFix(items, accounts) {
   if (first) return { label: actionLabel(first), detail: itemDetail(first), severity: first.severity || "watch" };
 
   return {
-    label: accounts.connected ? "Hold cash steady" : "Connect Chase",
+    label: accounts.connected ? "Hold cash steady" : "Live balances",
     detail: accounts.connected ? "A3 is waiting for current spending patterns." : "Current bank data is needed before the car decision.",
     severity: "watch"
   };
@@ -605,7 +617,7 @@ function actionLabel(item) {
     case "Payment pending":
       return "Still pending";
     case "Missing":
-      return "Connect Chase";
+      return "Live balances";
     default:
       return item?.label || "";
   }
@@ -630,22 +642,15 @@ function renderCutAssist(improvements, accounts) {
   activeCutItem = first;
 
   if (!first) {
-    els.cutTitle.textContent = accounts.connected ? "Hold spending" : "Connect Chase";
-    els.cutReason.textContent = accounts.connected ? "A3 needs more current transactions." : "Current transactions are needed first.";
-    els.cutSteps.innerHTML = `
-      <li>Do not add new card spend.</li>
-      <li>Keep cash steady.</li>
-      <li>Sync again tomorrow.</li>
-    `;
+    els.cutTitle.textContent = accounts.connected ? "No item" : "No live item";
+    els.cutReason.textContent = accounts.connected ? "No current repeat item." : "Current transactions are needed.";
+    els.cutSteps.innerHTML = "";
     return;
   }
 
   els.cutTitle.textContent = primaryCutTitle(first);
   els.cutReason.textContent = primaryCutReason(first);
-  els.cutSteps.innerHTML = `
-    <li>${escapeHtml(replacementStep(first))}</li>
-    <li>Keep cash steady.</li>
-  `;
+  els.cutSteps.innerHTML = "";
 }
 
 function renderDailyScan(improvements, accounts) {
@@ -659,10 +664,9 @@ function renderDailyScan(improvements, accounts) {
     els.dailyScanList.innerHTML = `<div class="daily-scan-row" data-severity="good">
       <time>${accounts.connected ? "Quiet" : "Waiting"}</time>
       <div>
-        <strong>${accounts.connected ? "No flexible purchases found" : "Connect Chase"}</strong>
+        <strong>${accounts.connected ? "No flexible purchases found" : "No live data"}</strong>
         <span>${accounts.connected ? "Payments, transfers, and debt payments are excluded." : "Payments and transfers are excluded."}</span>
       </div>
-      <p>${accounts.connected ? "Keep cash steady." : "Daily purchase patterns will show here."}</p>
     </div>`;
     return;
   }
@@ -677,7 +681,6 @@ function renderDailyScan(improvements, accounts) {
         <strong>${escapeHtml(money.format(row.total || 0))}</strong>
         <span>${escapeHtml(`${row.count || 0} purchase${row.count === 1 ? "" : "s"}: ${merchants}`)}</span>
       </div>
-      <p>${escapeHtml(row.next || "Pause before the next purchase; give it one named reason.")}</p>
     </div>`;
   }).join("");
 }
@@ -688,15 +691,15 @@ function renderSpendLeaks(improvements, accounts, locks = []) {
   const hiddenSpending = spending.slice(6);
   els.spendWindow.textContent = accounts.connected
     ? `Top ${visibleSpending.length || 0}${hiddenSpending.length ? ` / ${hiddenSpending.length} more` : ""}`
-    : "Waiting for Chase";
+    : "Waiting for bank data";
 
   if (!visibleSpending.length) {
     els.spendLeakList.innerHTML = `<div class="spend-leak-row">
+      <span class="spend-rank">--</span>
       <div>
-        <strong>${accounts.connected ? "No leak list yet" : "Connect Chase"}</strong>
-        <span>${accounts.connected ? "A3 needs more current transactions." : "Bank data is needed."}</span>
+        <strong>${accounts.connected ? "No item" : "No live item"}</strong>
+        <span>${accounts.connected ? "No current repeat item." : "Bank data is needed."}</span>
       </div>
-      <p>${accounts.connected ? "Keep cash steady and wait for the next sync." : "No spending recommendations until current transactions are available."}</p>
     </div>`;
     return;
   }
@@ -738,7 +741,6 @@ function renderSpendLeaks(improvements, accounts, locks = []) {
           <span>${escapeHtml(`${pattern}${item.issue || `${money.format(item.amount || 0)} / ${item.window || "90 days"}`}`)}</span>
           <em>${escapeHtml(item.impactLabel || `+${money.format(item.monthlyImpact || 0)}/mo if reduced`)}</em>
         </div>
-        <p>${escapeHtml(item.next || "Pause unless it is required for work, health, rent, transport, or food.")}</p>
       </div>
     `;
   }
@@ -753,7 +755,7 @@ function renderSpendLeaks(improvements, accounts, locks = []) {
     : "";
 
   els.spendLeakList.innerHTML = [
-    ...visibleSpending.map((item) => `${renderSpendRow(item)}${renderReceiptBreakdown(item)}`),
+    ...visibleSpending.map((item) => renderSpendRow(item)),
     hiddenBlock
   ].filter(Boolean).join("");
 }
@@ -769,16 +771,15 @@ function renderReview(data) {
     ? `Syncs every ${autoUpdate.intervalLabel || "15 min"} / ${lastSync}`
     : "Auto update off";
   if (!accounts.connected) {
-    els.reviewVerdict.textContent = "Connect Chase.";
-    els.reviewSummary.textContent = "No live spending plan yet.";
+    els.reviewVerdict.textContent = "No live data.";
+    els.reviewSummary.textContent = "No live financial read.";
   } else if (Number(accounts.debtTotal || 0) > 0) {
     const last6 = Number(data.analysis?.monthlyNet?.last6Average || 0);
-    const a3Price = Number(data.goal?.priceAsBuilt || goal.a3?.priceAsBuilt || 46690);
-    els.reviewVerdict.textContent = "Do not buy yet.";
-    els.reviewSummary.textContent = `Whole purchase: ${money.format(a3Price)}. Current cash ${money.format(accounts.cash || 0)}; card/loan balance ${money.format(accounts.debtTotal || 0)}; 6-mo avg ${money.format(last6)}.`;
+    els.reviewVerdict.textContent = "Not safe.";
+    els.reviewSummary.textContent = `${money.format(accounts.cash || 0)} cash / ${money.format(accounts.debtTotal || 0)} balance / ${money.format(last6)} 6-mo avg.`;
   } else {
     els.reviewVerdict.textContent = shortText(review.verdict || "Full-cost check.", 96);
-    els.reviewSummary.textContent = shortText(review.summary || "Do not buy from cash alone; monthly payment, insurance, debt, and cashflow still decide.", 140);
+    els.reviewSummary.textContent = shortText(review.summary || "Payment, insurance, tax, fees, and cashflow still decide.", 120);
   }
 
   function renderBullets(container, items, fallback) {
@@ -789,7 +790,7 @@ function renderReview(data) {
 
   renderBullets(els.reviewGood, review.good, "Live bank connection required.");
   renderBullets(els.reviewBad, review.bad, "No current spending picture yet.");
-  renderBullets(els.reviewMust, review.must, "Connect Chase, then review the first live plan.");
+  renderBullets(els.reviewMust, review.must, "Live balances are required before the car decision.");
 }
 
 function renderMonthlyNet(data) {
@@ -803,7 +804,7 @@ function renderMonthlyNet(data) {
     els.netCurrent.textContent = "--";
     els.netChart.innerHTML = "";
     els.netAverage.textContent = "No monthly net history yet.";
-    els.netRange.textContent = "Connect Chase.";
+    els.netRange.textContent = "Live bank data required.";
     return;
   }
 
@@ -899,19 +900,19 @@ function renderImprovements(analysis, locks = []) {
         }
       ]
     : [
-        { label: "Missing", detail: "Connect Chase before the car decision.", severity: "watch" },
+        { label: "Missing", detail: "Live balances are needed before the car decision.", severity: "watch" },
         { label: "Whole purchase", detail: "Wait for real account data before testing a down payment.", severity: "watch" }
       ];
   const rows = (items.length ? items : fallback).slice(0, 6);
   const primary = primaryFix(rows, accounts);
   const ordered = orderedImprovements(rows, primary);
-  els.primaryFixLabel.textContent = primary.label;
-  els.primaryFixDetail.textContent = primary.detail;
-  els.improvementState.textContent = improvements.state || (accounts.connected ? "Live Chase data." : "Chase not connected.");
+  els.primaryFixLabel.textContent = displaySafeText(primary.label);
+  els.primaryFixDetail.textContent = displaySafeText(primary.detail);
+  els.improvementState.textContent = displaySafeText(improvements.state || (accounts.connected ? "Live bank data." : "Bank data unavailable."));
   els.improvementList.innerHTML = ordered.map((item, index) => `
     <div class="improvement-row" data-severity="${escapeHtml(item.severity || "watch")}" data-step="${String(index + 1).padStart(2, "0")}">
-      <strong>${escapeHtml(actionLabel(item))}</strong>
-      <span>${escapeHtml(itemDetail(item))}</span>
+      <strong>${escapeHtml(displaySafeText(actionLabel(item)))}</strong>
+      <span>${escapeHtml(displaySafeText(itemDetail(item)))}</span>
     </div>
   `).join("");
   renderCutAssist(improvements, accounts, locks);
@@ -954,31 +955,27 @@ function render(data) {
 
   if (sampleOnly) {
     const plaidReviewPending = Boolean(data.plaid?.productionReviewPending);
-    els.storageState.textContent = plaidReviewPending ? "Plaid review" : data.plaid?.configured ? "Bank off" : "Setup needed";
-    els.stateLabel.textContent = plaidReviewPending
-      ? "Plaid review"
-      : data.plaid?.configured
-        ? "Chase"
-        : "Plaid";
+    els.storageState.textContent = plaidReviewPending ? "Bank review" : data.plaid?.configured ? "Bank off" : "Setup needed";
+    els.stateLabel.textContent = plaidReviewPending ? "Bank review" : "No live data";
     els.stateReason.textContent = plaidReviewPending
-      ? "Chase pending."
-      : "Connect Chase.";
+      ? "Bank link pending."
+      : "Financial data unavailable.";
     els.gapValue.textContent = "No bank data";
-    els.gapLabel.textContent = "Balances are not connected.";
-    els.actionLabel.textContent = plaidReviewPending ? "Plaid review pending" : data.plaid?.configured ? "Connect bank" : "Plaid setup needed";
+    els.gapLabel.textContent = "Balances unavailable.";
+    els.actionLabel.textContent = plaidReviewPending ? "Bank review pending" : data.plaid?.configured ? "Connect bank" : "Bank link setup needed";
     els.actionDetail.textContent = plaidReviewPending
-      ? "Waiting for Plaid production approval."
+      ? "Waiting for bank connection approval."
       : data.plaid?.configured
-        ? "Use Chase through Plaid."
-        : "Plaid API keys missing.";
-    els.advisorStatus.textContent = "Paused";
-    els.advisorAction.textContent = plaidReviewPending ? "Chase tracking pending." : "Connect Chase first.";
-    els.advisorSummary.textContent = "No sample numbers are used.";
-    els.advisorEffect.textContent = plaidReviewPending ? "Spending plan starts after bank link." : "";
+        ? "Use bank link."
+        : "Bank API keys missing.";
+    setText(els.advisorStatus, "Paused");
+    setText(els.advisorAction, plaidReviewPending ? "Bank tracking pending." : "No live financial data.");
+    setText(els.advisorSummary, "No sample numbers are used.");
+    setText(els.advisorEffect, plaidReviewPending ? "Spending plan starts after bank link." : "");
     renderImprovements(analysis, data.spendingLocks || []);
     renderReview(data);
     renderMonthlyNet(data);
-    renderRows(els.watchList, [{ label: "Bank off", detail: "No connected Chase data." }], (item) => [item.label, item.detail]);
+    renderRows(els.watchList, [{ label: "Bank off", detail: "No connected bank data." }], (item) => [item.label, item.detail]);
     renderBankAccounts(accounts.items || []);
     renderRows(els.eventList, data.events, (item) => [item.label, item.type]);
     els.transactionList.innerHTML = `<div class="empty">Hidden until current data is imported.</div>`;
@@ -1006,10 +1003,10 @@ function render(data) {
   const advisorDisplay = compactAdvisor(latestRun, analysis);
   els.actionLabel.textContent = accounts.debtTotal > 0 ? advisorDisplay.status : latestRun?.advice?.one_action || analysis.action.label;
   els.actionDetail.textContent = accounts.debtTotal > 0 ? advisorDisplay.summary : latestRun?.advice?.why || analysis.action.detail;
-  els.advisorStatus.textContent = advisorDisplay.status;
-  els.advisorAction.textContent = advisorDisplay.action;
-  els.advisorSummary.textContent = advisorDisplay.summary;
-  els.advisorEffect.textContent = advisorDisplay.effect;
+  setText(els.advisorStatus, advisorDisplay.status);
+  setText(els.advisorAction, advisorDisplay.action);
+  setText(els.advisorSummary, advisorDisplay.summary);
+  setText(els.advisorEffect, advisorDisplay.effect);
   renderImprovements(analysis, data.spendingLocks || []);
   renderReview(data);
   renderMonthlyNet(data);
@@ -1024,8 +1021,8 @@ function renderRows(container, items, mapper) {
   container.innerHTML = items.length ? items.map((item) => {
     const [label, detail] = mapper(item);
     return `<div class="row">
-      <strong>${escapeHtml(label)}</strong>
-      <span>${escapeHtml(detail)}</span>
+      <strong>${escapeHtml(displaySafeText(label))}</strong>
+      <span>${escapeHtml(displaySafeText(detail))}</span>
     </div>`;
   }).join("") : `<div class="empty">None.</div>`;
 }
@@ -1111,8 +1108,8 @@ async function connectBank() {
       return;
     }
     if (/Plaid production review pending/i.test(error.message)) {
-      els.actionLabel.textContent = "Plaid review pending";
-      els.actionDetail.textContent = "Waiting for Plaid production approval.";
+      els.actionLabel.textContent = "Bank review pending";
+      els.actionDetail.textContent = "Waiting for bank connection approval.";
       return;
     }
     if (/Production Plaid key needed/i.test(error.message)) {

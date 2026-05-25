@@ -28,6 +28,11 @@
   display: none !important;
 }
 
+.suite-topbar-actions,
+.fund-connect {
+  display: none !important;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -68,6 +73,7 @@ body.locked-view .daily-panel,
 body.locked-view .spend-panel,
 body.locked-view .review-panel,
 body.locked-view .net-panel,
+body.locked-view .finance-grid,
 body.locked-view .focus-grid,
 body.locked-view details.panel {
   display: none;
@@ -291,6 +297,10 @@ h2 {
   color: var(--ink);
 }
 
+.suite-topbar-actions {
+  display: none;
+}
+
 .suite-topbar-actions button:hover,
 .suite-topbar-actions button:focus-visible,
 .suite-topbar-actions .file-button:hover,
@@ -379,35 +389,25 @@ body.locked-view .lock-panel {
 
 .dream-hero {
   position: relative;
-  min-height: clamp(720px, 100svh, 940px);
-  overflow: hidden;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  width: min(calc(100% - 72px), 1180px);
+  min-height: 0;
+  margin: 0 auto;
+  padding: 92px 0 28px;
+  overflow: visible;
   border-radius: 0;
-  background: var(--bg);
+  background: transparent;
   box-shadow: none;
 }
 
 .dream-hero::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 2;
-  height: 190px;
-  pointer-events: none;
-  background: linear-gradient(180deg, rgba(8, 8, 7, 0), rgba(8, 8, 7, .68) 62%, var(--bg));
+  content: none;
 }
 
 .dream-hero::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 68% 52%, rgba(246, 239, 230, .1) 0%, rgba(246, 239, 230, 0) 31%),
-    linear-gradient(180deg, rgba(4, 4, 4, .08) 0%, rgba(4, 4, 4, 0) 36%, rgba(4, 4, 4, .58) 100%),
-    linear-gradient(90deg, rgba(4, 4, 4, .46) 0%, rgba(4, 4, 4, .1) 30%, rgba(4, 4, 4, 0) 64%, rgba(4, 4, 4, .08) 100%);
+  content: none;
 }
 
 .dream-image,
@@ -418,44 +418,50 @@ body.locked-view .lock-panel {
 }
 
 .dream-image {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 50%;
+  position: relative;
+  inset: auto;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid rgba(255, 250, 241, .12);
+  border-radius: 6px;
+  background: #070707;
 }
 
 .dream-image-a5 {
-  left: 50%;
-  right: 0;
-  width: 50%;
-  border-left: 1px solid rgba(255, 250, 241, .18);
+  left: auto;
+  right: auto;
+  width: 100%;
+  border-left: 1px solid rgba(255, 250, 241, .12);
 }
 
 .dream-image img {
-  object-fit: cover;
-  object-position: 61% 55%;
+  object-fit: contain;
+  object-position: center center;
   filter: contrast(1.05) saturate(1.04) brightness(1.08);
 }
 
 .dream-image-a5 img {
-  object-position: 50% 55%;
+  object-position: center center;
   filter: contrast(1.05) saturate(1.02) brightness(.92);
 }
 
 .dream-fund {
-  position: absolute;
+  position: relative;
   z-index: 5;
-  left: clamp(28px, 5.8vw, 84px);
-  right: clamp(28px, 5.8vw, 84px);
-  bottom: clamp(58px, 10vh, 112px);
+  left: auto;
+  right: auto;
+  bottom: auto;
   display: grid;
+  grid-column: 1 / -1;
   grid-template-columns: 1fr;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
   width: auto;
   margin: 0;
-  padding: 14px 0 0;
+  padding: 0;
   border: 0;
-  border-top: 1px solid rgba(255, 250, 241, .24);
   border-radius: 0;
   background: transparent;
   box-shadow: none;
@@ -489,57 +495,164 @@ body.locked-view .lock-panel {
   font-weight: 520;
 }
 
-.build-comparison {
+.build-overview {
   display: grid;
+  grid-template-columns: minmax(260px, 420px) minmax(260px, 420px);
+  justify-content: space-between;
+  gap: clamp(24px, 8vw, 120px);
   min-width: 0;
-  border-top: 1px solid rgba(255, 250, 241, .12);
-  border-bottom: 1px solid rgba(255, 250, 241, .16);
-  background: rgba(8, 8, 7, .22);
-  backdrop-filter: blur(10px) saturate(1.02);
 }
 
-.build-row {
+.build-card {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: end;
+  gap: 8px;
   min-width: 0;
+  min-height: 176px;
+  padding: 15px 17px;
+  border: 1px solid rgba(255, 250, 241, .16);
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(8, 8, 7, .28), rgba(8, 8, 7, .54));
+  color: #fffaf1;
+  text-decoration: none;
+  backdrop-filter: blur(9px) saturate(1.05);
 }
 
-.build-row + .build-row {
-  border-top: 1px solid rgba(255, 250, 241, .09);
+.build-card-a5 {
+  justify-self: end;
 }
 
-.build-row > * {
-  min-width: 0;
-  padding: 9px 14px;
-  border-left: 1px solid rgba(255, 250, 241, .09);
-  overflow-wrap: anywhere;
+.build-tag,
+.build-trim,
+.build-meta span,
+.build-features li,
+.hero-cash-line span {
+  color: rgba(255, 250, 241, .66);
+  font-size: .76rem;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
-.build-row > *:first-child {
-  border-left: 0;
-}
-
-.build-head span {
-  color: rgba(255, 250, 241, .58);
-  font-size: .72rem;
-  font-weight: 780;
-  line-height: 1.12;
+.build-tag {
+  color: rgba(255, 250, 241, .56);
+  font-size: .68rem;
+  font-weight: 800;
   text-transform: uppercase;
 }
 
-.build-values strong {
+.build-card h1 {
+  max-width: 13ch;
   color: #fffaf1;
-  font-size: clamp(1.18rem, 2.2vw, 1.72rem);
-  font-weight: 760;
-  line-height: 1.04;
+  font-size: clamp(1.78rem, 3vw, 2.62rem);
+  font-weight: 790;
+  line-height: .94;
+  overflow-wrap: anywhere;
 }
 
-.build-sub span,
-.build-sub a {
-  color: rgba(255, 250, 241, .66);
-  font-size: .82rem;
-  font-weight: 690;
-  line-height: 1.18;
+.build-trim {
+  max-width: 30ch;
+}
+
+.build-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+}
+
+.build-meta strong {
+  color: #fffaf1;
+  font-size: clamp(1.22rem, 2vw, 1.64rem);
+  font-weight: 780;
+  line-height: 1;
+}
+
+.build-features {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.build-features li {
+  overflow-wrap: anywhere;
+}
+
+.build-features li::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin: 0 8px 2px 0;
+  border-radius: 999px;
+  background: rgba(255, 250, 241, .48);
+}
+
+.build-view-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+.build-view-strip a {
+  position: relative;
+  display: block;
+  min-width: 0;
+  min-height: 156px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 250, 241, .13);
+  border-radius: 6px;
+  background: rgba(8, 8, 7, .34);
+  color: #fffaf1;
+}
+
+.build-view-strip img {
+  display: block;
+  width: 100%;
+  height: 156px;
+  object-fit: cover;
+  object-position: center center;
+  filter: contrast(1.04) saturate(1.03) brightness(.96);
+}
+
+.build-view-strip span {
+  position: absolute;
+  left: 9px;
+  bottom: 7px;
+  padding: 3px 7px;
+  border: 1px solid rgba(255, 250, 241, .14);
+  border-radius: 999px;
+  background: rgba(8, 8, 7, .48);
+  color: rgba(255, 250, 241, .78);
+  font-size: .66rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.hero-cash-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px 10px;
+  width: fit-content;
+  max-width: 100%;
+  justify-self: center;
+  padding: 7px 12px;
+  border: 1px solid rgba(255, 250, 241, .13);
+  border-radius: 999px;
+  background: rgba(8, 8, 7, .32);
+  backdrop-filter: blur(9px) saturate(1.04);
+}
+
+.hero-cash-line strong {
+  color: #fffaf1;
+  font-size: .94rem;
+  font-weight: 780;
+  line-height: 1.1;
 }
 
 .goal-meter {
@@ -569,6 +682,7 @@ body.locked-view .lock-panel {
 }
 
 .fund-connect {
+  display: none;
   justify-self: end;
   min-height: 38px;
   padding: 0 18px;
@@ -703,10 +817,10 @@ body.locked-view .lock-panel {
   position: relative;
   z-index: 4;
   display: grid;
-  gap: 14px;
+  gap: 10px;
   width: min(calc(100% - 72px), 940px);
   margin: 16px auto 0;
-  padding: 18px 0 2px;
+  padding: 14px 0 2px;
   border-top: 1px solid rgba(246, 239, 230, .12);
   border-bottom: 1px solid rgba(246, 239, 230, .08);
 }
@@ -726,7 +840,7 @@ body.locked-view .lock-panel {
 
 .purchase-sim-head h2 {
   color: var(--ink);
-  font-size: clamp(1.24rem, 2.2vw, 1.66rem);
+  font-size: clamp(1.12rem, 2vw, 1.44rem);
   font-weight: 780;
   line-height: 1.02;
 }
@@ -764,20 +878,23 @@ body.locked-view .lock-panel {
 
 .purchase-sim-list {
   display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   border-top: 1px solid rgba(246, 239, 230, .09);
 }
 
 .purchase-sim-row {
   display: grid;
-  grid-template-columns: minmax(150px, .34fr) minmax(0, 1fr);
-  gap: 20px;
+  grid-template-columns: 1fr;
+  gap: 6px;
   align-items: start;
   min-width: 0;
-  padding: 13px 0;
+  padding: 12px 14px 12px 0;
 }
 
 .purchase-sim-row + .purchase-sim-row {
-  border-top: 1px solid rgba(246, 239, 230, .07);
+  border-top: 0;
+  border-left: 1px solid rgba(246, 239, 230, .07);
+  padding-left: 14px;
 }
 
 .purchase-sim-row strong {
@@ -980,17 +1097,15 @@ body.locked-view .lock-panel {
   position: relative;
   z-index: 4;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(190px, .34fr);
-  gap: 14px;
+  grid-template-columns: 1fr;
+  gap: 0;
   width: min(calc(100% - 72px), 940px);
   margin: 14px auto 0;
   overflow: hidden;
-  border: 1px solid rgba(246, 239, 230, .12);
-  border-radius: 8px;
-  background:
-    linear-gradient(135deg, rgba(18, 17, 15, .94), rgba(10, 10, 9, .96)),
-    radial-gradient(circle at 96% 8%, rgba(129, 147, 184, .08), transparent 38%);
-  box-shadow: 0 18px 70px rgba(0, 0, 0, .18);
+  border-top: 1px solid rgba(246, 239, 230, .1);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .cut-primary {
@@ -999,14 +1114,14 @@ body.locked-view .lock-panel {
   align-content: center;
   gap: 8px;
   min-width: 0;
-  padding: 22px 24px;
+  padding: 14px 0;
 }
 
 .cut-primary h2 {
   color: var(--ink);
-  font-size: clamp(1.62rem, 3vw, 2.42rem);
+  font-size: clamp(1.16rem, 2.1vw, 1.52rem);
   font-weight: 790;
-  line-height: .98;
+  line-height: 1.02;
   overflow-wrap: anywhere;
 }
 
@@ -1055,6 +1170,16 @@ body.locked-view .lock-panel {
   font-weight: 760;
 }
 
+.finance-grid {
+  position: relative;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 28px;
+  width: min(calc(100% - 72px), 940px);
+  margin: 16px auto 0;
+}
+
 .daily-panel {
   position: relative;
   z-index: 4;
@@ -1063,6 +1188,12 @@ body.locked-view .lock-panel {
   width: min(calc(100% - 72px), 940px);
   margin: 16px auto 0;
   border-top: 1px solid rgba(246, 239, 230, .1);
+}
+
+.finance-grid > .daily-panel,
+.finance-grid > .review-panel {
+  width: auto;
+  margin: 0;
 }
 
 .daily-panel-head {
@@ -1093,8 +1224,8 @@ body.locked-view .lock-panel {
 
 .daily-scan-row {
   display: grid;
-  grid-template-columns: 76px minmax(200px, .8fr) minmax(220px, 1fr);
-  column-gap: 22px;
+  grid-template-columns: 64px minmax(0, 1fr);
+  column-gap: 16px;
   row-gap: 4px;
   align-items: start;
   min-width: 0;
@@ -1195,8 +1326,8 @@ body.locked-view .lock-panel {
 
 .spend-leak-row {
   display: grid;
-  grid-template-columns: 40px minmax(188px, .66fr) minmax(220px, 1fr);
-  column-gap: 22px;
+  grid-template-columns: 40px minmax(0, 1fr);
+  column-gap: 16px;
   row-gap: 4px;
   align-items: start;
   min-width: 0;
@@ -1257,7 +1388,7 @@ body.locked-view .lock-panel {
 }
 
 .spend-leak-row.is-compact {
-  grid-template-columns: 40px minmax(160px, .55fr) minmax(200px, 1fr);
+  grid-template-columns: 40px minmax(0, 1fr);
   padding: 12px 0;
 }
 
@@ -1859,52 +1990,92 @@ details.panel {
   }
 
   .dream-hero {
-    min-height: 720px;
-  }
-
-  .dream-hero::before {
-    background:
-      linear-gradient(0deg, rgba(5, 5, 5, .72) 0%, rgba(5, 5, 5, .18) 58%, rgba(5, 5, 5, .02) 100%),
-      linear-gradient(90deg, rgba(5, 5, 5, .34) 0%, rgba(5, 5, 5, .02) 80%);
+    grid-template-columns: 1fr;
+    gap: 10px;
+    width: min(calc(100vw - 28px), 1120px);
+    padding: 78px 0 20px;
+    min-height: 0;
   }
 
   .dream-image img {
-    object-position: 57% 56%;
+    object-position: center center;
   }
 
   .dream-image {
-    inset: 0 0 38% 0;
+    inset: auto;
     width: 100%;
-    height: 62%;
+    height: auto;
+    aspect-ratio: 16 / 9;
   }
 
   .dream-image-a5 {
-    inset: 62% 0 0 0;
+    inset: auto;
     width: 100%;
-    height: 38%;
+    height: auto;
+    aspect-ratio: 16 / 9;
     border-top: 1px solid rgba(255, 250, 241, .18);
     border-left: 0;
   }
 
   .dream-image-a5 img {
-    object-position: 49% 56%;
+    object-position: center center;
     filter: contrast(1.05) saturate(1.02) brightness(.88);
   }
 
   .dream-fund {
-    left: 20px;
-    right: 20px;
-    bottom: 42px;
+    left: auto;
+    right: auto;
+    bottom: auto;
     width: auto;
     grid-template-columns: 1fr;
     gap: 9px;
-    padding: 14px 0 0;
-    border-top: 1px solid rgba(255, 250, 241, .26);
+    padding: 0;
+    border-top: 0;
   }
 
   .fund-heading {
     display: grid;
     gap: 3px;
+  }
+
+  .build-overview {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .build-card,
+  .build-card-a5 {
+    justify-self: stretch;
+    min-height: 0;
+    padding: 13px 14px;
+  }
+
+  .build-card h1 {
+    max-width: none;
+    font-size: clamp(1.38rem, 7.2vw, 1.88rem);
+  }
+
+  .build-features {
+    gap: 3px;
+  }
+
+  .build-view-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .build-view-strip a {
+    min-height: 108px;
+  }
+
+  .build-view-strip img {
+    height: 108px;
+  }
+
+  .hero-cash-line {
+    justify-self: stretch;
+    justify-content: flex-start;
+    border-radius: 4px;
   }
 
   .summary-row,
@@ -1917,6 +2088,7 @@ details.panel {
   .spend-panel,
   .review-panel,
   .net-panel,
+  .finance-grid,
   .focus-grid,
   details.panel {
     width: min(calc(100vw - 28px), 1120px);
@@ -1981,25 +2153,14 @@ details.panel {
     padding: 13px 0;
   }
 
-  .build-row {
-    grid-template-columns: minmax(0, 1.08fr) minmax(0, .96fr) minmax(0, .96fr);
+  .purchase-sim-list {
+    grid-template-columns: 1fr;
   }
 
-  .build-row > * {
-    padding: 7px 5px;
-  }
-
-  .build-head span {
-    font-size: .58rem;
-  }
-
-  .build-values strong {
-    font-size: clamp(.88rem, 4.2vw, 1.02rem);
-  }
-
-  .build-sub span,
-  .build-sub a {
-    font-size: .62rem;
+  .purchase-sim-row + .purchase-sim-row {
+    border-left: 0;
+    border-top: 1px solid rgba(246, 239, 230, .07);
+    padding-left: 0;
   }
 
   .action-panel {
@@ -2078,6 +2239,18 @@ details.panel {
 
   .daily-panel {
     margin-top: 14px;
+  }
+
+  .finance-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    width: min(calc(100vw - 28px), 1120px);
+    margin-top: 14px;
+  }
+
+  .finance-grid .daily-panel,
+  .finance-grid .review-panel {
+    margin-top: 0;
   }
 
   .daily-panel-head,

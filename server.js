@@ -679,7 +679,7 @@ function creditPaymentStatus(transactions, latestDate) {
       status: "not_visible",
       label: "No large payment visible",
       amount: 0,
-      detail: "Plaid has not shown a recent large credit-card payment.",
+      detail: "No recent large credit-card payment is visible.",
       candidates: []
     };
   }
@@ -693,20 +693,20 @@ function creditPaymentStatus(transactions, latestDate) {
   const pending = related.some((transaction) => transaction.pending);
   const posted = related.some((transaction) => !transaction.pending);
   let status = "seen";
-  let label = "Payment seen in Plaid";
-  let detail = "Plaid sees the payment.";
+  let label = "Payment seen";
+  let detail = "Payment visible.";
   if (cardPosted && checkingPosted) {
     status = "posted";
-    label = "Payment posted in Plaid";
+    label = "Payment posted";
     detail = `Seen on card ${cardPosted.date} and checking ${checkingPosted.date}.`;
   } else if (posted) {
     status = "posted_partial";
-    label = "Payment posted in Plaid";
+    label = "Payment posted";
     detail = `Seen as posted on ${related.find((transaction) => !transaction.pending)?.date || primary.date}.`;
   } else if (pending) {
     status = "pending";
-    label = "Payment pending in Plaid";
-    detail = `Plaid sees it pending on ${primary.date}.`;
+    label = "Payment pending";
+    detail = `Payment pending on ${primary.date}.`;
   }
   return {
     status,
@@ -849,7 +849,7 @@ function spendAlternative(label, category, context = {}) {
     return `${countText || "Ride spend"}. Receipts show short campus/home trips; batch rides or walk daytime routes when safe.`;
   }
   if (/amazon/.test(text)) {
-    return `${countText || "Amazon pattern"}. Receipts split into gear, supplies, food, health, and project parts; buy only a replacement or one named project item.`;
+    return `${countText || "Amazon pattern"}. Receipts split into gear, supplies, food, health, and project parts.`;
   }
   if (/lululemon|clothing|apparel/.test(text)) {
     return `${countText || "Clothing spend"}. Promo emails are pushing tracksuits/accessories; replace only a daily item that is worn out.`;
@@ -858,8 +858,8 @@ function spendAlternative(label, category, context = {}) {
     if (/best ?buy/.test(text)) return "Receipt shows the camera purchase was refunded. Keep this resolved; no accessory follow-up.";
     if (/samsung/.test(text)) return "No recent Samsung receipt found in email. Treat as old electronics spend until matched.";
     return pastPurchase
-      ? `$${Math.round(amount90).toLocaleString("en-US")} past spike. This is not a daily habit; block only follow-up accessories or financing.`
-      : `${recentText || countText || "Retail spend"}. Buy only the exact replacement item you can name before checkout.`;
+      ? `$${Math.round(amount90).toLocaleString("en-US")} past spike. This is not a daily habit.`
+      : `${recentText || countText || "Retail spend"}.`;
   }
   if (/grocery|supermarket/.test(text)) {
     return "One grocery run, one list, one limit.";
@@ -876,7 +876,7 @@ function merchantReceiptBreakdown(label) {
   return {
     title: "Amazon: what it is",
     source: "Gmail receipts checked May 23.",
-    rule: "Allowed: replacement supply, one named project part, or food that replaces takeout. Not allowed: browsing carts, backup gear, duplicate accessories, or spare upgrades.",
+    rule: "Receipts split into gear, supplies, food, health, and project parts.",
     categories: [
       {
         label: "Electronics and camera gear",
@@ -1079,7 +1079,7 @@ function dailyPurchaseAction(topLabel, items) {
   if (/pharmacy|medical|health|sleep|cpap|cvs/.test(text)) return "Replacement only if it fixes tonight or this week.";
   if (/amc|theatre|theater|movie|entertainment/.test(text)) return "Entertainment only if planned before checkout.";
   if (/mbta|transit|train|bus/.test(text)) return "Transit is fine; keep it separate from rideshare.";
-  if (/amazon/.test(text)) return "One named item only; no cart browsing.";
+  if (/amazon/.test(text)) return "Amazon repeat item.";
   if (/chipotle|restaurant|food|coffee|cafe|dining|takeout|delivery|supermarket|grocery/.test(text)) {
     return "Use food already paid for before another order.";
   }
@@ -1088,7 +1088,7 @@ function dailyPurchaseAction(topLabel, items) {
   if (/best buy|samsung|electronics|camera|dji|gear|accessory|lululemon|clothing|apparel|shop|retail/.test(text)) {
     return "Replacement only; skip backup gear and upgrades.";
   }
-  return "Pause before the next purchase; give it one named reason.";
+  return "Repeat purchase.";
 }
 
 function dailyPurchaseScan(flexible14, latestDate) {
@@ -1157,19 +1157,19 @@ function overallReview(input) {
   if (!accounts.connected) {
     return {
       verdict: "No live review yet.",
-      summary: "Connect Chase first. A3 should not guess.",
+      summary: "No live financial read.",
       good: ["The page is waiting for bank data instead of using fake sample numbers."],
       bad: ["No current balances or transactions are connected."],
-      must: ["Connect Chase, then review the first live full-purchase picture."]
+      must: ["Live balances are required before the car decision."]
     };
   }
 
   const good = [
-    "Chase is connected; the page is using live Plaid data.",
+    "Live bank data is connected.",
     `${moneyText(cash)} current cash is included in the full-purchase check.`
   ];
   if (paymentStatus?.amount > 0 && paymentStatus.status !== "pending") {
-    good.push(`${moneyText(paymentStatus.amount)} payment is already visible in Plaid.`);
+    good.push(`${moneyText(paymentStatus.amount)} payment is already visible.`);
   }
   if (goal.monthlyRoom > 0) {
     good.push(`${moneyText(goal.monthlyRoom)} monthly room exists if repeat spending is controlled.`);
@@ -1184,7 +1184,7 @@ function overallReview(input) {
 
   const must = [];
   if (cardBalance > 0) must.push(`Do not treat cash as car money until the ${moneyText(cardBalance)} card/loan balance is lower.`);
-  if (amazon) must.push("Amazon: buy only required supplies with a named use; no cart drift.");
+  if (amazon) must.push("Amazon repeat item.");
   if (openai) must.push("OpenAI: remove duplicate plans or API auto-funding that is not doing current work.");
   if (food) must.push("Food: use food already paid for before another order.");
   if (lyft) must.push("Rides: batch trips; walk or transit when the schedule allows.");
@@ -1282,14 +1282,14 @@ function immediateImprovements(input) {
 
   if (!accounts.connected) {
     return {
-      state: "Chase not connected.",
+      state: "Bank data unavailable.",
       flexible14: 0,
       debtPayment14: 0,
       topMerchants: [],
       topCategories: [],
       spending: [],
       items: [
-        { label: "Connect Chase", detail: "The full A3 decision needs current balances and purchases.", severity: "watch" },
+        { label: "Live balances", detail: "The full A3 decision needs current balances and purchases.", severity: "watch" },
         { label: "Down payment today", detail: "Wait for real account data before testing cash damage.", severity: "watch" }
       ]
     };
@@ -1345,8 +1345,8 @@ function immediateImprovements(input) {
     items.push({
       label: paymentStatus.status === "pending" ? "Payment pending" : "Payment posted",
       detail: paymentStatus.status === "pending"
-        ? `$${Math.round(paymentStatus.amount).toLocaleString("en-US")} still pending in Plaid.`
-        : `No Chase login needed for the $${Math.round(paymentStatus.amount).toLocaleString("en-US")} payment.`,
+        ? `$${Math.round(paymentStatus.amount).toLocaleString("en-US")} still pending.`
+        : `$${Math.round(paymentStatus.amount).toLocaleString("en-US")} payment visible.`,
       severity: paymentStatus.status === "pending" ? "watch" : "good"
     });
   }
@@ -1594,7 +1594,7 @@ function analyze(store) {
 
 function readinessState(input) {
   const { transactions, balanceKnown, balance, cashFloor, bufferDays, spendChange, watch, goal, accounts } = input;
-  if (!transactions.length) return { label: "no data", reason: "Import Chase CSV", color: "muted" };
+  if (!transactions.length) return { label: "no data", reason: "Import CSV", color: "muted" };
   if (accounts?.debtTotal > 0) {
     return { label: "not ready", reason: "Connected balances block a responsible A3 buy", color: "danger" };
   }
@@ -1807,7 +1807,7 @@ function plaidTransactionToApp(transaction, accountsById, connection) {
     date: transaction.date || transaction.authorized_date || "",
     description: transaction.merchant_name || transaction.name || "Transaction",
     category: cleanCategory(category),
-    type: transaction.pending ? "Pending" : account.subtype || account.type || "Plaid",
+    type: transaction.pending ? "Pending" : account.subtype || account.type || "Bank",
     amount,
     balance: null,
     pending: Boolean(transaction.pending),
@@ -2167,7 +2167,7 @@ async function handleApi(req, res, requestUrl) {
       createdAt: now,
       type: "bank_connected",
       label: connection.institutionName,
-      detail: "Plaid connection added"
+      detail: "Bank connection added"
     }];
     let syncError = "";
     try {

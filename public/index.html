@@ -13,7 +13,7 @@
     <link rel="icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons" type="image/svg+xml">
     <link rel="apple-touch-icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons">
     <link rel="manifest" href="/site.webmanifest?v=20260516-a3-three-rings">
-    <link rel="stylesheet" href="/styles.css?v=20260525-a3-aqymvcz8">
+    <link rel="stylesheet" href="/styles.css?v=20260525-car-finance-cleanup">
   </head>
   <body class="locked-view">
     <header class="suite-topbar" aria-label="a3 navigation">
@@ -50,47 +50,82 @@
         <a class="dream-image dream-image-a5" href="/a5-a3vav2f6.pdf" aria-label="Audi A5 exterior build PDF">
           <img src="/a5-car.jpg?v=20260525-a5-a3vav2f6" alt="Audi A5 Prestige in Glacier White metallic">
         </a>
-        <section class="dream-fund" aria-label="Current cash and Audi build comparison">
+        <section class="dream-fund" aria-label="Audi build overview">
           <div class="fund-heading">
-            <strong id="stateLabel">Plaid review</strong>
-            <span id="stateReason">Chase pending.</span>
+            <strong id="stateLabel">No live data</strong>
+            <span id="stateReason">Bank link pending.</span>
           </div>
-          <div class="build-comparison" role="table" aria-label="Current cash compared with A3 and A5">
-            <div class="build-row build-head" role="row">
-              <span role="columnheader">Current cash</span>
-              <span role="columnheader">A3</span>
-              <span role="columnheader">A5</span>
-            </div>
-            <div class="build-row build-values" role="row">
-              <strong id="goalSaved" role="cell">Bank link pending</strong>
-              <strong id="heroA3Price" role="cell">$46,690</strong>
-              <strong id="heroA5Price" role="cell">$60,590</strong>
-            </div>
-            <div class="build-row build-sub" role="row">
-              <span id="heroCashMeta" role="cell">Connect Chase.</span>
-              <a href="/a3-aqymvcz8.pdf" role="cell">Premium Plus</a>
-              <a href="/a5-a3vav2f6.pdf" role="cell">Prestige</a>
-            </div>
+          <div class="build-overview" aria-label="Audi build summaries">
+            <a class="build-card build-card-a3" href="/a3-aqymvcz8.pdf" aria-label="Open A3 AQYMVCZ8 build PDF">
+              <span class="build-tag">A3 target</span>
+              <h1>Audi A3 Premium Plus</h1>
+              <span class="build-trim">TFSI quattro Premium Plus S tronic</span>
+              <div class="build-meta">
+                <strong id="heroA3Price">$46,690</strong>
+                <span>AQYMVCZ8</span>
+              </div>
+              <ul class="build-features">
+                <li>Bang & Olufsen 3D sound</li>
+                <li>3-zone climate + heated front seats</li>
+                <li>Panoramic sunroof + top view camera</li>
+              </ul>
+            </a>
+            <a class="build-card build-card-a5" href="/a5-a3vav2f6.pdf" aria-label="Open A5 A3VAV2F6 build PDF">
+              <span class="build-tag">A5 alternate</span>
+              <h1>Audi A5 Prestige</h1>
+              <span class="build-trim">TFSI quattro Prestige S tronic</span>
+              <div class="build-meta">
+                <strong id="heroA5Price">$60,590</strong>
+                <span>A3VAV2F6</span>
+              </div>
+              <ul class="build-features">
+                <li>Bang & Olufsen 3D + headrest speakers</li>
+                <li>Acoustic front door windows</li>
+                <li>Ventilated sport seats + heated rear seats</li>
+              </ul>
+            </a>
           </div>
-          <div class="goal-meter" aria-label="Whole purchase state">
+          <div class="build-view-strip" aria-label="Audi rear and interior views">
+            <a href="/a3-aqymvcz8.pdf" aria-label="Audi A3 rear view">
+              <img src="/a3-rear.jpg?v=20260525-a3-aqymvcz8" alt="Audi A3 rear exterior">
+              <span>A3 rear</span>
+            </a>
+            <a href="/a3-aqymvcz8.pdf" aria-label="Audi A3 interior view">
+              <img src="/a3-interior.jpg?v=20260525-a3-aqymvcz8" alt="Audi A3 interior">
+              <span>A3 interior</span>
+            </a>
+            <a href="/a5-a3vav2f6.pdf" aria-label="Audi A5 rear view">
+              <img src="/a5-rear.jpg?v=20260525-a5-a3vav2f6" alt="Audi A5 rear exterior">
+              <span>A5 rear</span>
+            </a>
+            <a href="/a5-a3vav2f6.pdf" aria-label="Audi A5 interior view">
+              <img src="/a5-interior.jpg?v=20260525-a5-a3vav2f6" alt="Audi A5 interior">
+              <span>A5 interior</span>
+            </a>
+          </div>
+          <div class="hero-cash-line" aria-label="Current cash">
+            <strong id="goalSaved">No live cash</strong>
+            <span id="heroCashMeta">current cash</span>
+          </div>
+          <div class="goal-meter" aria-label="Whole purchase state" hidden>
             <div class="goal-meter-track" aria-hidden="true">
               <span id="goalMeterFill"></span>
             </div>
             <span id="goalTarget" class="sr-only">$46,690 whole purchase</span>
-            <span id="goalPace" class="goal-pace">Plaid review pending.</span>
+            <span id="goalPace" class="goal-pace">Bank link pending.</span>
           </div>
-          <button id="connectBankPrimary" class="fund-connect" type="button" disabled>connect Chase</button>
+          <button id="connectBankPrimary" class="fund-connect" type="button" disabled hidden>connect bank</button>
         </section>
       </section>
 
       <section class="blocker-panel" aria-label="Why not A3 yet" hidden>
         <div class="blocker-head">
           <h2 id="blockerTitle">Do not buy yet.</h2>
-          <span id="blockerSummary">Connect Chase first.</span>
+          <span id="blockerSummary">Live balances required.</span>
         </div>
         <div id="blockerList" class="blocker-list">
           <div class="blocker-row">
-            <strong>Connect Chase</strong>
+            <strong>Live balances</strong>
             <span>Live balances are needed before A3 decisions.</span>
           </div>
         </div>
@@ -99,8 +134,8 @@
       <section class="purchase-sim-panel" aria-label="Down payment today simulation">
         <div class="purchase-sim-head">
           <div>
-            <h2>Down payment today</h2>
-            <span id="simStatus">Connect Chase first.</span>
+            <h2>Down payment check</h2>
+            <span id="simStatus">Needs live data.</span>
           </div>
           <label class="purchase-sim-control">
             <span>Amount</span>
@@ -108,6 +143,10 @@
           </label>
         </div>
         <div id="simResultList" class="purchase-sim-list">
+          <div class="purchase-sim-row" id="simHealthRow">
+            <strong>Safe?</strong>
+            <span id="simHealth">No live read.</span>
+          </div>
           <div class="purchase-sim-row">
             <strong>Cash after</strong>
             <span id="simCashAfter">No live cash.</span>
@@ -116,13 +155,9 @@
             <strong>Existing balance</strong>
             <span id="simDebtAfter">No live balance.</span>
           </div>
-          <div class="purchase-sim-row">
+          <div class="purchase-sim-row" hidden>
             <strong>Car still unpaid</strong>
             <span id="simCarAfter">$46,690 before tax, fees, insurance, and interest.</span>
-          </div>
-          <div class="purchase-sim-row" id="simHealthRow">
-            <strong>Financial health</strong>
-            <span id="simHealth">No live Chase data.</span>
           </div>
         </div>
       </section>
@@ -134,10 +169,10 @@
         </div>
         <div class="summary-block">
           <strong id="gapValue">No bank data</strong>
-          <span id="gapLabel">Chase is not connected.</span>
+          <span id="gapLabel">Bank data unavailable.</span>
         </div>
         <div class="summary-block">
-          <strong id="actionLabel">Plaid review pending</strong>
+          <strong id="actionLabel">Bank link pending</strong>
           <span id="actionDetail">Waiting for production approval.</span>
         </div>
       </section>
@@ -145,54 +180,51 @@
       <section class="action-panel" aria-label="Immediate financial fixes" hidden>
         <div class="action-panel-head">
           <span>Immediate triage</span>
-          <h2 id="primaryFixLabel">Connect Chase</h2>
+          <h2 id="primaryFixLabel">Live balances</h2>
           <p id="primaryFixDetail">Current bank data is needed before the car decision.</p>
-          <strong id="improvementState">Waiting for Chase.</strong>
+          <strong id="improvementState">Waiting for bank data.</strong>
         </div>
         <div id="improvementList" class="improvement-list">
           <div class="improvement-row">
             <strong>Missing</strong>
-            <span>Connect Chase before the car decision.</span>
+            <span>Live balances are needed before the car decision.</span>
           </div>
         </div>
       </section>
 
       <section class="cut-panel" aria-label="Cut spending assist">
         <div class="cut-primary">
-          <h2 id="cutTitle">First cut</h2>
-          <p id="cutReason">Connect Chase to see the first cut.</p>
+          <h2 id="cutTitle">Repeat item</h2>
+          <p id="cutReason">Live transactions are needed.</p>
         </div>
-        <ol id="cutSteps" class="cut-steps">
-          <li>Open it only with a specific need.</li>
-          <li>Use what is already paid for.</li>
-          <li>Keep cash steady.</li>
-        </ol>
+        <ol id="cutSteps" class="cut-steps" hidden></ol>
       </section>
 
-      <section class="daily-panel" aria-label="Daily purchase scan">
-        <div class="daily-panel-head">
-          <h2>Daily scan</h2>
-          <span id="dailyScanWindow">Purchases only</span>
-        </div>
-        <div id="dailyScanList" class="daily-scan-list">
-          <div class="daily-scan-row">
-            <time>Waiting</time>
-            <div>
-              <strong>Connect Chase</strong>
-              <span>Payments and transfers are excluded.</span>
-            </div>
-            <p>Daily purchase patterns will show here.</p>
+      <section class="finance-grid" aria-label="Daily and overall financial state">
+        <section class="daily-panel" aria-label="Daily purchase scan">
+          <div class="daily-panel-head">
+            <h2>Daily scan</h2>
+            <span id="dailyScanWindow">Purchases only</span>
           </div>
-        </div>
-      </section>
+          <div id="dailyScanList" class="daily-scan-list">
+            <div class="daily-scan-row">
+              <time>Waiting</time>
+              <div>
+                <strong>No live data</strong>
+                <span>Payments and transfers are excluded.</span>
+              </div>
+            </div>
+          </div>
+        </section>
 
-      <section class="review-panel" aria-label="Overall financial review">
-        <div class="review-head">
-          <h2>A3 distance</h2>
-          <span id="autoUpdateState">Auto update checking</span>
-        </div>
-        <strong id="reviewVerdict">Connect Chase first.</strong>
-        <p id="reviewSummary">A3 should not guess.</p>
+        <section class="review-panel" aria-label="Overall financial review">
+          <div class="review-head">
+            <h2>Overall</h2>
+            <span id="autoUpdateState">Auto update checking</span>
+          </div>
+          <strong id="reviewVerdict">No live data.</strong>
+          <p id="reviewSummary">No live financial read.</p>
+        </section>
       </section>
 
       <section class="net-panel" aria-label="Monthly net chart">
@@ -208,7 +240,7 @@
         </div>
         <div class="net-foot">
           <span id="netAverage">No history yet.</span>
-          <span id="netRange">Connect Chase.</span>
+          <span id="netRange">Live bank data required.</span>
         </div>
       </section>
 
@@ -221,27 +253,11 @@
           <div class="spend-leak-row">
             <div>
               <strong>Waiting</strong>
-              <span>Connect Chase.</span>
+              <span>Live bank data required.</span>
             </div>
             <p>No spending recommendations until current transactions are available.</p>
           </div>
         </div>
-      </section>
-
-      <section class="focus-grid" aria-label="Audi A3 interior and advisor state">
-        <a class="media-panel media-interior" href="/a3-aqymvcz8.pdf" aria-label="Audi A3 interior build PDF">
-          <img src="/a3-interior.jpg?v=20260525-a3-aqymvcz8" alt="Audi A3 cockpit interior">
-        </a>
-
-        <section class="panel advisor-panel" aria-label="Advisor state">
-          <h2 id="advisorStatus">Paused</h2>
-          <strong id="advisorAction">Chase tracking pending.</strong>
-          <span id="advisorSummary">No sample numbers are used.</span>
-          <details class="advisor-more">
-            <summary>why</summary>
-            <span id="advisorEffect">Spending plan starts after bank link.</span>
-          </details>
-        </section>
       </section>
 
       <details class="panel">
@@ -309,6 +325,6 @@
     </main>
 
     <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
-    <script src="/app.js?v=20260525-a3-aqymvcz8" defer></script>
+    <script src="/app.js?v=20260525-car-finance-cleanup" defer></script>
   </body>
 </html>
