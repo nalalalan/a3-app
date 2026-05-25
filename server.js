@@ -1376,6 +1376,91 @@ function weeklySpend(transactions, latestDate) {
   return weeks;
 }
 
+function weekStart(date) {
+  const parsed = new Date(`${date}T00:00:00Z`);
+  if (!Number.isFinite(parsed.getTime())) return "";
+  const day = parsed.getUTCDay();
+  const diff = (day + 6) % 7;
+  parsed.setUTCDate(parsed.getUTCDate() - diff);
+  return parsed.toISOString().slice(0, 10);
+}
+
+function addWeeks(date, amount) {
+  const parsed = new Date(`${date}T00:00:00Z`);
+  if (!Number.isFinite(parsed.getTime())) return "";
+  parsed.setUTCDate(parsed.getUTCDate() + (amount * 7));
+  return parsed.toISOString().slice(0, 10);
+}
+
+function weekRange(start, end) {
+  const weeks = [];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) return weeks;
+  let cursor = start;
+  while (cursor && cursor <= end) {
+    weeks.push(cursor);
+    cursor = addWeeks(cursor, 1);
+  }
+  return weeks;
+}
+
+function weeklyNetHistory(transactions, latestDate) {
+  const byWeek = new Map();
+  for (const transaction of transactions || []) {
+    if (!transaction.date) continue;
+    const week = weekStart(transaction.date);
+    if (!week) continue;
+    if (!byWeek.has(week)) {
+      byWeek.set(week, { week, inflow: 0, spend: 0, net: 0, count: 0 });
+    }
+    const row = byWeek.get(week);
+    const inflow = Number(transaction.inflow || 0);
+    const spend = Number(transaction.spend || 0);
+    row.inflow += inflow;
+    row.spend += spend;
+    row.net += inflow - spend;
+    row.count += 1;
+  }
+
+  const keys = [...byWeek.keys()].sort();
+  if (!keys.length) {
+    return {
+      startWeek: "",
+      endWeek: "",
+      current: null,
+      weeks: [],
+      minNet: 0,
+      maxNet: 0,
+      last12Average: 0
+    };
+  }
+
+  const startWeek = keys[0];
+  const endWeek = latestDate ? weekStart(latestDate) : keys[keys.length - 1];
+  const weeks = weekRange(startWeek, endWeek).map((week) => {
+    const row = byWeek.get(week) || { week, inflow: 0, spend: 0, net: 0, count: 0 };
+    return {
+      week,
+      year: Number(week.slice(0, 4)),
+      inflow: Number(row.inflow.toFixed(2)),
+      spend: Number(row.spend.toFixed(2)),
+      net: Number(row.net.toFixed(2)),
+      count: row.count
+    };
+  });
+  const nets = weeks.map((item) => item.net);
+  const nonEmpty = weeks.filter((item) => item.count > 0);
+  const last12 = nonEmpty.slice(-12);
+  return {
+    startWeek,
+    endWeek,
+    current: weeks[weeks.length - 1] || null,
+    weeks,
+    minNet: Math.min(0, ...nets),
+    maxNet: Math.max(0, ...nets),
+    last12Average: last12.length ? Number((sum(last12.map((item) => item.net)) / last12.length).toFixed(2)) : 0
+  };
+}
+
 function addMonths(month, amount) {
   const date = new Date(`${month}-01T00:00:00Z`);
   date.setUTCMonth(date.getUTCMonth() + amount);
@@ -1584,6 +1669,7 @@ function analyze(store) {
     improvements,
     review,
     weeks: weeklySpend(withFlow, latestDate),
+    weeklyNet: weeklyNetHistory(withFlow, latestDate),
     monthlyNet: monthlyNetHistory(withFlow, latestDate),
     recurring,
     categories,

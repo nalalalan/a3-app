@@ -146,6 +146,11 @@ function monthLabel(value) {
   return new Date(`${value}-01T00:00:00Z`).toLocaleString([], { month: "short", year: "numeric", timeZone: "UTC" });
 }
 
+function weekLabel(value) {
+  if (!value) return "--";
+  return `Week of ${dateLabel(value)}`;
+}
+
 function forecastMonthLabel(monthsAhead) {
   const date = new Date();
   date.setDate(1);
@@ -781,10 +786,9 @@ function renderDailyScan(improvements, accounts) {
 
 function renderSpendLeaks(improvements, accounts, locks = []) {
   const spending = Array.isArray(improvements.spending) ? improvements.spending : [];
-  const visibleSpending = spending.slice(0, 6);
-  const hiddenSpending = spending.slice(6);
+  const visibleSpending = spending.slice(0, 3);
   els.spendWindow.textContent = accounts.connected
-    ? `Top ${visibleSpending.length || 0}${hiddenSpending.length ? ` / ${hiddenSpending.length} more` : ""}`
+    ? (visibleSpending.length ? `Top ${visibleSpending.length} repeat item${visibleSpending.length === 1 ? "" : "s"}` : "No repeat items")
     : "Waiting for bank data";
 
   if (!visibleSpending.length) {
@@ -839,19 +843,7 @@ function renderSpendLeaks(improvements, accounts, locks = []) {
     `;
   }
 
-  const hiddenBlock = hiddenSpending.length
-    ? `<details class="spend-more">
-        <summary>${hiddenSpending.length} more lower-priority items</summary>
-        <div class="spend-more-list">
-          ${hiddenSpending.map((item) => renderSpendRow(item, { compact: true })).join("")}
-        </div>
-      </details>`
-    : "";
-
-  els.spendLeakList.innerHTML = [
-    ...visibleSpending.map((item) => renderSpendRow(item)),
-    hiddenBlock
-  ].filter(Boolean).join("");
+  els.spendLeakList.innerHTML = visibleSpending.map((item) => renderSpendRow(item)).join("");
 }
 
 function renderReview(data) {
@@ -888,53 +880,55 @@ function renderReview(data) {
 }
 
 function renderMonthlyNet(data) {
-  const history = data.analysis?.monthlyNet || {};
-  const months = Array.isArray(history.months) ? history.months : [];
-  const visible = months;
+  const history = data.analysis?.weeklyNet || {};
+  const weeks = Array.isArray(history.weeks) ? history.weeks : [];
+  const visible = weeks.slice(-104);
   const current = history.current || visible[visible.length - 1] || null;
 
   if (!visible.length || !current) {
     els.netWindow.textContent = "Waiting for transactions";
     els.netCurrent.textContent = "--";
     els.netChart.innerHTML = "";
-    els.netAverage.textContent = "No monthly net history yet.";
+    els.netAverage.textContent = "No weekly net history yet.";
     els.netRange.textContent = "Live bank data required.";
     return;
   }
 
-  const currentLabel = `${monthLabel(current.month)} so far`;
-  const monthWord = visible.length === 1 ? "month" : "months";
+  const currentLabel = `${weekLabel(current.week)} so far`;
+  const weekWord = visible.length === 1 ? "week" : "weeks";
   els.netWindow.textContent = currentLabel;
   els.netCurrent.textContent = money.format(current.net);
   els.netCurrent.dataset.net = current.net >= 0 ? "positive" : "negative";
   els.netAverage.textContent = `${money.format(current.inflow || 0)} in - ${money.format(current.spend || 0)} out`;
-  els.netRange.textContent = `6-mo avg ${money.format(history.last6Average || 0)} / ${visible.length} ${monthWord}`;
+  els.netRange.textContent = `12-wk avg ${money.format(history.last12Average || 0)} / ${visible.length} ${weekWord}`;
 
   const width = 720;
   const height = 260;
-  const plotLeft = 66;
-  const plotRight = width - 18;
+  const plotLeft = 64;
+  const plotRight = width - 24;
   const plotTop = 22;
-  const plotBottom = height - 42;
+  const plotBottom = height - 44;
   const plotW = plotRight - plotLeft;
   const plotH = plotBottom - plotTop;
   const nets = visible.map((item) => Number(item.net || 0));
   const maxAbs = Math.max(1, ...nets.map((value) => Math.abs(value))) * 1.08;
   const yFor = (value) => plotTop + ((maxAbs - value) / (maxAbs * 2)) * plotH;
   const zeroY = yFor(0);
-  const step = plotW / visible.length;
-  const barW = Math.max(1.2, Math.min(14, (plotW / visible.length) * .58));
-
-  const bars = visible.map((item, index) => {
+  const step = visible.length > 1 ? plotW / (visible.length - 1) : 0;
+  const xFor = (index) => plotLeft + (index * step);
+  const lineD = visible.map((item, index) => {
     const value = Number(item.net || 0);
-    const x = plotLeft + index * step + (step - barW) / 2;
-    const y = Math.min(zeroY, yFor(value));
-    const barH = Math.max(1, Math.abs(zeroY - yFor(value)));
-    const currentClass = item.month === current.month ? " is-current" : "";
+    const command = index === 0 ? "M" : "L";
+    return `${command}${xFor(index).toFixed(2)},${yFor(value).toFixed(2)}`;
+  }).join(" ");
+
+  const points = visible.map((item, index) => {
+    const value = Number(item.net || 0);
+    const currentClass = item.week === current.week ? " is-current" : "";
     const signClass = value >= 0 ? "positive" : "negative";
-    return `<rect class="net-bar ${signClass}${currentClass}" x="${x.toFixed(2)}" y="${y.toFixed(2)}" width="${barW.toFixed(2)}" height="${barH.toFixed(2)}" rx="2">
-      <title>${escapeHtml(monthLabel(item.month))}: ${escapeHtml(money.format(value))} net</title>
-    </rect>`;
+    return `<circle class="net-point ${signClass}${currentClass}" cx="${xFor(index).toFixed(2)}" cy="${yFor(value).toFixed(2)}" r="${currentClass ? 4.5 : 2.15}">
+      <title>${escapeHtml(weekLabel(item.week))}: ${escapeHtml(money.format(value))} net</title>
+    </circle>`;
   }).join("");
 
   const gridValues = [maxAbs, maxAbs / 2, 0, -maxAbs / 2, -maxAbs];
@@ -947,25 +941,29 @@ function renderMonthlyNet(data) {
     </g>`;
   }).join(" ");
 
-  const labelEvery = Math.max(1, Math.ceil(visible.length / 5));
-  const xLabels = visible.map((item, index) => {
-    const isEdge = index === 0 || index === visible.length - 1;
-    if (!isEdge && index % labelEvery !== 0) return "";
-    const x = plotLeft + index * step + step / 2;
-    const anchor = index === visible.length - 1 ? " end" : "";
-    return `<text class="net-axis-label${anchor}" x="${x.toFixed(2)}" y="${height - 12}">${escapeHtml(monthLabel(item.month))}</text>`;
+  const years = [];
+  for (let index = 0; index < visible.length; index += 1) {
+    const year = Number(visible[index].year || String(visible[index].week || "").slice(0, 4));
+    if (!Number.isFinite(year)) continue;
+    if (!years.some((item) => item.year === year)) years.push({ year, index });
+  }
+  const xLabels = years.map((item, labelIndex) => {
+    const anchor = item.index === visible.length - 1 ? " end" : "";
+    const x = xFor(item.index);
+    return `<text class="net-axis-label${anchor}" x="${x.toFixed(2)}" y="${height - 12}">${escapeHtml(String(item.year))}</text>`;
   }).join("");
 
-  const foundCurrent = visible.findIndex((item) => item.month === current.month);
+  const foundCurrent = visible.findIndex((item) => item.week === current.week);
   const currentIndex = foundCurrent >= 0 ? foundCurrent : visible.length - 1;
-  const currentX = plotLeft + currentIndex * step + step / 2;
+  const currentX = xFor(currentIndex);
   const currentY = yFor(Number(current.net || 0));
   const currentLabelX = currentX > width - 120 ? currentX - 8 : currentX + 8;
   const currentAnchor = currentX > width - 120 ? " end" : "";
 
   els.netChart.innerHTML = `
     ${grid}
-    ${bars}
+    <path class="net-line" d="${lineD}"></path>
+    ${points}
     <line class="net-current-rule" x1="${currentX.toFixed(2)}" x2="${currentX.toFixed(2)}" y1="${plotTop}" y2="${plotBottom}"></line>
     <circle class="net-current-dot" cx="${currentX.toFixed(2)}" cy="${currentY.toFixed(2)}" r="5"></circle>
     <text class="net-current-label${currentAnchor}" x="${currentLabelX.toFixed(2)}" y="${Math.max(plotTop + 14, currentY - 10).toFixed(2)}">${escapeHtml(moneyShort(current.net))}</text>

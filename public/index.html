@@ -13,7 +13,7 @@
     <link rel="icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons" type="image/svg+xml">
     <link rel="apple-touch-icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons">
     <link rel="manifest" href="/site.webmanifest?v=20260516-a3-three-rings">
-    <link rel="stylesheet" href="/styles.css?v=20260525-finance-row">
+    <link rel="stylesheet" href="/styles.css?v=20260525-weekly-evidence">
   </head>
   <body class="locked-view">
     <header class="suite-topbar" aria-label="a3 navigation">
@@ -216,7 +216,7 @@
         </div>
       </section>
 
-      <section class="cut-panel" aria-label="Cut spending assist">
+      <section class="cut-panel" aria-label="Cut spending assist" hidden>
         <div class="cut-primary">
           <h2 id="cutTitle">Repeat item</h2>
           <p id="cutReason">Live transactions are needed.</p>
@@ -224,7 +224,7 @@
         <ol id="cutSteps" class="cut-steps" hidden></ol>
       </section>
 
-      <section class="finance-grid" aria-label="Daily and monthly financial state">
+      <section class="finance-grid" aria-label="Daily scan and spending evidence">
         <section class="daily-panel" aria-label="Daily purchase scan">
           <div class="daily-panel-head">
             <h2>Daily scan</h2>
@@ -241,22 +241,37 @@
           </div>
         </section>
 
-        <section class="net-panel" aria-label="Monthly net chart">
-          <div class="net-head">
-            <div>
-              <h2>Net per month</h2>
-              <span id="netWindow">Waiting for transactions</span>
+        <section class="spend-panel" aria-label="Monthly spending evidence">
+          <div class="spend-panel-head">
+            <h2>Spending $/mo</h2>
+            <span id="spendWindow">Repeatable first</span>
+          </div>
+          <div id="spendLeakList" class="spend-leak-list">
+            <div class="spend-leak-row">
+              <div>
+                <strong>Waiting</strong>
+                <span>Live bank data required.</span>
+              </div>
             </div>
-            <strong id="netCurrent">--</strong>
-          </div>
-          <div class="net-chart-frame">
-            <svg id="netChart" class="net-chart" viewBox="0 0 720 260" role="img" aria-label="Monthly net history"></svg>
-          </div>
-          <div class="net-foot">
-            <span id="netAverage">No history yet.</span>
-            <span id="netRange">Live bank data required.</span>
           </div>
         </section>
+      </section>
+
+      <section class="net-panel" aria-label="Weekly net chart">
+        <div class="net-head">
+          <div>
+            <h2>Weekly net</h2>
+            <span id="netWindow">Waiting for transactions</span>
+          </div>
+          <strong id="netCurrent">--</strong>
+        </div>
+        <div class="net-chart-frame">
+          <svg id="netChart" class="net-chart" viewBox="0 0 720 260" role="img" aria-label="Weekly net history"></svg>
+        </div>
+        <div class="net-foot">
+          <span id="netAverage">No history yet.</span>
+          <span id="netRange">Live bank data required.</span>
+        </div>
       </section>
 
       <section class="review-panel" aria-label="Overall financial review" hidden>
@@ -266,22 +281,6 @@
         </div>
         <strong id="reviewVerdict">No live data.</strong>
         <p id="reviewSummary">No live financial read.</p>
-      </section>
-
-      <section class="spend-panel" aria-label="Spending leaks" hidden>
-        <div class="spend-panel-head">
-          <h2>Spending</h2>
-          <span id="spendWindow">Repeatable first</span>
-        </div>
-        <div id="spendLeakList" class="spend-leak-list">
-          <div class="spend-leak-row">
-            <div>
-              <strong>Waiting</strong>
-              <span>Live bank data required.</span>
-            </div>
-            <p>No spending recommendations until current transactions are available.</p>
-          </div>
-        </div>
       </section>
 
       <details class="panel">
@@ -349,6 +348,6 @@
     </main>
 
     <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
-    <script src="/app.js?v=20260525-finance-row" defer></script>
+    <script src="/app.js?v=20260525-weekly-evidence" defer></script>
   </body>
 </html>
