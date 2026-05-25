@@ -1841,6 +1841,13 @@ body.locked-view .lock-panel {
   text-anchor: end;
 }
 
+.net-axis-title {
+  fill: rgba(246, 239, 230, .48);
+  font-size: 10px;
+  font-weight: 760;
+  text-anchor: end;
+}
+
 .net-foot {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

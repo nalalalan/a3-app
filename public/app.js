@@ -961,6 +961,7 @@ function netModeData(data) {
   return {
     week: {
       title: "Weekly net",
+      axisTitle: "weekly points",
       rows: weekRows.slice(-104),
       current: weekly.current || weekRows[weekRows.length - 1] || null,
       key: "week",
@@ -970,6 +971,7 @@ function netModeData(data) {
     },
     month: {
       title: "Monthly net",
+      axisTitle: "monthly points",
       rows: monthRows.slice(-36),
       current: monthly.current || monthRows[monthRows.length - 1] || null,
       key: "month",
@@ -979,6 +981,7 @@ function netModeData(data) {
     },
     year: {
       title: "Yearly net",
+      axisTitle: "yearly totals",
       rows: yearly.rows,
       current: yearly.current,
       key: "period",
@@ -988,6 +991,7 @@ function netModeData(data) {
     },
     all: {
       title: "All-time net",
+      axisTitle: "cumulative weekly net",
       rows: allTime.rows,
       current: allTime.current,
       key: "week",
@@ -1004,6 +1008,38 @@ function itemYear(item) {
   const source = item.week || item.month || item.period || "";
   const year = Number(String(source).slice(0, 4));
   return Number.isFinite(year) ? year : null;
+}
+
+function axisTicks(modeKey, rows) {
+  const ticks = [];
+  if (!Array.isArray(rows) || !rows.length) return ticks;
+  const add = (index, label) => {
+    if (!Number.isFinite(index) || index < 0 || index >= rows.length || !label) return;
+    if (ticks.some((item) => item.index === index || item.label === label)) return;
+    ticks.push({ index, label });
+  };
+
+  if (modeKey === "month") {
+    add(0, monthLabel(rows[0].month));
+    rows.forEach((item, index) => {
+      if (String(item.month || "").endsWith("-01")) add(index, monthLabel(item.month));
+    });
+    add(rows.length - 1, monthLabel(rows[rows.length - 1].month));
+    return ticks;
+  }
+
+  if (modeKey === "year") {
+    rows.forEach((item, index) => add(index, String(item.year || item.period || "")));
+    return ticks;
+  }
+
+  rows.forEach((item, index) => {
+    const year = itemYear(item);
+    if (Number.isFinite(year) && !ticks.some((tick) => tick.label === String(year))) {
+      add(index, String(year));
+    }
+  });
+  return ticks;
 }
 
 function renderNetModeButtons(modes) {
@@ -1090,18 +1126,13 @@ function renderMonthlyNet(data) {
     </g>`;
   }).join(" ");
 
-  const years = [];
-  for (let index = 0; index < visible.length; index += 1) {
-    const year = itemYear(visible[index]);
-    if (!Number.isFinite(year)) continue;
-    if (activeNetMode === "year" || !years.some((item) => item.year === year)) years.push({ year, index });
-  }
-  const labelEvery = activeNetMode === "year" ? Math.max(1, Math.ceil(years.length / 6)) : 1;
-  const xLabels = years.map((item, labelIndex) => {
-    if (activeNetMode === "year" && labelIndex % labelEvery !== 0 && labelIndex !== years.length - 1) return "";
+  const ticks = axisTicks(activeNetMode, visible);
+  const labelEvery = activeNetMode === "year" || activeNetMode === "month" ? Math.max(1, Math.ceil(ticks.length / 6)) : 1;
+  const xLabels = ticks.map((item, labelIndex) => {
+    if ((activeNetMode === "year" || activeNetMode === "month") && labelIndex % labelEvery !== 0 && labelIndex !== ticks.length - 1) return "";
     const anchor = item.index === visible.length - 1 ? " end" : "";
     const x = xFor(item.index);
-    return `<text class="net-axis-label${anchor}" x="${x.toFixed(2)}" y="${height - 12}">${escapeHtml(String(item.year))}</text>`;
+    return `<text class="net-axis-label${anchor}" x="${x.toFixed(2)}" y="${height - 22}">${escapeHtml(String(item.label))}</text>`;
   }).join("");
 
   const foundCurrent = mode.key ? visible.findIndex((item) => item[mode.key] === current[mode.key]) : -1;
@@ -1119,6 +1150,7 @@ function renderMonthlyNet(data) {
     <circle class="net-current-dot" cx="${currentX.toFixed(2)}" cy="${currentY.toFixed(2)}" r="5"></circle>
     <text class="net-current-label${currentAnchor}" x="${currentLabelX.toFixed(2)}" y="${Math.max(plotTop + 14, currentY - 10).toFixed(2)}">${escapeHtml(moneyShort(current.net))}</text>
     ${xLabels}
+    <text class="net-axis-title" x="${plotRight}" y="${height - 8}">${escapeHtml(mode.axisTitle || "")}</text>
   `;
 }
 
