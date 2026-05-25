@@ -49,6 +49,7 @@ body.locked-view .dream-fund,
 body.locked-view .blocker-panel,
 body.locked-view .summary-row,
 body.locked-view .move-strip,
+body.locked-view .purchase-sim-panel,
 body.locked-view .action-panel,
 body.locked-view .cut-panel,
 body.locked-view .daily-panel,
@@ -675,6 +676,114 @@ body.locked-view .lock-panel {
   font-weight: 700;
   line-height: 1.28;
   overflow-wrap: anywhere;
+}
+
+.purchase-sim-panel {
+  position: relative;
+  z-index: 4;
+  display: grid;
+  gap: 14px;
+  width: min(calc(100% - 72px), 940px);
+  margin: 16px auto 0;
+  padding: 18px 0 2px;
+  border-top: 1px solid rgba(246, 239, 230, .12);
+  border-bottom: 1px solid rgba(246, 239, 230, .08);
+}
+
+.purchase-sim-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 230px);
+  gap: 20px;
+  align-items: end;
+}
+
+.purchase-sim-head > div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.purchase-sim-head h2 {
+  color: var(--ink);
+  font-size: clamp(1.24rem, 2.2vw, 1.66rem);
+  font-weight: 780;
+  line-height: 1.02;
+}
+
+.purchase-sim-head span {
+  color: rgba(246, 239, 230, .56);
+  font-size: .82rem;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.purchase-sim-control {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.purchase-sim-control span {
+  color: rgba(246, 239, 230, .48);
+  font-size: .72rem;
+  font-weight: 760;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.purchase-sim-control input {
+  min-height: 40px;
+  border-color: rgba(246, 239, 230, .18);
+  background: rgba(246, 239, 230, .045);
+  color: var(--ink);
+  font-size: 1.12rem;
+  font-weight: 760;
+}
+
+.purchase-sim-list {
+  display: grid;
+  border-top: 1px solid rgba(246, 239, 230, .09);
+}
+
+.purchase-sim-row {
+  display: grid;
+  grid-template-columns: minmax(150px, .34fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+  min-width: 0;
+  padding: 13px 0;
+}
+
+.purchase-sim-row + .purchase-sim-row {
+  border-top: 1px solid rgba(246, 239, 230, .07);
+}
+
+.purchase-sim-row strong {
+  color: rgba(246, 239, 230, .9);
+  font-size: .88rem;
+  font-weight: 800;
+  line-height: 1.16;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.purchase-sim-row span {
+  min-width: 0;
+  color: rgba(246, 239, 230, .72);
+  font-size: .98rem;
+  font-weight: 720;
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+}
+
+.purchase-sim-row[data-severity="danger"] strong,
+.purchase-sim-row[data-severity="danger"] span {
+  color: #f1b8ad;
+}
+
+.purchase-sim-row[data-severity="watch"] strong {
+  color: rgba(246, 239, 230, .82);
 }
 
 .move-strip {
@@ -1838,6 +1947,7 @@ details.panel {
   .summary-row,
   .blocker-panel,
   .move-strip,
+  .purchase-sim-panel,
   .action-panel,
   .cut-panel,
   .daily-panel,
@@ -1893,6 +2003,26 @@ details.panel {
   }
 
   .blocker-row {
+    grid-template-columns: 1fr;
+    gap: 5px;
+    padding: 13px 0;
+  }
+
+  .purchase-sim-panel {
+    margin-top: 14px;
+    padding-top: 16px;
+  }
+
+  .purchase-sim-head {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .purchase-sim-control input {
+    font-size: 1rem;
+  }
+
+  .purchase-sim-row {
     grid-template-columns: 1fr;
     gap: 5px;
     padding: 13px 0;

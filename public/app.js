@@ -25,6 +25,13 @@ const els = {
   blockerTitle: document.getElementById("blockerTitle"),
   blockerSummary: document.getElementById("blockerSummary"),
   blockerList: document.getElementById("blockerList"),
+  simStatus: document.getElementById("simStatus"),
+  simDownPaymentInput: document.getElementById("simDownPaymentInput"),
+  simCashAfter: document.getElementById("simCashAfter"),
+  simDebtAfter: document.getElementById("simDebtAfter"),
+  simCarAfter: document.getElementById("simCarAfter"),
+  simHealth: document.getElementById("simHealth"),
+  simHealthRow: document.getElementById("simHealthRow"),
   gapValue: document.getElementById("gapValue"),
   gapLabel: document.getElementById("gapLabel"),
   actionLabel: document.getElementById("actionLabel"),
@@ -66,6 +73,7 @@ const els = {
 
 let lastState = null;
 let activeCutItem = null;
+const downPaymentSimStorageKey = "a3DownPaymentTodayAmount";
 
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -193,20 +201,84 @@ function primaryCutReason(item) {
   return `${issue}. ${impact}.`;
 }
 
-function targetProgressText(goal) {
-  const target = Math.max(0, Number(goal?.downPaymentTarget || 0));
-  if (target <= 0) return "Cash plan not set";
-  const saved = Math.max(0, Number(goal?.availableForDownPayment || 0));
-  return `${Math.round(clamp(saved / target, 0, 1) * 100)}% cash plan`;
+function parseMoneyInput(value) {
+  const cleaned = String(value || "").replace(/[^0-9.-]/g, "");
+  const number = Number(cleaned);
+  return Number.isFinite(number) ? Math.max(0, number) : 0;
 }
 
-function monthsToCloseText(gap, pace) {
-  const remaining = Math.max(0, Number(gap || 0));
-  const monthly = Math.max(0, Number(pace || 0));
-  if (remaining <= 0) return "cash plan covered";
-  if (monthly <= 0) return "cash plan not moving";
-  const months = remaining / monthly;
-  return months < 1 ? "cash plan under 1 mo at 30d pace" : `cash plan ${months.toFixed(1)} mo at 30d pace`;
+function defaultDownPaymentSimAmount(data) {
+  const saved = parseMoneyInput(localStorage.getItem(downPaymentSimStorageKey));
+  if (saved > 0) return saved;
+  return 10000;
+}
+
+function wholePurchaseProgressText(goal, cash, a3Price) {
+  const price = Math.max(1, Number(a3Price || goal?.a3?.priceAsBuilt || 46690));
+  const progress = clamp(Number(cash || 0) / price, 0, 1);
+  return `${Math.round(progress * 100)}% of whole price in cash`;
+}
+
+function renderPurchaseSimulation(data, sampleOnly) {
+  if (!els.simDownPaymentInput) return;
+  const analysis = data?.analysis || {};
+  const accounts = analysis.accounts || {};
+  const goal = analysis.goal || {};
+  const settings = analysis.settings || {};
+  const connected = Boolean(accounts.connected) && !sampleOnly;
+  const cash = Number(accounts.cash || 0);
+  const balance = Number(accounts.debtTotal || 0);
+  const cashFloor = Number(settings.cashFloor || 0);
+  const a3Price = Math.max(0, Number(data?.goal?.priceAsBuilt || goal.a3?.priceAsBuilt || 46690));
+
+  if (!els.simDownPaymentInput.value.trim()) {
+    els.simDownPaymentInput.value = money.format(defaultDownPaymentSimAmount(data));
+  }
+
+  const downPayment = parseMoneyInput(els.simDownPaymentInput.value);
+  const missingCash = connected ? Math.max(0, downPayment - cash) : 0;
+  const cashAfter = connected ? cash - downPayment : 0;
+  const carAfter = Math.max(0, a3Price - downPayment);
+
+  if (!connected) {
+    els.simStatus.textContent = "Needs live Chase data.";
+    els.simCashAfter.textContent = "No live cash.";
+    els.simDebtAfter.textContent = "No live balance.";
+    els.simCarAfter.textContent = `${money.format(a3Price)} before tax, fees, insurance, and interest.`;
+    els.simHealth.textContent = "No financial-health read until Chase is unlocked.";
+    els.simHealthRow.dataset.severity = "watch";
+    return;
+  }
+
+  els.simStatus.textContent = `${money.format(cash)} cash / ${money.format(balance)} existing balance`;
+  els.simCashAfter.textContent = missingCash > 0
+    ? `${money.format(0)} cash; ${money.format(missingCash)} short`
+    : `${money.format(cashAfter)} cash left`;
+  els.simDebtAfter.textContent = `${money.format(balance)} unchanged`;
+  els.simCarAfter.textContent = `${money.format(carAfter)} before tax, fees, insurance, and interest`;
+
+  if (downPayment <= 0) {
+    els.simHealth.textContent = "No down payment simulated.";
+    els.simHealthRow.dataset.severity = "watch";
+  } else if (missingCash > 0) {
+    els.simHealth.textContent = `Impossible today: ${money.format(missingCash)} cash short; ${money.format(balance)} balance unchanged.`;
+    els.simHealthRow.dataset.severity = "danger";
+  } else if (balance > 0 && cashAfter <= cashFloor) {
+    els.simHealth.textContent = `Breaks health: ${money.format(cashAfter)} cash left; ${money.format(balance)} balance remains.`;
+    els.simHealthRow.dataset.severity = "danger";
+  } else if (balance > 0) {
+    els.simHealth.textContent = `Worsens health: ${money.format(cashAfter)} cash left; ${money.format(balance)} balance remains.`;
+    els.simHealthRow.dataset.severity = "danger";
+  } else if (cashAfter <= cashFloor) {
+    els.simHealth.textContent = `Cash cushion breaks: ${money.format(cashAfter)} left before loan costs.`;
+    els.simHealthRow.dataset.severity = "danger";
+  } else if (cashAfter <= cashFloor + 1000) {
+    els.simHealth.textContent = `Fragile: ${money.format(cashAfter)} left before loan costs.`;
+    els.simHealthRow.dataset.severity = "watch";
+  } else {
+    els.simHealth.textContent = `${money.format(cashAfter)} left; loan, insurance, tax, fees, and interest still decide.`;
+    els.simHealthRow.dataset.severity = "watch";
+  }
 }
 
 function renderBlockers(analysis, sampleOnly) {
@@ -240,9 +312,6 @@ function renderBlockers(analysis, sampleOnly) {
   if (Number(accounts.debtTotal || 0) > 0) {
     els.blockerTitle.textContent = "Do not buy yet.";
     els.blockerSummary.textContent = "Current balances block the purchase.";
-  } else if (Number(goal.downPaymentGap || 0) > 0) {
-    els.blockerTitle.textContent = "Still not buy-ready.";
-    els.blockerSummary.textContent = "Cash has to support the full purchase, not a saved-number milestone.";
   } else {
     els.blockerTitle.textContent = "Full-cost check.";
     els.blockerSummary.textContent = "Cash is only one input; payment, insurance, debt, and cashflow still decide.";
@@ -274,11 +343,9 @@ function renderBlockers(analysis, sampleOnly) {
 }
 
 function renderGoalMeter(goal, sampleOnly, data) {
-  const target = Math.max(0, Number(goal.downPaymentTarget || 0));
-  const saved = Math.max(0, Number(goal.availableForDownPayment || 0));
   const cash = Math.max(0, Number(data?.analysis?.accounts?.cash ?? 0));
   const a3Price = Math.max(0, Number(data?.goal?.priceAsBuilt || goal.a3?.priceAsBuilt || 46690));
-  const progress = !sampleOnly && target > 0 ? clamp(saved / target, 0, 1) : 0;
+  const progress = !sampleOnly && a3Price > 0 ? clamp(cash / a3Price, 0, 1) : 0;
   els.goalMeterFill.style.width = `${Math.round(progress * 100)}%`;
   els.goalSaved.textContent = sampleOnly ? "Bank link pending" : `${money.format(cash)} current cash`;
   els.goalTarget.textContent = `${money.format(a3Price)} whole purchase`;
@@ -292,21 +359,7 @@ function renderGoalMeter(goal, sampleOnly, data) {
     return;
   }
 
-  if (target <= 0) {
-    els.goalPace.textContent = "Set a planning cash amount.";
-    return;
-  }
-
-  if (goal.downPaymentGap <= 0) {
-    els.goalPace.textContent = "Planning cash covered; payment, insurance, and cashflow still decide.";
-    return;
-  }
-
-  const pace = Math.max(0, Number(goal.monthlySavingsPace || 0));
-  const needed = Math.max(0, Number(goal.monthlySavingsNeeded || 0));
-  els.goalPace.textContent = goal.targetDate
-    ? `${money.format(pace)}/mo pace / ${money.format(Math.ceil(needed))}/mo needed`
-    : `${money.format(goal.downPaymentGap)} cash-plan gap`;
+  els.goalPace.textContent = wholePurchaseProgressText(goal, cash, a3Price);
 }
 
 function setBusy(text) {
@@ -463,11 +516,6 @@ function financialMoves(analysis) {
       label: "Cash is context",
       detail: `${money.format(cash)} current cash right now`
     });
-  } else if (goal.downPaymentGap > 0) {
-    moves.push({
-      label: "Cash plan",
-      detail: `${money.format(goal.downPaymentGap)} short before the full purchase check`
-    });
   }
   const fallbackMoves = [
     { label: "Keep cash steady", detail: "Do not guess with old numbers." },
@@ -537,7 +585,7 @@ function actionLabel(item) {
       return "Do not count car cash";
     case "Cash floor":
     case "Cash today":
-    case "Planning cash":
+    case "Down payment today":
       return "Keep cash steady";
     case "Biggest leak":
       return "Slow biggest leak";
@@ -558,7 +606,7 @@ function actionLabel(item) {
 }
 
 function orderedImprovements(items, primary) {
-  const labels = ["Mistake to avoid", "Card spend", "Food leak", "Cash today", "Planning cash", "Cash floor", "Payment posted", "Payment pending", "Cash plan", "Missing", "Floor"];
+  const labels = ["Mistake to avoid", "Card spend", "Food leak", "Cash today", "Down payment today", "Whole purchase", "Cash floor", "Payment posted", "Payment pending", "Missing", "Floor"];
   const ordered = [];
   for (const label of labels) {
     const item = findImprovement(items, label);
@@ -722,11 +770,6 @@ function renderReview(data) {
     const a3Price = Number(data.goal?.priceAsBuilt || goal.a3?.priceAsBuilt || 46690);
     els.reviewVerdict.textContent = "Do not buy yet.";
     els.reviewSummary.textContent = `Whole purchase: ${money.format(a3Price)}. Current cash ${money.format(accounts.cash || 0)}; card/loan balance ${money.format(accounts.debtTotal || 0)}; 6-mo avg ${money.format(last6)}.`;
-  } else if (Number(goal.downPaymentGap || 0) > 0) {
-    const pace = Math.max(0, Number(goal.monthlySavingsPace || 0));
-    const a3Price = Number(data.goal?.priceAsBuilt || goal.a3?.priceAsBuilt || 46690);
-    els.reviewVerdict.textContent = "Cash not ready.";
-    els.reviewSummary.textContent = `Whole purchase: ${money.format(a3Price)}. Current cash ${money.format(accounts.cash || 0)}; cash plan short by ${money.format(goal.downPaymentGap || 0)}. ${monthsToCloseText(goal.downPaymentGap, pace)}.`;
   } else {
     els.reviewVerdict.textContent = shortText(review.verdict || "Full-cost check.", 96);
     els.reviewSummary.textContent = shortText(review.summary || "Do not buy from cash alone; monthly payment, insurance, debt, and cashflow still decide.", 140);
@@ -844,14 +887,14 @@ function renderImprovements(analysis, locks = []) {
           severity: accounts.debtTotal > 0 ? "danger" : "watch"
         },
         {
-          label: "Cash plan",
-          detail: `${money.format(goal.downPaymentGap || 0)} short before the full purchase check.`,
+          label: "Whole purchase",
+          detail: `${money.format(goal.fullPurchaseGap || 0)} below the car price before tax, fees, insurance, and interest.`,
           severity: "watch"
         }
       ]
     : [
         { label: "Missing", detail: "Connect Chase before the car decision.", severity: "watch" },
-        { label: "Planning cash", detail: "Wait for real account data before treating cash as car money.", severity: "watch" }
+        { label: "Whole purchase", detail: "Wait for real account data before testing a down payment.", severity: "watch" }
       ];
   const rows = (items.length ? items : fallback).slice(0, 6);
   const primary = primaryFix(rows, accounts);
@@ -901,6 +944,7 @@ function render(data) {
   document.documentElement.dataset.state = sampleOnly ? "watch" : analysis.readiness.color;
   renderGoalMeter(goal, sampleOnly, data);
   renderBlockers(analysis, sampleOnly);
+  renderPurchaseSimulation(data, sampleOnly);
 
   if (sampleOnly) {
     const plaidReviewPending = Boolean(data.plaid?.productionReviewPending);
@@ -942,17 +986,14 @@ function render(data) {
       : data.openaiConfigured
       ? "AI on"
       : "CSV data";
-  const targetProgress = targetProgressText(goal);
   if (accounts.debtTotal > 0) {
     els.stateLabel.textContent = "Not ready yet";
     els.stateReason.textContent = `${money.format(accounts.debtTotal)} card/loan balance has to come down first.`;
   } else {
-    els.stateLabel.textContent = goal.downPaymentGap <= 0 ? "Full-cost check" : `${money.format(goal.downPaymentGap || 0)} cash-plan gap`;
-    els.stateReason.textContent = goal.downPaymentGap <= 0
-      ? "Payment, insurance, and cashflow still decide."
-      : `${targetProgress} / ${money.format(accounts.cash || 0)} current cash.`;
+    els.stateLabel.textContent = "Full-cost check";
+    els.stateReason.textContent = "Payment, insurance, and cashflow still decide.";
   }
-  els.gapValue.textContent = accounts.debtTotal > 0 ? money.format(accounts.debtTotal) : money.format(goal.downPaymentGap);
+  els.gapValue.textContent = accounts.debtTotal > 0 ? money.format(accounts.debtTotal) : money.format(goal.fullPurchaseGap || 0);
   els.gapLabel.textContent = accounts.connected
     ? `${money.format(accounts.cash || 0)} cash / ${dateTimeLabel(accounts.lastUpdatedAt)}`
     : `${money.format(data.goal.priceAsBuilt)} whole purchase needs live cash data`;
@@ -1108,6 +1149,13 @@ els.saveSettings.addEventListener("click", async () => {
   });
   await loadState();
 });
+
+if (els.simDownPaymentInput) {
+  els.simDownPaymentInput.addEventListener("input", () => {
+    localStorage.setItem(downPaymentSimStorageKey, String(parseMoneyInput(els.simDownPaymentInput.value)));
+    if (lastState) renderPurchaseSimulation(lastState, isSampleOnly(lastState));
+  });
+}
 
 els.csvInput.addEventListener("change", async (event) => {
   const file = event.target.files?.[0];
