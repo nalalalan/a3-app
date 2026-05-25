@@ -303,8 +303,8 @@ function renderBlockers(analysis, sampleOnly) {
     els.blockerTitle.textContent = "Do not buy yet.";
     els.blockerSummary.textContent = "The app needs live Chase data first.";
     setRows([
-      { label: "Connect Chase", detail: "Balances and purchases decide whether the A3 is realistic." },
-      { label: "Whole purchase", detail: `${money.format(a3Price)} car decision needs current cash, balances, payment, insurance, and monthly cashflow.` }
+      { label: "Connect Chase", detail: "Current cash, balance, and payment decide." },
+      { label: "Whole purchase", detail: `${money.format(a3Price)} before tax, fees, insurance, and interest.` }
     ]);
     return;
   }

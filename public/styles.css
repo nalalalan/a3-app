@@ -671,11 +671,13 @@ body.locked-view .lock-panel {
 
 .blocker-row span {
   min-width: 0;
+  max-width: 100%;
   color: rgba(246, 239, 230, .72);
   font-size: .92rem;
   font-weight: 700;
   line-height: 1.28;
   overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .purchase-sim-panel {
@@ -770,11 +772,13 @@ body.locked-view .lock-panel {
 
 .purchase-sim-row span {
   min-width: 0;
+  max-width: 100%;
   color: rgba(246, 239, 230, .72);
   font-size: .98rem;
   font-weight: 720;
   line-height: 1.28;
   overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .purchase-sim-row[data-severity="danger"] strong,
@@ -784,6 +788,100 @@ body.locked-view .lock-panel {
 
 .purchase-sim-row[data-severity="watch"] strong {
   color: rgba(246, 239, 230, .82);
+}
+
+.liked-builds {
+  position: relative;
+  z-index: 4;
+  display: grid;
+  gap: 12px;
+  width: min(calc(100% - 72px), 1180px);
+  margin: 18px auto 0;
+  padding: 17px 0 0;
+  border-top: 1px solid rgba(246, 239, 230, .12);
+}
+
+.liked-builds-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.liked-builds-head h2 {
+  color: var(--ink);
+  font-size: clamp(1.18rem, 2vw, 1.52rem);
+  font-weight: 780;
+  line-height: 1.02;
+}
+
+.liked-builds-head span {
+  max-width: 390px;
+  color: rgba(246, 239, 230, .56);
+  font-size: .82rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: right;
+}
+
+.liked-build-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.liked-build {
+  display: grid;
+  grid-template-columns: minmax(150px, .44fr) minmax(0, 1fr);
+  min-width: 0;
+  min-height: 128px;
+  overflow: hidden;
+  border: 1px solid rgba(246, 239, 230, .1);
+  border-radius: 2px;
+  background: rgba(246, 239, 230, .035);
+}
+
+.liked-build-primary {
+  border-color: rgba(246, 239, 230, .18);
+  background: rgba(246, 239, 230, .055);
+}
+
+.liked-build img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 128px;
+  object-fit: cover;
+  object-position: 54% 54%;
+  filter: contrast(1.05) saturate(1.03);
+}
+
+.liked-build div {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 16px;
+}
+
+.liked-build strong {
+  color: rgba(246, 239, 230, .94);
+  font-size: clamp(1rem, 1.6vw, 1.18rem);
+  font-weight: 760;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+
+.liked-build span {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  color: rgba(246, 239, 230, .62);
+  font-size: .84rem;
+  font-weight: 680;
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .move-strip {
@@ -1948,6 +2046,7 @@ details.panel {
   .blocker-panel,
   .move-strip,
   .purchase-sim-panel,
+  .liked-builds,
   .action-panel,
   .cut-panel,
   .daily-panel,
@@ -2026,6 +2125,44 @@ details.panel {
     grid-template-columns: 1fr;
     gap: 5px;
     padding: 13px 0;
+  }
+
+  .liked-builds {
+    margin-top: 14px;
+    padding-top: 15px;
+  }
+
+  .liked-builds-head {
+    display: grid;
+    gap: 6px;
+  }
+
+  .liked-builds-head span {
+    max-width: none;
+    text-align: left;
+  }
+
+  .liked-build-list {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .liked-build {
+    grid-template-columns: 112px minmax(0, 1fr);
+    min-height: 104px;
+  }
+
+  .liked-build img {
+    min-height: 104px;
+  }
+
+  .liked-build div {
+    padding: 12px;
+  }
+
+  .liked-build span {
+    font-size: .78rem;
+    line-height: 1.24;
   }
 
   .action-panel {
