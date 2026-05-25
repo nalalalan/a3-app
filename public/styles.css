@@ -2401,3 +2401,253 @@ details.panel {
     padding: 20px;
   }
 }
+
+.dream-hero {
+  width: min(calc(100% - 56px), 1360px);
+  gap: 20px;
+  align-items: start;
+  padding-bottom: 22px;
+}
+
+.car-profile {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto auto;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 250, 241, .16);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(24, 23, 20, .94), rgba(10, 10, 9, .98)),
+    radial-gradient(circle at 22% 0%, rgba(255, 250, 241, .08), transparent 28%);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, .28);
+}
+
+.car-profile .dream-image {
+  border: 0;
+  border-bottom: 1px solid rgba(255, 250, 241, .12);
+  border-radius: 0;
+  background: #090908;
+}
+
+.car-profile .dream-image img {
+  object-fit: contain;
+  object-position: center center;
+}
+
+.car-profile-a3 .dream-image img {
+  filter: contrast(1.05) saturate(1.03) brightness(1.04);
+}
+
+.car-profile-a5 .dream-image img {
+  filter: contrast(1.05) saturate(1.02) brightness(.92);
+}
+
+.car-profile .build-card,
+.car-profile .build-card-a5 {
+  justify-self: stretch;
+  align-content: start;
+  min-height: 0;
+  padding: 22px 24px 20px;
+  border: 0;
+  border-radius: 0;
+  background:
+    linear-gradient(180deg, rgba(255, 250, 241, .035), rgba(255, 250, 241, .012)),
+    rgba(10, 10, 9, .94);
+  backdrop-filter: none;
+}
+
+.car-profile .build-tag {
+  display: none;
+}
+
+.car-profile .build-card h1 {
+  max-width: none;
+  font-size: clamp(1.72rem, 3vw, 2.7rem);
+  line-height: .98;
+}
+
+.car-profile .build-trim {
+  max-width: none;
+  color: rgba(255, 250, 241, .72);
+  font-size: .86rem;
+}
+
+.car-profile .build-meta {
+  padding-top: 2px;
+}
+
+.car-profile .build-meta strong {
+  font-size: clamp(1.24rem, 2vw, 1.72rem);
+}
+
+.car-profile .build-features {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px 18px;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 250, 241, .1);
+}
+
+.car-profile .build-features li {
+  color: rgba(255, 250, 241, .76);
+  font-size: .82rem;
+}
+
+.car-gallery {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  padding: 1px;
+  border-top: 1px solid rgba(255, 250, 241, .12);
+  background: rgba(255, 250, 241, .1);
+}
+
+.car-gallery a {
+  min-height: 132px;
+  border: 0;
+  border-radius: 0;
+  background: #090908;
+}
+
+.car-gallery img {
+  height: 132px;
+  object-fit: cover;
+  filter: contrast(1.04) saturate(1.02) brightness(.94);
+}
+
+.car-gallery span {
+  left: 8px;
+  bottom: 8px;
+  border-radius: 4px;
+  background: rgba(8, 8, 7, .62);
+}
+
+.dream-fund {
+  grid-template-columns: minmax(0, 1fr) auto;
+  justify-self: center;
+  width: min(100%, 900px);
+  margin-top: 0;
+  padding: 12px 0;
+  border-top: 1px solid rgba(246, 239, 230, .13);
+  border-bottom: 1px solid rgba(246, 239, 230, .08);
+}
+
+.dream-fund .fund-heading {
+  display: grid;
+  gap: 3px;
+}
+
+.dream-fund .fund-heading strong {
+  font-size: clamp(1.18rem, 2vw, 1.42rem);
+}
+
+.dream-fund .fund-heading span {
+  color: rgba(246, 239, 230, .62);
+}
+
+.dream-fund .hero-cash-line {
+  justify-self: end;
+  border-radius: 5px;
+  background: rgba(246, 239, 230, .045);
+}
+
+.affordability-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(250px, .92fr);
+  gap: 18px;
+  align-items: start;
+  min-width: 0;
+  padding: 13px 0 0;
+  border-top: 1px solid rgba(246, 239, 230, .09);
+}
+
+.affordability-main,
+.affordability-facts {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.affordability-main strong {
+  color: var(--ink);
+  font-size: clamp(1.1rem, 2vw, 1.34rem);
+  font-weight: 800;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+
+.affordability-main span,
+.affordability-facts span {
+  color: rgba(246, 239, 230, .68);
+  font-size: .9rem;
+  font-weight: 700;
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+}
+
+.affordability-facts {
+  justify-self: end;
+  text-align: right;
+}
+
+.affordability-main[data-severity="danger"] strong {
+  color: #f1b8ad;
+}
+
+.affordability-main[data-severity="watch"] strong {
+  color: rgba(246, 239, 230, .9);
+}
+
+@media (max-width: 860px) {
+  .dream-hero {
+    grid-template-columns: 1fr;
+    width: min(calc(100vw - 28px), 720px);
+    gap: 14px;
+    padding-top: 78px;
+  }
+
+  .car-profile .build-card,
+  .car-profile .build-card-a5 {
+    padding: 18px;
+  }
+
+  .car-profile .build-features {
+    grid-template-columns: 1fr;
+  }
+
+  .car-gallery a,
+  .car-gallery img {
+    min-height: 104px;
+    height: 104px;
+  }
+
+  .dream-fund,
+  .affordability-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .dream-fund .hero-cash-line,
+  .affordability-facts {
+    justify-self: stretch;
+    text-align: left;
+  }
+}
+
+@media (max-width: 460px) {
+  .car-profile .dream-image {
+    aspect-ratio: 16 / 10;
+  }
+
+  .car-gallery a,
+  .car-gallery img {
+    min-height: 82px;
+    height: 82px;
+  }
+
+  .car-gallery span {
+    font-size: .58rem;
+    left: 5px;
+    bottom: 5px;
+    padding: 3px 5px;
+  }
+}

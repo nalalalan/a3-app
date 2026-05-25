@@ -35,6 +35,11 @@ const els = {
   simCarAfter: document.getElementById("simCarAfter"),
   simHealth: document.getElementById("simHealth"),
   simHealthRow: document.getElementById("simHealthRow"),
+  affordabilityHealth: document.getElementById("affordabilityHealth"),
+  affordabilityVerdict: document.getElementById("affordabilityVerdict"),
+  affordabilityWhen: document.getElementById("affordabilityWhen"),
+  affordabilityPace: document.getElementById("affordabilityPace"),
+  affordabilityAssumption: document.getElementById("affordabilityAssumption"),
   gapValue: document.getElementById("gapValue"),
   gapLabel: document.getElementById("gapLabel"),
   actionLabel: document.getElementById("actionLabel"),
@@ -141,6 +146,13 @@ function monthLabel(value) {
   return new Date(`${value}-01T00:00:00Z`).toLocaleString([], { month: "short", year: "numeric", timeZone: "UTC" });
 }
 
+function forecastMonthLabel(monthsAhead) {
+  const date = new Date();
+  date.setDate(1);
+  date.setMonth(date.getMonth() + Math.max(0, monthsAhead));
+  return date.toLocaleString([], { month: "long", year: "numeric" });
+}
+
 function moneyShort(value) {
   const numeric = Number(value || 0);
   const sign = numeric < 0 ? "-" : "";
@@ -234,6 +246,87 @@ function wholePurchaseProgressText(goal, cash, a3Price) {
   return `${Math.round(progress * 100)}% of whole price in cash`;
 }
 
+function monthlyForecastPace(analysis) {
+  const last6 = Number(analysis?.monthlyNet?.last6Average || 0);
+  const current = Number(analysis?.monthlyNet?.current?.net || 0);
+  const net30 = Number(analysis?.totals?.net30 || 0);
+  return Math.max(0, last6 > 0 ? last6 : current > 0 ? current : net30 > 0 ? net30 : 0);
+}
+
+function renderAffordabilityForecast(data, sampleOnly, downPayment, cashAfter, carAfter) {
+  if (!els.affordabilityVerdict) return;
+  const analysis = data?.analysis || {};
+  const accounts = analysis.accounts || {};
+  const settings = analysis.settings || {};
+  const connected = Boolean(accounts.connected) && !sampleOnly;
+  const cash = Number(accounts.cash || 0);
+  const balance = Number(accounts.debtTotal || 0);
+  const cashFloor = Math.max(0, Number(settings.cashFloor || 0));
+  const pace = monthlyForecastPace(analysis);
+
+  if (!connected) {
+    els.affordabilityHealth.dataset.severity = "watch";
+    els.affordabilityVerdict.textContent = "No forecast.";
+    els.affordabilityWhen.textContent = "Live balances and monthly net are required.";
+    els.affordabilityPace.textContent = "--/mo pace";
+    els.affordabilityAssumption.textContent = `${money.format(downPayment)} down / ${money.format(cashFloor)} kept`;
+    return;
+  }
+
+  const safeCashNeeded = downPayment + balance + cashFloor;
+  const cashGap = Math.max(0, safeCashNeeded - cash);
+  const months = pace > 0 ? Math.ceil(cashGap / pace) : null;
+  const drainsCash = downPayment >= cash || cashAfter <= cashFloor;
+  let severity = "watch";
+  let verdict = "Not yet.";
+  let when = "Payment, insurance, tax, fees, and loan terms still decide.";
+
+  if (downPayment <= 0) {
+    verdict = "Enter a down payment.";
+    when = "Use an amount that still keeps the cash buffer.";
+  } else if (downPayment > cash) {
+    severity = "danger";
+    verdict = "No. The down payment exceeds cash.";
+    when = pace > 0
+      ? `Around ${forecastMonthLabel(months)} for ${money.format(downPayment)} down after balance and buffer.`
+      : "No date: monthly pace is not positive.";
+  } else if (drainsCash && balance > 0) {
+    severity = "danger";
+    verdict = "No. Draining cash while balance remains is not smart.";
+    when = pace > 0
+      ? `Around ${forecastMonthLabel(months)} after balance and ${money.format(cashFloor)} buffer.`
+      : "No date: monthly pace is not positive.";
+  } else if (drainsCash) {
+    severity = "danger";
+    verdict = "No. Do not spend the whole bank account.";
+    when = pace > 0
+      ? `Around ${forecastMonthLabel(months)} if the cash buffer survives.`
+      : "No date: monthly pace is not positive.";
+  } else if (balance > 0) {
+    severity = "danger";
+    verdict = "No. Pay the existing balance first.";
+    when = pace > 0
+      ? `Around ${forecastMonthLabel(months)} for balance + down payment + buffer.`
+      : "No date: monthly pace is not positive.";
+  } else if (pace <= 0) {
+    severity = "danger";
+    verdict = "No. Monthly pace is not positive.";
+    when = "No reliable afford-by date.";
+  } else if (cashGap > 0) {
+    verdict = "Not yet.";
+    when = `Around ${forecastMonthLabel(months)} for balance + down payment + buffer.`;
+  } else {
+    verdict = "Maybe. Buffer survives.";
+    when = "Still needs payment, insurance, tax, fees, and loan terms.";
+  }
+
+  els.affordabilityHealth.dataset.severity = severity;
+  els.affordabilityVerdict.textContent = verdict;
+  els.affordabilityWhen.textContent = when;
+  els.affordabilityPace.textContent = pace > 0 ? `${money.format(pace)}/mo recent net pace` : "No positive $/mo pace";
+  els.affordabilityAssumption.textContent = `${money.format(downPayment)} down / ${money.format(cashFloor)} kept / ${money.format(carAfter)} financed before tax and fees`;
+}
+
 function renderPurchaseSimulation(data, sampleOnly) {
   if (!els.simDownPaymentInput) return;
   const analysis = data?.analysis || {};
@@ -254,6 +347,7 @@ function renderPurchaseSimulation(data, sampleOnly) {
   const missingCash = connected ? Math.max(0, downPayment - cash) : 0;
   const cashAfter = connected ? cash - downPayment : 0;
   const carAfter = Math.max(0, a3Price - downPayment);
+  renderAffordabilityForecast(data, sampleOnly, downPayment, cashAfter, carAfter);
 
   if (!connected) {
     els.simStatus.textContent = "Needs live data.";
