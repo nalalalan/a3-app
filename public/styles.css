@@ -1174,9 +1174,9 @@ body.locked-view .lock-panel {
   position: relative;
   z-index: 4;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 28px;
-  width: min(calc(100% - 72px), 940px);
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
+  gap: 32px;
+  width: min(calc(100% - 72px), 1160px);
   margin: 16px auto 0;
 }
 
@@ -1191,9 +1191,14 @@ body.locked-view .lock-panel {
 }
 
 .finance-grid > .daily-panel,
-.finance-grid > .review-panel {
+.finance-grid > .net-panel {
   width: auto;
   margin: 0;
+}
+
+.finance-grid > .net-panel {
+  align-self: start;
+  padding-top: 18px;
 }
 
 .daily-panel-head {
