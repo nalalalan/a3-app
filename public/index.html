@@ -33,15 +33,6 @@
       </div>
     </header>
 
-    <section id="lockPanel" class="lock-panel" aria-label="Private access" hidden>
-      <div>
-        <h2>PIN</h2>
-      </div>
-      <input id="accessInput" type="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN">
-      <button id="unlockButton" type="button">Unlock</button>
-      <span id="accessMessage"></span>
-    </section>
-
     <main class="shell">
       <section class="dream-hero" aria-label="Audi build overview">
         <article class="car-profile car-profile-a3" aria-label="Audi A3 Premium Plus">
@@ -130,6 +121,15 @@
           </div>
           <button id="connectBankPrimary" class="fund-connect" type="button" disabled hidden>connect bank</button>
         </section>
+      </section>
+
+      <section id="lockPanel" class="lock-panel" aria-label="Private access" hidden>
+        <div>
+          <h2>PIN</h2>
+        </div>
+        <input id="accessInput" type="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN">
+        <button id="unlockButton" type="button">Unlock</button>
+        <span id="accessMessage"></span>
       </section>
 
       <section class="blocker-panel" aria-label="Why not A3 yet" hidden>

@@ -2653,21 +2653,21 @@ details.panel {
 }
 
 body.locked-view .lock-panel {
-  position: fixed;
+  position: relative;
   top: auto;
-  right: clamp(18px, 4vw, 52px);
-  bottom: 26px;
+  right: auto;
+  bottom: auto;
   left: auto;
   z-index: 12;
-  margin: 0;
+  margin: 0 auto 30px;
 }
 
 @media (max-width: 660px) {
   body.locked-view .lock-panel {
     top: auto;
     right: auto;
-    bottom: 14px;
-    left: 14px;
+    bottom: auto;
+    left: auto;
     width: min(304px, calc(100% - 28px));
   }
 }
