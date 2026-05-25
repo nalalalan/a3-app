@@ -22,6 +22,9 @@ const els = {
   goalSaved: document.getElementById("goalSaved"),
   goalTarget: document.getElementById("goalTarget"),
   goalPace: document.getElementById("goalPace"),
+  heroCashMeta: document.getElementById("heroCashMeta"),
+  heroA3Price: document.getElementById("heroA3Price"),
+  heroA5Price: document.getElementById("heroA5Price"),
   blockerTitle: document.getElementById("blockerTitle"),
   blockerSummary: document.getElementById("blockerSummary"),
   blockerList: document.getElementById("blockerList"),
@@ -250,7 +253,7 @@ function renderPurchaseSimulation(data, sampleOnly) {
     return;
   }
 
-  els.simStatus.textContent = `${money.format(cash)} cash / ${money.format(balance)} existing balance`;
+  els.simStatus.textContent = "Immediate cash damage.";
   els.simCashAfter.textContent = missingCash > 0
     ? `${money.format(0)} cash; ${money.format(missingCash)} short`
     : `${money.format(cashAfter)} cash left`;
@@ -347,7 +350,10 @@ function renderGoalMeter(goal, sampleOnly, data) {
   const a3Price = Math.max(0, Number(data?.goal?.priceAsBuilt || goal.a3?.priceAsBuilt || 46690));
   const progress = !sampleOnly && a3Price > 0 ? clamp(cash / a3Price, 0, 1) : 0;
   els.goalMeterFill.style.width = `${Math.round(progress * 100)}%`;
-  els.goalSaved.textContent = sampleOnly ? "Bank link pending" : `${money.format(cash)} current cash`;
+  els.goalSaved.textContent = sampleOnly ? "Bank link pending" : money.format(cash);
+  els.heroCashMeta.textContent = sampleOnly ? "Connect Chase." : "current cash";
+  els.heroA3Price.textContent = money.format(a3Price);
+  els.heroA5Price.textContent = "$60,590";
   els.goalTarget.textContent = `${money.format(a3Price)} whole purchase`;
 
   if (sampleOnly) {
