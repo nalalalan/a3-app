@@ -1403,6 +1403,77 @@ function weekRange(start, end) {
   return weeks;
 }
 
+function addDays(date, amount) {
+  const parsed = new Date(`${date}T00:00:00Z`);
+  if (!Number.isFinite(parsed.getTime())) return "";
+  parsed.setUTCDate(parsed.getUTCDate() + amount);
+  return parsed.toISOString().slice(0, 10);
+}
+
+function dateRange(start, end) {
+  const days = [];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) return days;
+  let cursor = start;
+  while (cursor && cursor <= end) {
+    days.push(cursor);
+    cursor = addDays(cursor, 1);
+  }
+  return days;
+}
+
+function dailyNetHistory(transactions, latestDate) {
+  const byDate = new Map();
+  for (const transaction of transactions || []) {
+    const date = String(transaction.date || "").slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    if (!byDate.has(date)) {
+      byDate.set(date, { date, inflow: 0, spend: 0, net: 0, count: 0 });
+    }
+    const row = byDate.get(date);
+    const inflow = Number(transaction.inflow || 0);
+    const spend = Number(transaction.spend || 0);
+    row.inflow += inflow;
+    row.spend += spend;
+    row.net += inflow - spend;
+    row.count += 1;
+  }
+
+  const keys = [...byDate.keys()].sort();
+  if (!keys.length) {
+    return {
+      startDate: "",
+      endDate: "",
+      current: null,
+      days: [],
+      minNet: 0,
+      maxNet: 0
+    };
+  }
+
+  const startDate = keys[0];
+  const endDate = latestDate && /^\d{4}-\d{2}-\d{2}$/.test(latestDate) ? latestDate : keys[keys.length - 1];
+  const days = dateRange(startDate, endDate).map((date) => {
+    const row = byDate.get(date) || { date, inflow: 0, spend: 0, net: 0, count: 0 };
+    return {
+      date,
+      year: Number(date.slice(0, 4)),
+      inflow: Number(row.inflow.toFixed(2)),
+      spend: Number(row.spend.toFixed(2)),
+      net: Number(row.net.toFixed(2)),
+      count: row.count
+    };
+  });
+  const nets = days.map((item) => item.net);
+  return {
+    startDate,
+    endDate,
+    current: days[days.length - 1] || null,
+    days,
+    minNet: Math.min(0, ...nets),
+    maxNet: Math.max(0, ...nets)
+  };
+}
+
 function weeklyNetHistory(transactions, latestDate) {
   const byWeek = new Map();
   for (const transaction of transactions || []) {
@@ -1669,6 +1740,7 @@ function analyze(store) {
     improvements,
     review,
     weeks: weeklySpend(withFlow, latestDate),
+    dailyNet: dailyNetHistory(withFlow, latestDate),
     weeklyNet: weeklyNetHistory(withFlow, latestDate),
     monthlyNet: monthlyNetHistory(withFlow, latestDate),
     recurring,

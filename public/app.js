@@ -103,6 +103,13 @@ const shortDate = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC"
 });
 
+const shortDateWithYear = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  timeZone: "UTC"
+});
+
 async function api(path, options = {}) {
   const { accessCodeOverride, headers = {}, ...fetchOptions } = options;
   const code = accessCodeOverride ?? localStorage.getItem("a3AccessCode") ?? "";
@@ -136,6 +143,11 @@ function escapeHtml(value) {
 function dateLabel(date) {
   if (!date) return "--";
   return shortDate.format(new Date(`${date}T00:00:00Z`));
+}
+
+function dateLabelWithYear(date) {
+  if (!date) return "--";
+  return shortDateWithYear.format(new Date(`${date}T00:00:00Z`));
 }
 
 function dateTimeLabel(value) {
@@ -894,120 +906,74 @@ function renderReview(data) {
   renderBullets(els.reviewMust, review.must, "Live balances are required before the car decision.");
 }
 
-function yearlyNetFromMonthly(monthlyNet) {
-  const months = Array.isArray(monthlyNet?.months) ? monthlyNet.months : [];
-  const byYear = new Map();
-  for (const item of months) {
-    const year = Number(String(item.month || "").slice(0, 4));
-    if (!Number.isFinite(year)) continue;
-    if (!byYear.has(year)) byYear.set(year, { year, period: String(year), inflow: 0, spend: 0, net: 0, count: 0 });
-    const row = byYear.get(year);
-    row.inflow += Number(item.inflow || 0);
-    row.spend += Number(item.spend || 0);
-    row.net += Number(item.net || 0);
-    row.count += Number(item.count || 0);
-  }
-  const rows = [...byYear.values()]
-    .sort((a, b) => a.year - b.year)
+function normalizedDailyNetRows(data) {
+  const days = Array.isArray(data.analysis?.dailyNet?.days) ? data.analysis.dailyNet.days : [];
+  return days
+    .filter((item) => /^\d{4}-\d{2}-\d{2}$/.test(String(item.date || "")))
     .map((item) => ({
-      ...item,
-      inflow: Number(item.inflow.toFixed(2)),
-      spend: Number(item.spend.toFixed(2)),
-      net: Number(item.net.toFixed(2))
+      date: item.date,
+      year: Number(item.year || String(item.date || "").slice(0, 4)),
+      inflow: Number(item.inflow || 0),
+      spend: Number(item.spend || 0),
+      net: Number(item.net || 0),
+      count: Number(item.count || 0)
     }));
-  const nonEmpty = rows.filter((item) => item.count > 0);
-  const last3 = nonEmpty.slice(-3);
+}
+
+function dailyNetTotal(rows) {
+  const total = rows.reduce((acc, item) => {
+    acc.inflow += Number(item.inflow || 0);
+    acc.spend += Number(item.spend || 0);
+    acc.net += Number(item.net || 0);
+    acc.count += Number(item.count || 0);
+    return acc;
+  }, { inflow: 0, spend: 0, net: 0, count: 0 });
+  const first = rows[0] || {};
+  const last = rows[rows.length - 1] || {};
   return {
-    rows,
-    current: rows[rows.length - 1] || null,
-    last3Average: last3.length ? Number((last3.reduce((total, item) => total + Number(item.net || 0), 0) / last3.length).toFixed(2)) : 0
+    date: last.date || "",
+    startDate: first.date || "",
+    endDate: last.date || "",
+    inflow: Number(total.inflow.toFixed(2)),
+    spend: Number(total.spend.toFixed(2)),
+    net: Number(total.net.toFixed(2)),
+    count: total.count
   };
 }
 
-function allTimeNetFromWeekly(weeklyNet) {
-  const weeks = Array.isArray(weeklyNet?.weeks) ? weeklyNet.weeks : [];
-  let inflow = 0;
-  let spend = 0;
-  let net = 0;
-  let count = 0;
-  const rows = weeks.map((item) => {
-    inflow += Number(item.inflow || 0);
-    spend += Number(item.spend || 0);
-    net += Number(item.net || 0);
-    count += Number(item.count || 0);
-    return {
-      week: item.week,
-      year: Number(item.year || String(item.week || "").slice(0, 4)),
-      inflow: Number(inflow.toFixed(2)),
-      spend: Number(spend.toFixed(2)),
-      net: Number(net.toFixed(2)),
-      count
-    };
-  });
+function dailyRangeText(rows) {
+  if (!rows.length) return "No daily points";
+  const first = rows[0];
+  const last = rows[rows.length - 1];
+  const longRange = rows.length > 180 || String(first.date).slice(0, 4) !== String(last.date).slice(0, 4);
+  const label = longRange ? dateLabelWithYear : dateLabel;
+  return `${rows.length} daily ${rows.length === 1 ? "point" : "points"} / ${label(first.date)} to ${label(last.date)}`;
+}
+
+function dailyRangeMode(allRows, rangeDays, label) {
+  const rows = Number.isFinite(rangeDays) ? allRows.slice(-rangeDays) : allRows;
   return {
+    title: "Daily net",
+    axisTitle: "daily net points",
     rows,
-    current: rows[rows.length - 1] || null,
-    start: rows[0]?.week || ""
+    current: rows.length ? dailyNetTotal(rows) : null,
+    highlight: rows[rows.length - 1] || null,
+    key: "date",
+    pointLabel: (item) => dateLabel(item.date),
+    currentLabel: () => label,
+    rangeLabel: dailyRangeText
   };
 }
 
 function netModeData(data) {
-  const weekly = data.analysis?.weeklyNet || {};
-  const monthly = data.analysis?.monthlyNet || {};
-  const weekRows = Array.isArray(weekly.weeks) ? weekly.weeks : [];
-  const monthRows = Array.isArray(monthly.months) ? monthly.months : [];
-  const yearly = yearlyNetFromMonthly(monthly);
-  const allTime = allTimeNetFromWeekly(weekly);
+  const rows = normalizedDailyNetRows(data);
   return {
-    week: {
-      title: "Weekly net",
-      axisTitle: "weekly points",
-      rows: weekRows.slice(-104),
-      current: weekly.current || weekRows[weekRows.length - 1] || null,
-      key: "week",
-      pointLabel: (item) => weekLabel(item.week),
-      currentLabel: (item) => `${weekLabel(item.week)} so far`,
-      rangeLabel: (rows) => `12-wk avg ${money.format(weekly.last12Average || 0)} / ${rows.length} ${rows.length === 1 ? "week" : "weeks"}`
-    },
-    month: {
-      title: "Monthly net",
-      axisTitle: "monthly points",
-      rows: monthRows.slice(-36),
-      current: monthly.current || monthRows[monthRows.length - 1] || null,
-      key: "month",
-      pointLabel: (item) => monthLabel(item.month),
-      currentLabel: (item) => `${monthLabel(item.month)} so far`,
-      rangeLabel: (rows) => `6-mo avg ${money.format(monthly.last6Average || 0)} / ${rows.length} ${rows.length === 1 ? "month" : "months"}`
-    },
-    year: {
-      title: "Yearly net",
-      axisTitle: "yearly totals",
-      rows: yearly.rows,
-      current: yearly.current,
-      key: "period",
-      pointLabel: (item) => String(item.year || item.period || ""),
-      currentLabel: (item) => `${item.year || item.period} so far`,
-      rangeLabel: (rows) => `3-yr avg ${money.format(yearly.last3Average || 0)} / ${rows.length} ${rows.length === 1 ? "year" : "years"}`
-    },
-    all: {
-      title: "All-time net",
-      axisTitle: "cumulative weekly net",
-      rows: allTime.rows,
-      current: allTime.current,
-      key: "week",
-      pointLabel: (item) => weekLabel(item.week),
-      currentLabel: () => allTime.start ? `Since ${dateLabel(allTime.start)}` : "All connected history",
-      rangeLabel: (rows) => `${rows.length} ${rows.length === 1 ? "week" : "weeks"} / cumulative`
-    }
+    week: dailyRangeMode(rows, 7, "Last 7 days"),
+    month: dailyRangeMode(rows, 30, "Last 30 days"),
+    quarter: dailyRangeMode(rows, 90, "Last 90 days"),
+    year: dailyRangeMode(rows, 365, "Last 1 year"),
+    all: dailyRangeMode(rows, Infinity, rows[0] ? `Since ${dateLabelWithYear(rows[0].date)}` : "All connected history")
   };
-}
-
-function itemYear(item) {
-  const direct = Number(item.year);
-  if (Number.isFinite(direct)) return direct;
-  const source = item.week || item.month || item.period || "";
-  const year = Number(String(source).slice(0, 4));
-  return Number.isFinite(year) ? year : null;
 }
 
 function axisTicks(modeKey, rows) {
@@ -1019,26 +985,33 @@ function axisTicks(modeKey, rows) {
     ticks.push({ index, label });
   };
 
+  if (modeKey === "week") {
+    rows.forEach((item, index) => add(index, dateLabel(item.date)));
+    return ticks;
+  }
+
   if (modeKey === "month") {
-    add(0, monthLabel(rows[0].month));
+    [0, 6, 13, 20, 27, rows.length - 1].forEach((index) => add(index, dateLabel(rows[index]?.date)));
+    return ticks;
+  }
+
+  if (modeKey === "quarter") {
+    add(0, dateLabel(rows[0].date));
     rows.forEach((item, index) => {
-      if (String(item.month || "").endsWith("-01")) add(index, monthLabel(item.month));
+      if (String(item.date || "").endsWith("-01")) add(index, dateLabel(item.date));
     });
-    add(rows.length - 1, monthLabel(rows[rows.length - 1].month));
+    add(rows.length - 1, dateLabel(rows[rows.length - 1].date));
     return ticks;
   }
 
-  if (modeKey === "year") {
-    rows.forEach((item, index) => add(index, String(item.year || item.period || "")));
-    return ticks;
-  }
-
+  add(0, modeKey === "all" ? String(rows[0].year || String(rows[0].date).slice(0, 4)) : monthLabel(String(rows[0].date).slice(0, 7)));
   rows.forEach((item, index) => {
-    const year = itemYear(item);
-    if (Number.isFinite(year) && !ticks.some((tick) => tick.label === String(year))) {
-      add(index, String(year));
+    const date = String(item.date || "");
+    if (date.slice(5) === "01-01") {
+      add(index, String(date.slice(0, 4)));
     }
   });
+  add(rows.length - 1, modeKey === "all" ? String(rows[rows.length - 1].year || String(rows[rows.length - 1].date).slice(0, 4)) : monthLabel(String(rows[rows.length - 1].date).slice(0, 7)));
   return ticks;
 }
 
@@ -1068,9 +1041,10 @@ function renderMonthlyNet(data) {
   const mode = modes[activeNetMode] || modes.week;
   const visible = Array.isArray(mode.rows) ? mode.rows : [];
   const current = mode.current || visible[visible.length - 1] || null;
+  const highlight = mode.highlight || visible[visible.length - 1] || current;
   renderNetModeButtons(modes);
 
-  if (!visible.length || !current) {
+  if (!visible.length || !current || !highlight) {
     els.netWindow.textContent = "Waiting for transactions";
     els.netCurrent.textContent = "--";
     els.netChart.innerHTML = "";
@@ -1109,7 +1083,7 @@ function renderMonthlyNet(data) {
 
   const points = visible.map((item, index) => {
     const value = Number(item.net || 0);
-    const currentClass = mode.key && item[mode.key] === current[mode.key] ? " is-current" : "";
+    const currentClass = mode.key && item[mode.key] === highlight[mode.key] ? " is-current" : "";
     const signClass = value >= 0 ? "positive" : "negative";
     return `<circle class="net-point ${signClass}${currentClass}" cx="${xFor(index).toFixed(2)}" cy="${yFor(value).toFixed(2)}" r="${currentClass ? 4.5 : 2.15}">
       <title>${escapeHtml(mode.pointLabel(item))}: ${escapeHtml(money.format(value))} net</title>
@@ -1127,18 +1101,18 @@ function renderMonthlyNet(data) {
   }).join(" ");
 
   const ticks = axisTicks(activeNetMode, visible);
-  const labelEvery = activeNetMode === "year" || activeNetMode === "month" ? Math.max(1, Math.ceil(ticks.length / 6)) : 1;
+  const labelEvery = ticks.length > 8 ? Math.max(1, Math.ceil(ticks.length / 7)) : 1;
   const xLabels = ticks.map((item, labelIndex) => {
-    if ((activeNetMode === "year" || activeNetMode === "month") && labelIndex % labelEvery !== 0 && labelIndex !== ticks.length - 1) return "";
+    if (labelIndex % labelEvery !== 0 && labelIndex !== ticks.length - 1) return "";
     const anchor = item.index === visible.length - 1 ? " end" : "";
     const x = xFor(item.index);
     return `<text class="net-axis-label${anchor}" x="${x.toFixed(2)}" y="${height - 22}">${escapeHtml(String(item.label))}</text>`;
   }).join("");
 
-  const foundCurrent = mode.key ? visible.findIndex((item) => item[mode.key] === current[mode.key]) : -1;
+  const foundCurrent = mode.key ? visible.findIndex((item) => item[mode.key] === highlight[mode.key]) : -1;
   const currentIndex = foundCurrent >= 0 ? foundCurrent : visible.length - 1;
   const currentX = xFor(currentIndex);
-  const currentY = yFor(Number(current.net || 0));
+  const currentY = yFor(Number(highlight.net || 0));
   const currentLabelX = currentX > width - 120 ? currentX - 8 : currentX + 8;
   const currentAnchor = currentX > width - 120 ? " end" : "";
 
@@ -1148,7 +1122,7 @@ function renderMonthlyNet(data) {
     ${points}
     <line class="net-current-rule" x1="${currentX.toFixed(2)}" x2="${currentX.toFixed(2)}" y1="${plotTop}" y2="${plotBottom}"></line>
     <circle class="net-current-dot" cx="${currentX.toFixed(2)}" cy="${currentY.toFixed(2)}" r="5"></circle>
-    <text class="net-current-label${currentAnchor}" x="${currentLabelX.toFixed(2)}" y="${Math.max(plotTop + 14, currentY - 10).toFixed(2)}">${escapeHtml(moneyShort(current.net))}</text>
+    <text class="net-current-label${currentAnchor}" x="${currentLabelX.toFixed(2)}" y="${Math.max(plotTop + 14, currentY - 10).toFixed(2)}">${escapeHtml(moneyShort(highlight.net))}</text>
     ${xLabels}
     <text class="net-axis-title" x="${plotRight}" y="${height - 8}">${escapeHtml(mode.axisTitle || "")}</text>
   `;

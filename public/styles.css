@@ -1665,7 +1665,7 @@ body.locked-view .lock-panel {
 
 .net-mode-row {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0;
   border-top: 1px solid rgba(246, 239, 230, .1);
   border-bottom: 1px solid rgba(246, 239, 230, .1);
@@ -2498,6 +2498,10 @@ details.panel {
 
   .net-mode-button:nth-child(n + 3) {
     border-top: 1px solid rgba(246, 239, 230, .08);
+  }
+
+  .net-mode-button:last-child {
+    grid-column: span 2;
   }
 
   .net-chart-frame {
