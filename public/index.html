@@ -13,7 +13,7 @@
     <link rel="icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons" type="image/svg+xml">
     <link rel="apple-touch-icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons">
     <link rel="manifest" href="/site.webmanifest?v=20260516-a3-three-rings">
-    <link rel="stylesheet" href="/styles.css?v=20260525-daily-net-ranges">
+    <link rel="stylesheet" href="/styles.css?v=20260526-running-net-windows">
   </head>
   <body class="locked-view">
     <header class="suite-topbar" aria-label="a3 navigation">
@@ -257,21 +257,21 @@
         </section>
       </section>
 
-      <section class="net-panel" aria-label="Daily net chart">
+      <section class="net-panel" aria-label="Net chart">
         <div class="net-head">
           <div>
-            <h2>Daily net</h2>
+            <h2>Week net</h2>
             <span id="netWindow">Waiting for transactions</span>
           </div>
           <strong id="netCurrent">--</strong>
         </div>
         <div class="net-mode-row" id="netModeRow" role="group" aria-label="Net period">
           <button type="button" class="net-mode-button is-active" data-net-mode="week" aria-pressed="true">
-            <span>7 days</span>
+            <span>Week</span>
             <strong>--</strong>
           </button>
           <button type="button" class="net-mode-button" data-net-mode="month" aria-pressed="false">
-            <span>30 days</span>
+            <span>Month</span>
             <strong>--</strong>
           </button>
           <button type="button" class="net-mode-button" data-net-mode="quarter" aria-pressed="false">
@@ -279,7 +279,7 @@
             <strong>--</strong>
           </button>
           <button type="button" class="net-mode-button" data-net-mode="year" aria-pressed="false">
-            <span>1 year</span>
+            <span>Year</span>
             <strong>--</strong>
           </button>
           <button type="button" class="net-mode-button" data-net-mode="all" aria-pressed="false">
@@ -288,7 +288,7 @@
           </button>
         </div>
         <div class="net-chart-frame">
-          <svg id="netChart" class="net-chart" viewBox="0 0 720 260" role="img" aria-label="Daily net history"></svg>
+          <svg id="netChart" class="net-chart" viewBox="0 0 720 260" role="img" aria-label="Net history"></svg>
         </div>
         <div class="net-foot">
           <span id="netAverage">No history yet.</span>
@@ -370,6 +370,6 @@
     </main>
 
     <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
-    <script src="/app.js?v=20260525-daily-net-ranges" defer></script>
+    <script src="/app.js?v=20260526-running-net-windows" defer></script>
   </body>
 </html>

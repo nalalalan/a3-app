@@ -920,27 +920,6 @@ function normalizedDailyNetRows(data) {
     }));
 }
 
-function dailyNetTotal(rows) {
-  const total = rows.reduce((acc, item) => {
-    acc.inflow += Number(item.inflow || 0);
-    acc.spend += Number(item.spend || 0);
-    acc.net += Number(item.net || 0);
-    acc.count += Number(item.count || 0);
-    return acc;
-  }, { inflow: 0, spend: 0, net: 0, count: 0 });
-  const first = rows[0] || {};
-  const last = rows[rows.length - 1] || {};
-  return {
-    date: last.date || "",
-    startDate: first.date || "",
-    endDate: last.date || "",
-    inflow: Number(total.inflow.toFixed(2)),
-    spend: Number(total.spend.toFixed(2)),
-    net: Number(total.net.toFixed(2)),
-    count: total.count
-  };
-}
-
 function dailyRangeText(rows) {
   if (!rows.length) return "No daily points";
   const first = rows[0];
@@ -950,13 +929,75 @@ function dailyRangeText(rows) {
   return `${rows.length} daily ${rows.length === 1 ? "point" : "points"} / ${label(first.date)} to ${label(last.date)}`;
 }
 
-function dailyRangeMode(allRows, rangeDays, label) {
+function rollingNetRows(allRows, rangeDays) {
   const rows = Number.isFinite(rangeDays) ? allRows.slice(-rangeDays) : allRows;
+  if (!Number.isFinite(rangeDays)) {
+    let inflow = 0;
+    let spend = 0;
+    let net = 0;
+    let count = 0;
+    return rows.map((item) => {
+      inflow += Number(item.inflow || 0);
+      spend += Number(item.spend || 0);
+      net += Number(item.net || 0);
+      count += Number(item.count || 0);
+      return {
+        ...item,
+        inflow: Number(inflow.toFixed(2)),
+        spend: Number(spend.toFixed(2)),
+        net: Number(net.toFixed(2)),
+        count
+      };
+    });
+  }
+
+  return rows.map((item) => {
+    const endIndex = allRows.findIndex((candidate) => candidate.date === item.date);
+    const windowRows = allRows.slice(Math.max(0, endIndex - rangeDays + 1), endIndex + 1);
+    const totals = windowRows.reduce((acc, row) => {
+      acc.inflow += Number(row.inflow || 0);
+      acc.spend += Number(row.spend || 0);
+      acc.net += Number(row.net || 0);
+      acc.count += Number(row.count || 0);
+      return acc;
+    }, { inflow: 0, spend: 0, net: 0, count: 0 });
+    return {
+      ...item,
+      inflow: Number(totals.inflow.toFixed(2)),
+      spend: Number(totals.spend.toFixed(2)),
+      net: Number(totals.net.toFixed(2)),
+      count: totals.count
+    };
+  });
+}
+
+function cumulativeNetRows(rows) {
+  let inflow = 0;
+  let spend = 0;
+  let net = 0;
+  let count = 0;
+  return rows.map((item) => {
+    inflow += Number(item.inflow || 0);
+    spend += Number(item.spend || 0);
+    net += Number(item.net || 0);
+    count += Number(item.count || 0);
+    return {
+      ...item,
+      inflow: Number(inflow.toFixed(2)),
+      spend: Number(spend.toFixed(2)),
+      net: Number(net.toFixed(2)),
+      count
+    };
+  });
+}
+
+function netWindowMode(allRows, rangeDays, title, label, axisTitle) {
+  const rows = Number.isFinite(rangeDays) ? rollingNetRows(allRows, rangeDays) : cumulativeNetRows(allRows);
   return {
-    title: "Daily net",
-    axisTitle: "daily net points",
+    title,
+    axisTitle,
     rows,
-    current: rows.length ? dailyNetTotal(rows) : null,
+    current: rows[rows.length - 1] || null,
     highlight: rows[rows.length - 1] || null,
     key: "date",
     pointLabel: (item) => dateLabel(item.date),
@@ -968,11 +1009,11 @@ function dailyRangeMode(allRows, rangeDays, label) {
 function netModeData(data) {
   const rows = normalizedDailyNetRows(data);
   return {
-    week: dailyRangeMode(rows, 7, "Last 7 days"),
-    month: dailyRangeMode(rows, 30, "Last 30 days"),
-    quarter: dailyRangeMode(rows, 90, "Last 90 days"),
-    year: dailyRangeMode(rows, 365, "Last 1 year"),
-    all: dailyRangeMode(rows, Infinity, rows[0] ? `Since ${dateLabelWithYear(rows[0].date)}` : "All connected history")
+    week: netWindowMode(rows, 7, "Week net", "Last 7 days", "$/week"),
+    month: netWindowMode(rows, 30, "Month net", "Last 30 days", "$/month"),
+    quarter: netWindowMode(rows, 90, "90-day net", "Last 90 days", "$/90 days"),
+    year: netWindowMode(rows, 365, "Year net", "Last 1 year", "$/year"),
+    all: netWindowMode(rows, Infinity, "All-time net", rows[0] ? `Since ${dateLabelWithYear(rows[0].date)}` : "All connected history", "cumulative net")
   };
 }
 
@@ -1086,7 +1127,7 @@ function renderMonthlyNet(data) {
     const currentClass = mode.key && item[mode.key] === highlight[mode.key] ? " is-current" : "";
     const signClass = value >= 0 ? "positive" : "negative";
     return `<circle class="net-point ${signClass}${currentClass}" cx="${xFor(index).toFixed(2)}" cy="${yFor(value).toFixed(2)}" r="${currentClass ? 4.5 : 2.15}">
-      <title>${escapeHtml(mode.pointLabel(item))}: ${escapeHtml(money.format(value))} net</title>
+      <title>${escapeHtml(mode.pointLabel(item))}: ${escapeHtml(money.format(value))} ${escapeHtml(mode.axisTitle || "net")}</title>
     </circle>`;
   }).join("");
 
