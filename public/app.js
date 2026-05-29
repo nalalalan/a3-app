@@ -223,6 +223,20 @@ function displayMerchantLabel(label) {
     .replace(/\bAtm\b/g, "ATM");
 }
 
+function spendCompareKey(value) {
+  const text = String(value || "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9&' ]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (/CHIPOTLE/.test(text)) return "CHIPOTLE";
+  if (/\bLYFT\b/.test(text)) return "LYFT";
+  if (/SLEEPLAY/.test(text)) return "SLEEPLAY";
+  if (/LULULEMON/.test(text)) return "LULULEMON";
+  if (/GOLDENPIZ|GOLDEN PIZ/.test(text)) return "GOLDENPIZ";
+  return text;
+}
+
 function displaySafeText(value) {
   return String(value ?? "")
     .replace(/Connect Chase/gi, "Live bank data")
@@ -810,9 +824,11 @@ function renderDailyScan(improvements, accounts) {
 function renderSpendLeaks(improvements, accounts, locks = []) {
   const spending = Array.isArray(improvements.spending) ? improvements.spending : [];
   const progress = improvements?.progress || {};
-  const progressRows = (Array.isArray(progress.rows) ? progress.rows : []).slice(0, 2);
-  const visibleSpending = spending.slice(0, 6);
-  const hiddenSpending = spending.slice(6);
+  const progressRows = (Array.isArray(progress.rows) ? progress.rows : []).slice(0, 5);
+  const heldKeys = new Set(progressRows.map((item) => spendCompareKey(item.label)).filter(Boolean));
+  const unresolvedSpending = spending.filter((item) => !heldKeys.has(spendCompareKey(item.label)));
+  const visibleSpending = unresolvedSpending.slice(0, 6);
+  const hiddenSpending = unresolvedSpending.slice(6);
   const heldMonthly = progressRows.reduce((total, item) => total + Math.max(0, Number(item.savedMonthly || 0)), 0);
   els.spendWindow.textContent = accounts.connected
     ? (visibleSpending.length
@@ -860,7 +876,7 @@ function renderSpendLeaks(improvements, accounts, locks = []) {
   }
 
   function renderSpendRow(item, options = {}) {
-    const rank = String(item.priorityRank || "").padStart(2, "0");
+    const rank = String(options.displayRank || item.priorityRank || "").padStart(2, "0");
     const pattern = item.pattern ? `${item.pattern} - ` : "";
     return `
       <div class="spend-leak-row${options.compact ? " is-compact" : ""}" data-severity="${escapeHtml(item.severity || "watch")}">
@@ -906,13 +922,13 @@ function renderSpendLeaks(improvements, accounts, locks = []) {
     ? `<details class="spend-more">
         <summary>${hiddenSpending.length} more lower-priority items</summary>
         <div class="spend-more-list">
-          ${hiddenSpending.map((item) => renderSpendRow(item, { compact: true })).join("")}
+          ${hiddenSpending.map((item, index) => renderSpendRow(item, { compact: true, displayRank: visibleSpending.length + index + 1 })).join("")}
         </div>
       </details>`
     : "";
   const heldBody = progressRows.map((item, index) => renderProgressRow(item, index)).join("");
   const currentBody = [
-    ...visibleSpending.map((item) => renderSpendRow(item)),
+    ...visibleSpending.map((item, index) => renderSpendRow(item, { displayRank: index + 1 })),
     hiddenBlock
   ].filter(Boolean).join("");
   const currentValue = `Top ${visibleSpending.length}${hiddenSpending.length ? ` / ${hiddenSpending.length} more` : ""}`;
