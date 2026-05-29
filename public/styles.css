@@ -1325,7 +1325,57 @@ body.locked-view .lock-panel {
 }
 
 .spend-leak-list {
+  display: grid;
+  gap: 0;
   border-top: 1px solid rgba(246, 239, 230, .1);
+}
+
+.spend-band {
+  display: grid;
+  grid-template-columns: 98px minmax(0, 1fr);
+  min-width: 0;
+}
+
+.spend-band + .spend-band {
+  border-top: 1px solid rgba(246, 239, 230, .1);
+}
+
+.spend-band-label {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  min-width: 0;
+  padding: 15px 14px 15px 0;
+  border-right: 1px solid rgba(246, 239, 230, .08);
+}
+
+.spend-band-label span {
+  color: rgba(246, 239, 230, .5);
+  font-size: .68rem;
+  font-weight: 800;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.spend-band-label strong {
+  color: rgba(246, 239, 230, .72);
+  font-size: .78rem;
+  font-weight: 780;
+  line-height: 1.16;
+}
+
+.spend-band-rows {
+  min-width: 0;
+}
+
+.spend-band.is-held {
+  background: linear-gradient(90deg, rgba(200, 179, 158, .075), rgba(200, 179, 158, 0) 56%);
+}
+
+.spend-band.is-held .spend-band-label strong,
+.spend-band.is-held .spend-rank,
+.spend-band.is-held .spend-leak-row em {
+  color: #c8b39e;
 }
 
 .spend-leak-row {
@@ -1341,7 +1391,7 @@ body.locked-view .lock-panel {
 .finance-grid .spend-leak-row {
   grid-template-columns: 34px minmax(0, 1fr);
   column-gap: 14px;
-  padding: 13px 0;
+  padding: 13px 0 13px 16px;
 }
 
 .spend-leak-row + .spend-leak-row {
@@ -1400,15 +1450,6 @@ body.locked-view .lock-panel {
 .spend-leak-row.is-compact {
   grid-template-columns: 40px minmax(0, 1fr);
   padding: 12px 0;
-}
-
-.spend-leak-row.is-progress strong {
-  color: var(--ink);
-}
-
-.spend-leak-row.is-progress .spend-rank,
-.spend-leak-row.is-progress em {
-  color: #c8b39e;
 }
 
 .spend-leak-row[data-severity="danger"] strong {
@@ -2405,6 +2446,17 @@ details.panel {
     gap: 8px;
   }
 
+  .spend-band {
+    grid-template-columns: 1fr;
+  }
+
+  .spend-band-label {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    padding: 14px 0 8px;
+    border-right: 0;
+  }
+
   .spend-panel-head h2,
   .spend-panel-head span {
     grid-column: auto;
@@ -2415,6 +2467,10 @@ details.panel {
   }
 
   .spend-leak-row {
+    padding: 15px 0;
+  }
+
+  .finance-grid .spend-leak-row {
     padding: 15px 0;
   }
 

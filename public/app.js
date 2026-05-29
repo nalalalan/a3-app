@@ -813,11 +813,12 @@ function renderSpendLeaks(improvements, accounts, locks = []) {
   const progressRows = (Array.isArray(progress.rows) ? progress.rows : []).slice(0, 2);
   const visibleSpending = spending.slice(0, 6);
   const hiddenSpending = spending.slice(6);
+  const heldMonthly = progressRows.reduce((total, item) => total + Math.max(0, Number(item.savedMonthly || 0)), 0);
   els.spendWindow.textContent = accounts.connected
     ? (visibleSpending.length
-      ? `${progressRows.length ? `${progressRows.length} quieter / ` : ""}Top ${visibleSpending.length}${hiddenSpending.length ? ` / ${hiddenSpending.length} more` : ""}`
+      ? `${progressRows.length ? `${progressRows.length} held / ` : ""}Top ${visibleSpending.length}${hiddenSpending.length ? ` / ${hiddenSpending.length} more` : ""}`
       : progressRows.length
-        ? `${progressRows.length} quieter`
+        ? `${progressRows.length} held`
         : "No repeat items")
     : "Waiting for bank data";
 
@@ -876,11 +877,26 @@ function renderSpendLeaks(improvements, accounts, locks = []) {
   function renderProgressRow(item, index) {
     return `
       <div class="spend-leak-row is-progress" data-severity="good">
-        <span class="spend-rank">hold</span>
+        <span class="spend-rank">quiet</span>
         <div>
           <strong>${escapeHtml(item.label || "Reduced")}</strong>
           <span>${escapeHtml(progressDetail(item))}</span>
           <em>${escapeHtml(item.impactLabel || "Held at current pace")}</em>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderBand(kind, label, value, body) {
+    if (!body) return "";
+    return `
+      <div class="spend-band is-${escapeHtml(kind)}">
+        <div class="spend-band-label">
+          <span>${escapeHtml(label)}</span>
+          <strong>${escapeHtml(value)}</strong>
+        </div>
+        <div class="spend-band-rows">
+          ${body}
         </div>
       </div>
     `;
@@ -894,11 +910,17 @@ function renderSpendLeaks(improvements, accounts, locks = []) {
         </div>
       </details>`
     : "";
-
-  els.spendLeakList.innerHTML = [
-    ...progressRows.map((item, index) => renderProgressRow(item, index)),
+  const heldBody = progressRows.map((item, index) => renderProgressRow(item, index)).join("");
+  const currentBody = [
     ...visibleSpending.map((item) => renderSpendRow(item)),
     hiddenBlock
+  ].filter(Boolean).join("");
+  const currentValue = `Top ${visibleSpending.length}${hiddenSpending.length ? ` / ${hiddenSpending.length} more` : ""}`;
+  const heldValue = heldMonthly > 0 ? `${money.format(heldMonthly)}/mo pace` : "latest quiet";
+
+  els.spendLeakList.innerHTML = [
+    renderBand("held", "Held down", heldValue, heldBody),
+    renderBand("current", "Still high", currentValue, currentBody)
   ].filter(Boolean).join("");
 }
 
