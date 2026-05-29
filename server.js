@@ -1251,6 +1251,7 @@ function progressRowForTarget(target, transactions, latestDate) {
     savedMonthly,
     impactLabel: savedMonthly > 0 ? `-${moneyText(savedMonthly)}/mo pace if held` : "Held at current pace",
     priorityScore: Number(target.priority || 0) + savedMonthly + (latest14Quiet ? 40 : latest7Quiet ? 20 : 0),
+    named: Boolean(target.named),
     severity: "good"
   };
 }
@@ -1285,11 +1286,14 @@ function reducedSpendingSignals(flexible90, latestDate) {
       priority: 20
     };
     const row = progressRowForTarget(dynamicTarget, flexible90, latestDate);
-    if (row && row.count90 >= 2 && row.savedMonthly >= 25) rows.push(row);
+    if (row && row.count90 >= 3 && row.savedMonthly >= 25) rows.push(row);
   }
 
   const sorted = rows
-    .sort((a, b) => Number(b.priorityScore || 0) - Number(a.priorityScore || 0))
+    .sort((a, b) => {
+      if (Boolean(a.named) !== Boolean(b.named)) return a.named ? -1 : 1;
+      return Number(b.priorityScore || 0) - Number(a.priorityScore || 0);
+    })
     .slice(0, 5)
     .map((row, index) => ({ ...row, priorityRank: index + 1 }));
   return {
