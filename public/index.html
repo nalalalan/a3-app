@@ -13,7 +13,7 @@
     <link rel="icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons" type="image/svg+xml">
     <link rel="apple-touch-icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons">
     <link rel="manifest" href="/site.webmanifest?v=20260516-a3-three-rings">
-    <link rel="stylesheet" href="/styles.css?v=20260529-daily-scan-neutral-low">
+    <link rel="stylesheet" href="/styles.css?v=20260529-reduced-spending-progress">
   </head>
   <body class="locked-view">
     <header class="suite-topbar" aria-label="a3 navigation">
@@ -225,6 +225,22 @@
       </section>
 
       <section class="finance-grid" aria-label="Daily scan and spending evidence">
+        <section class="progress-panel" aria-label="Reduced spending evidence">
+          <div class="progress-panel-head">
+            <h2>Stopped / reduced</h2>
+            <span id="progressWindow">Latest 7d + 90d record</span>
+          </div>
+          <div id="progressList" class="progress-list">
+            <div class="progress-row">
+              <span class="progress-rank">--</span>
+              <div>
+                <strong>Waiting</strong>
+                <span>Live bank data required.</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section class="daily-panel" aria-label="Daily purchase scan">
           <div class="daily-panel-head">
             <h2>Daily scan</h2>
@@ -370,6 +386,6 @@
     </main>
 
     <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
-    <script src="/app.js?v=20260526-running-net-windows" defer></script>
+    <script src="/app.js?v=20260529-reduced-spending-progress" defer></script>
   </body>
 </html>

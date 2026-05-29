@@ -58,6 +58,8 @@ const els = {
   cutTitle: document.getElementById("cutTitle"),
   cutReason: document.getElementById("cutReason"),
   cutSteps: document.getElementById("cutSteps"),
+  progressWindow: document.getElementById("progressWindow"),
+  progressList: document.getElementById("progressList"),
   dailyScanWindow: document.getElementById("dailyScanWindow"),
   dailyScanList: document.getElementById("dailyScanList"),
   spendWindow: document.getElementById("spendWindow"),
@@ -766,6 +768,46 @@ function renderCutAssist(improvements, accounts) {
   els.cutSteps.innerHTML = "";
 }
 
+function progressDetail(row) {
+  const detail = String(row.detail || "");
+  const withDate = row.latestDate && detail.includes(row.latestDate)
+    ? detail.replace(row.latestDate, dateLabel(row.latestDate))
+    : detail;
+  const evidence = row.evidence ? ` ${row.evidence}.` : "";
+  return `${withDate}.${evidence}`.replace(/\.\./g, ".");
+}
+
+function renderProgress(improvements, accounts) {
+  const progress = improvements?.progress || {};
+  const rows = Array.isArray(progress.rows) ? progress.rows : [];
+  if (!els.progressWindow || !els.progressList) return;
+  els.progressWindow.textContent = accounts.connected
+    ? `${progress.window || "latest 7d + 90d record"}${progress.totalMonthlyPace ? ` / ${money.format(progress.totalMonthlyPace)}/mo pace held` : ""}`
+    : "Waiting for bank data";
+
+  if (!rows.length) {
+    els.progressList.innerHTML = `<div class="progress-row">
+      <span class="progress-rank">--</span>
+      <div>
+        <strong>${accounts.connected ? "No reduction detected yet" : "No live data"}</strong>
+        <span>${accounts.connected ? "The comparison needs a quiet latest week or a lower 14-day pace." : "Connect bank data to compare current habits."}</span>
+      </div>
+    </div>`;
+    return;
+  }
+
+  els.progressList.innerHTML = rows.map((row) => `
+    <div class="progress-row" data-severity="${escapeHtml(row.severity || "good")}">
+      <span class="progress-rank">${escapeHtml(String(row.priorityRank || "").padStart(2, "0"))}</span>
+      <div>
+        <strong>${escapeHtml(row.label || "Reduced")}</strong>
+        <span>${escapeHtml(progressDetail(row))}</span>
+        <em>${escapeHtml(row.impactLabel || "Held at current pace")}</em>
+      </div>
+    </div>
+  `).join("");
+}
+
 function renderDailyScan(improvements, accounts) {
   const scan = improvements?.dailyScan || {};
   const rows = Array.isArray(scan.rows) ? scan.rows : [];
@@ -1206,6 +1248,7 @@ function renderImprovements(analysis, locks = []) {
     </div>
   `).join("");
   renderCutAssist(improvements, accounts, locks);
+  renderProgress(improvements, accounts);
   renderDailyScan(improvements, accounts);
   renderSpendLeaks(improvements, accounts, locks);
 }

@@ -935,18 +935,24 @@ function merchantSpendPicture(label, broadItems, recentItems, latestDate) {
   const sortedRecent = recentItems.sort((a, b) => dateMs(b.date) - dateMs(a.date));
   const broadTotal = sum(sortedBroad.map((item) => item.spend));
   const recentTotal = sum(sortedRecent.map((item) => item.spend));
+  const latest7Items = latestDate ? sortedBroad.filter((item) => withinDays(item, latestDate, 7)) : [];
+  const latest7Total = sum(latest7Items.map((item) => item.spend));
   const broadCount = sortedBroad.length;
   const recentCount = sortedRecent.length;
+  const latest7Count = latest7Items.length;
   const category = sortedBroad[0]?.category || sortedRecent[0]?.category || "";
+  const quietDays = latestDate && sortedBroad[0]?.date ? Math.max(0, daysBetween(latestDate, sortedBroad[0].date)) : 0;
   const cadence = cadenceDays(sortedBroad);
   const namedSubscription = isNamedSubscription(label, category) && broadCount >= 2;
   const cadenceRecurring = !namedSubscription && isRecurringCadence(broadCount, cadence);
   const repeat = broadCount >= 3 || recentCount >= 2;
   const oneOff = broadCount === 1;
   const purchaseCluster = broadCount >= 2 && !namedSubscription && !cadenceRecurring && !repeat;
-  const activeMonthly = oneOff || purchaseCluster ? 0 : (recentCount > 0 ? recentTotal * (30 / 14) : 0);
+  const activeMonthly = oneOff || purchaseCluster ? 0 : (latest7Count > 0 ? latest7Total * (30 / 7) : recentCount > 0 ? recentTotal * (30 / 14) : 0);
   const broadMonthly = oneOff || purchaseCluster ? 0 : broadTotal * (30 / 90);
   const monthlyImpact = Math.max(activeMonthly, broadMonthly);
+  const quietLatest7 = latestDate && latest7Count === 0 && recentCount > 0;
+  const quietStreak = latestDate && quietDays >= 3 && recentCount > 0;
   const pastSpendScore = oneOff || purchaseCluster ? Math.min(broadTotal * 0.08, 450) : 0;
   const priorityScore = monthlyImpact
     + (namedSubscription ? 180 : 0)
@@ -968,11 +974,16 @@ function merchantSpendPicture(label, broadItems, recentItems, latestDate) {
           : "Purchase";
   const impactLabel = namedSubscription
     ? `+$${Math.round(monthlyImpact).toLocaleString("en-US")}/mo if canceled`
+    : (quietLatest7 || quietStreak) && monthlyImpact > 0
+      ? `+$${Math.round(monthlyImpact).toLocaleString("en-US")}/mo if held down`
     : repeat || cadenceRecurring
       ? `+$${Math.round(monthlyImpact).toLocaleString("en-US")}/mo if reduced`
       : `Past spend: $${Math.round(broadTotal).toLocaleString("en-US")}`;
   const issueParts = [];
-  if (recentCount > 0) issueParts.push(`$${Math.round(recentTotal).toLocaleString("en-US")} / 14d`);
+  if (quietStreak) issueParts.push(`$0 / ${quietDays}d`);
+  else if (quietLatest7) issueParts.push("$0 / 7d");
+  else if (latest7Count > 0) issueParts.push(`$${Math.round(latest7Total).toLocaleString("en-US")} / 7d`);
+  else if (recentCount > 0) issueParts.push(`$${Math.round(recentTotal).toLocaleString("en-US")} / 14d`);
   issueParts.push(`$${Math.round(broadTotal).toLocaleString("en-US")} / 90d`);
   issueParts.push(`${broadCount} charge${broadCount === 1 ? "" : "s"}`);
   return {
@@ -980,10 +991,15 @@ function merchantSpendPicture(label, broadItems, recentItems, latestDate) {
     amount: recentCount > 0 ? recentTotal : broadTotal,
     amount90: broadTotal,
     amount14: recentTotal,
+    amount7: latest7Total,
     monthlyImpact,
     impactLabel,
     count: broadCount,
     recentCount,
+    latest7Count,
+    quietLatest7,
+    quietStreak,
+    quietDays,
     category,
     cadence,
     pattern,
@@ -998,13 +1014,13 @@ function merchantSpendPicture(label, broadItems, recentItems, latestDate) {
       monthlyImpact
     }),
     receiptBreakdown: merchantReceiptBreakdown(label),
-    severity: monthlyImpact >= 150 || namedSubscription || cadenceRecurring ? "danger" : "watch",
+    severity: quietLatest7 || quietStreak ? "watch" : monthlyImpact >= 150 || namedSubscription || cadenceRecurring ? "danger" : "watch",
     priorityScore,
     latestDate: sortedBroad[0]?.date || latestDate || ""
   };
 }
 
-function spendingTriage(flexible14, flexible90, byCategory) {
+function spendingTriage(flexible14, flexible90, byCategory, latestDate = "") {
   const recentByMerchant = new Map();
   for (const transaction of flexible14) {
     if (!recentByMerchant.has(transaction.merchant)) recentByMerchant.set(transaction.merchant, []);
@@ -1024,7 +1040,7 @@ function spendingTriage(flexible14, flexible90, byCategory) {
     const key = label.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    rows.push(merchantSpendPicture(label, items, recentByMerchant.get(label) || [], items[0]?.date || ""));
+    rows.push(merchantSpendPicture(label, items, recentByMerchant.get(label) || [], latestDate || items[0]?.date || ""));
   }
 
   const food = byCategory.find((item) => /food/i.test(item.label));
@@ -1134,9 +1150,163 @@ function firstSpendMatch(spending, pattern) {
   return (spending || []).find((item) => pattern.test(`${item.label || ""} ${item.category || ""} ${item.pattern || ""}`));
 }
 
+function progressTargets() {
+  return [
+    {
+      label: "Chipotle",
+      key: "chipotle",
+      pattern: /chipotle/i,
+      priority: 220,
+      named: true
+    },
+    {
+      label: "Lyft",
+      key: "lyft",
+      pattern: /\blyft\b|uber|taxi|rideshare/i,
+      priority: 210,
+      named: true
+    },
+    {
+      label: "Food away",
+      key: "food",
+      pattern: /restaurant|dining|takeout|delivery|doordash|thai|pho|pizza|coffee|cafe/i,
+      priority: 120
+    },
+    {
+      label: "Ride spend",
+      key: "rides",
+      pattern: /transport|transit|ride/i,
+      priority: 100
+    }
+  ];
+}
+
+function progressMatchText(transaction) {
+  return `${transaction.merchant || ""} ${transaction.category || ""} ${transaction.description || ""}`.toLowerCase();
+}
+
+function progressRowForTarget(target, transactions, latestDate) {
+  const matched = (transactions || [])
+    .filter((transaction) => transaction.spend > 0 && target.pattern.test(progressMatchText(transaction)))
+    .sort((a, b) => dateMs(b.date) - dateMs(a.date));
+  if (!matched.length) return null;
+
+  const latest7 = matched.filter((transaction) => withinDays(transaction, latestDate, 7));
+  const previous21 = matched.filter((transaction) => withinDays(transaction, latestDate, 21, 7));
+  const latest14 = matched.filter((transaction) => withinDays(transaction, latestDate, 14));
+  const previous14 = matched.filter((transaction) => withinDays(transaction, latestDate, 14, 14));
+  const total90 = sum(matched.map((transaction) => transaction.spend));
+  const total7 = sum(latest7.map((transaction) => transaction.spend));
+  const prior21Total = sum(previous21.map((transaction) => transaction.spend));
+  const total14 = sum(latest14.map((transaction) => transaction.spend));
+  const prior14Total = sum(previous14.map((transaction) => transaction.spend));
+  const latest = matched[0];
+  const quietDays = latest?.date ? Math.max(0, daysBetween(latestDate, latest.date)) : 0;
+  const broadMonthly = total90 * (30 / 90);
+  const prior21Monthly = prior21Total * (30 / 21);
+  const prior14Monthly = prior14Total * (30 / 14);
+  const latest14Monthly = total14 * (30 / 14);
+  const latest7Quiet = total7 === 0 && (target.named || prior21Total >= 15 || total90 >= 60);
+  const latest14Quiet = total14 === 0 && (target.named || total90 >= 60);
+  const reduced14 = prior14Total >= 20 && total14 <= prior14Total * 0.6;
+  const namedQuietStreak = Boolean(target.named && quietDays >= 3);
+  const savedMonthly = latest14Quiet
+    ? Math.max(broadMonthly, prior14Monthly)
+    : latest7Quiet
+      ? Math.max(broadMonthly, prior21Monthly)
+      : namedQuietStreak
+        ? broadMonthly
+        : Math.max(0, prior14Monthly - latest14Monthly);
+
+  if (!latest7Quiet && !latest14Quiet && !reduced14 && !namedQuietStreak) return null;
+  if (!target.named && matched.length < 2 && total90 < 60) return null;
+
+  const status = latest14Quiet
+    ? "Quiet 14d"
+    : latest7Quiet
+      ? "Quiet 7d"
+      : namedQuietStreak
+        ? `Quiet ${quietDays}d`
+        : "Reduced";
+  const detail = namedQuietStreak && !latest7Quiet
+    ? `No charge since ${latest?.date || "unknown"}; ${moneyText(total7)} still in latest 7d`
+    : latest7Quiet
+    ? `${moneyText(total7)} latest 7d; last ${latest?.date || "unknown"}`
+    : `${moneyText(total14)} latest 14d; was ${moneyText(prior14Total)} prior 14d`;
+  const evidence = `${moneyText(total90)} / 90d; ${matched.length} charge${matched.length === 1 ? "" : "s"}`;
+  return {
+    label: target.label,
+    key: target.key,
+    status,
+    detail,
+    evidence,
+    latestDate: latest?.date || "",
+    quietDays,
+    latest7: total7,
+    prior21: prior21Total,
+    latest14: total14,
+    prior14: prior14Total,
+    amount90: total90,
+    count90: matched.length,
+    savedMonthly,
+    impactLabel: savedMonthly > 0 ? `-${moneyText(savedMonthly)}/mo pace if held` : "Held at current pace",
+    priorityScore: Number(target.priority || 0) + savedMonthly + (latest14Quiet ? 40 : latest7Quiet ? 20 : 0),
+    severity: "good"
+  };
+}
+
+function reducedSpendingSignals(flexible90, latestDate) {
+  if (!latestDate) {
+    return { window: "latest 7d + 90d record", totalMonthlyPace: 0, rows: [] };
+  }
+
+  const rows = [];
+  const usedKeys = new Set();
+  for (const target of progressTargets()) {
+    const row = progressRowForTarget(target, flexible90, latestDate);
+    if (!row) continue;
+    if (row.key === "food" && rows.some((candidate) => candidate.key === "chipotle")) continue;
+    if (row.key === "rides" && rows.some((candidate) => candidate.key === "lyft")) continue;
+    rows.push(row);
+    usedKeys.add(row.key);
+  }
+
+  const grouped = groupedSpend(flexible90 || [], (transaction) => transaction.merchant);
+  for (const merchant of grouped) {
+    const key = normalizeSpendLockLabel(merchant.label);
+    if (!key || usedKeys.has(key.toLowerCase())) continue;
+    if (rows.some((row) => row.label.toLowerCase() === merchant.label.toLowerCase())) continue;
+    if (rows.some((row) => row.key === "chipotle") && /chipotle/i.test(merchant.label)) continue;
+    if (rows.some((row) => row.key === "lyft") && /lyft/i.test(merchant.label)) continue;
+    const dynamicTarget = {
+      label: merchant.label,
+      key: key.toLowerCase(),
+      pattern: new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"), "i"),
+      priority: 20
+    };
+    const row = progressRowForTarget(dynamicTarget, flexible90, latestDate);
+    if (row && row.count90 >= 2 && row.savedMonthly >= 25) rows.push(row);
+  }
+
+  const sorted = rows
+    .sort((a, b) => Number(b.priorityScore || 0) - Number(a.priorityScore || 0))
+    .slice(0, 5)
+    .map((row, index) => ({ ...row, priorityRank: index + 1 }));
+  return {
+    window: "latest 7d + 90d record",
+    totalMonthlyPace: sum(sorted.map((row) => Math.max(0, Number(row.savedMonthly || 0)))),
+    rows: sorted
+  };
+}
+
+function hasProgressMatch(progressRows, pattern) {
+  return (progressRows || []).some((row) => pattern.test(`${row.label || ""} ${row.key || ""} ${row.status || ""}`));
+}
+
 function overallReview(input) {
   const { accounts, goal, settings, improvements, paymentStatus } = input;
   const spending = improvements?.spending || [];
+  const progressRows = improvements?.progress?.rows || [];
   const cash = Number(accounts.cash || 0);
   const floor = Number(settings.cashFloor || 0);
   const cushion = Math.max(0, cash - floor);
@@ -1148,6 +1318,8 @@ function overallReview(input) {
   const food = firstSpendMatch(spending, /chipotle|food|restaurant|dining|takeout|coffee|cafe/i);
   const foodCategory = (improvements?.topCategories || []).find((item) => /food/i.test(item.label || ""));
   const lyft = firstSpendMatch(spending, /lyft|uber|rideshare|transport/i);
+  const foodImproving = hasProgressMatch(progressRows, /chipotle|food/i);
+  const rideImproving = hasProgressMatch(progressRows, /lyft|rides/i);
   const subscriptions = spending
     .filter((item) => isNamedSubscription(item.label, item.category || item.pattern))
     .map((item) => item.label)
@@ -1171,6 +1343,9 @@ function overallReview(input) {
   if (paymentStatus?.amount > 0 && paymentStatus.status !== "pending") {
     good.push(`${moneyText(paymentStatus.amount)} payment is already visible.`);
   }
+  for (const row of progressRows.slice(0, 3)) {
+    good.push(`${row.label}: ${row.detail}. ${row.impactLabel}.`);
+  }
   if (goal.monthlyRoom > 0) {
     good.push(`${moneyText(goal.monthlyRoom)} monthly room exists if repeat spending is controlled.`);
   }
@@ -1180,14 +1355,14 @@ function overallReview(input) {
   if (fullPurchaseGap > 0) bad.push(`${moneyText(fullPurchaseGap)} below the car price before tax, fees, insurance, and interest.`);
   if (flexible14 > 0) bad.push(`${moneyText(flexible14)} flexible spend in the latest 14 days is too high for an A3 push.`);
   if (amazon) bad.push(`Amazon is the largest repeatable leak: ${moneyText(amazon.amount90)} in 90 days across ${amazon.count} charges.`);
-  if (foodCategory || food) bad.push(`Food and drink is still leaking: ${moneyText(foodCategory?.total || food.amount90 || food.amount)} in 90 days.`);
+  if ((foodCategory || food) && !foodImproving) bad.push(`Food and drink is still leaking: ${moneyText(foodCategory?.total || food.amount90 || food.amount)} in 90 days.`);
 
   const must = [];
   if (cardBalance > 0) must.push(`Do not treat cash as car money until the ${moneyText(cardBalance)} card/loan balance is lower.`);
   if (amazon) must.push("Amazon repeat item.");
   if (openai) must.push("OpenAI: remove duplicate plans or API auto-funding that is not doing current work.");
-  if (food) must.push("Food: use food already paid for before another order.");
-  if (lyft) must.push("Rides: batch trips; walk or transit when the schedule allows.");
+  if (food && !foodImproving) must.push("Food: use food already paid for before another order.");
+  if (lyft && !rideImproving) must.push("Rides: batch trips; walk or transit when the schedule allows.");
   if (subscriptions.length) must.push(`Subscription audit: ${subscriptions.join(", ")}.`);
   if (!must.length) must.push("Keep cash steady and review the full A3 purchase before committing.");
 
@@ -1287,6 +1462,8 @@ function immediateImprovements(input) {
       debtPayment14: 0,
       topMerchants: [],
       topCategories: [],
+      progress: { window: "latest 7d + 90d record", totalMonthlyPace: 0, rows: [] },
+      dailyScan: { window: "latest 7 days", days: 7, spendingDays: 0, total: 0, dailyAverage: 0, averageSpendingDay: 0, topMerchant: "", rows: [] },
       spending: [],
       items: [
         { label: "Live balances", detail: "The full A3 decision needs current balances and purchases.", severity: "watch" },
@@ -1324,8 +1501,10 @@ function immediateImprovements(input) {
     });
   }
 
+  const progress = reducedSpendingSignals(flexible90, latestDate);
   const food = byCategory.find((item) => /food/i.test(item.label));
-  if (food && !items.some((item) => item.detail.includes(food.label))) {
+  const foodImproving = hasProgressMatch(progress.rows, /chipotle|food/i);
+  if (food && !foodImproving && !items.some((item) => item.detail.includes(food.label))) {
     items.push({
       label: "Food leak",
       detail: `$${Math.round(food.total).toLocaleString("en-US")} in the latest 90d, ${food.count} charges. Use food already paid for before another order.`,
@@ -1357,8 +1536,9 @@ function immediateImprovements(input) {
     debtPayment14: debtPaymentTotal,
     topMerchants: byMerchant,
     topCategories: byCategory,
+    progress,
     dailyScan: dailyPurchaseScan(flexible, latestDate),
-    spending: spendingTriage(flexible, flexible90, byCategory),
+    spending: spendingTriage(flexible, flexible90, byCategory, latestDate),
     items: items.slice(0, 6)
   };
 }
