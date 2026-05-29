@@ -58,8 +58,6 @@ const els = {
   cutTitle: document.getElementById("cutTitle"),
   cutReason: document.getElementById("cutReason"),
   cutSteps: document.getElementById("cutSteps"),
-  progressWindow: document.getElementById("progressWindow"),
-  progressList: document.getElementById("progressList"),
   dailyScanWindow: document.getElementById("dailyScanWindow"),
   dailyScanList: document.getElementById("dailyScanList"),
   spendWindow: document.getElementById("spendWindow"),
@@ -777,37 +775,6 @@ function progressDetail(row) {
   return `${withDate}.${evidence}`.replace(/\.\./g, ".");
 }
 
-function renderProgress(improvements, accounts) {
-  const progress = improvements?.progress || {};
-  const rows = Array.isArray(progress.rows) ? progress.rows : [];
-  if (!els.progressWindow || !els.progressList) return;
-  els.progressWindow.textContent = accounts.connected
-    ? `${progress.window || "latest 7d + 90d record"}${progress.totalMonthlyPace ? ` / ${money.format(progress.totalMonthlyPace)}/mo pace held` : ""}`
-    : "Waiting for bank data";
-
-  if (!rows.length) {
-    els.progressList.innerHTML = `<div class="progress-row">
-      <span class="progress-rank">--</span>
-      <div>
-        <strong>${accounts.connected ? "No reduction detected yet" : "No live data"}</strong>
-        <span>${accounts.connected ? "The comparison needs a quiet latest week or a lower 14-day pace." : "Connect bank data to compare current habits."}</span>
-      </div>
-    </div>`;
-    return;
-  }
-
-  els.progressList.innerHTML = rows.map((row) => `
-    <div class="progress-row" data-severity="${escapeHtml(row.severity || "good")}">
-      <span class="progress-rank">${escapeHtml(String(row.priorityRank || "").padStart(2, "0"))}</span>
-      <div>
-        <strong>${escapeHtml(row.label || "Reduced")}</strong>
-        <span>${escapeHtml(progressDetail(row))}</span>
-        <em>${escapeHtml(row.impactLabel || "Held at current pace")}</em>
-      </div>
-    </div>
-  `).join("");
-}
-
 function renderDailyScan(improvements, accounts) {
   const scan = improvements?.dailyScan || {};
   const rows = Array.isArray(scan.rows) ? scan.rows : [];
@@ -842,13 +809,19 @@ function renderDailyScan(improvements, accounts) {
 
 function renderSpendLeaks(improvements, accounts, locks = []) {
   const spending = Array.isArray(improvements.spending) ? improvements.spending : [];
+  const progress = improvements?.progress || {};
+  const progressRows = (Array.isArray(progress.rows) ? progress.rows : []).slice(0, 2);
   const visibleSpending = spending.slice(0, 6);
   const hiddenSpending = spending.slice(6);
   els.spendWindow.textContent = accounts.connected
-    ? (visibleSpending.length ? `Top ${visibleSpending.length}${hiddenSpending.length ? ` / ${hiddenSpending.length} more` : ""}` : "No repeat items")
+    ? (visibleSpending.length
+      ? `${progressRows.length ? `${progressRows.length} quieter / ` : ""}Top ${visibleSpending.length}${hiddenSpending.length ? ` / ${hiddenSpending.length} more` : ""}`
+      : progressRows.length
+        ? `${progressRows.length} quieter`
+        : "No repeat items")
     : "Waiting for bank data";
 
-  if (!visibleSpending.length) {
+  if (!visibleSpending.length && !progressRows.length) {
     els.spendLeakList.innerHTML = `<div class="spend-leak-row">
       <span class="spend-rank">--</span>
       <div>
@@ -900,6 +873,19 @@ function renderSpendLeaks(improvements, accounts, locks = []) {
     `;
   }
 
+  function renderProgressRow(item, index) {
+    return `
+      <div class="spend-leak-row is-progress" data-severity="good">
+        <span class="spend-rank">hold</span>
+        <div>
+          <strong>${escapeHtml(item.label || "Reduced")}</strong>
+          <span>${escapeHtml(progressDetail(item))}</span>
+          <em>${escapeHtml(item.impactLabel || "Held at current pace")}</em>
+        </div>
+      </div>
+    `;
+  }
+
   const hiddenBlock = hiddenSpending.length
     ? `<details class="spend-more">
         <summary>${hiddenSpending.length} more lower-priority items</summary>
@@ -910,6 +896,7 @@ function renderSpendLeaks(improvements, accounts, locks = []) {
     : "";
 
   els.spendLeakList.innerHTML = [
+    ...progressRows.map((item, index) => renderProgressRow(item, index)),
     ...visibleSpending.map((item) => renderSpendRow(item)),
     hiddenBlock
   ].filter(Boolean).join("");
@@ -1248,7 +1235,6 @@ function renderImprovements(analysis, locks = []) {
     </div>
   `).join("");
   renderCutAssist(improvements, accounts, locks);
-  renderProgress(improvements, accounts);
   renderDailyScan(improvements, accounts);
   renderSpendLeaks(improvements, accounts, locks);
 }
