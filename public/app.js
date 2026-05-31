@@ -492,7 +492,7 @@ function renderGoalMeter(goal, sampleOnly, data) {
   els.goalSaved.textContent = sampleOnly ? "Bank link pending" : money.format(cash);
   els.heroCashMeta.textContent = sampleOnly ? "no live cash" : "current cash";
   els.heroA3Price.textContent = money.format(a3Price);
-  els.heroMiniPrice.textContent = "$39,875";
+  els.heroMiniPrice.textContent = "$39,825";
   els.goalTarget.textContent = `${money.format(a3Price)} whole purchase`;
 
   if (sampleOnly) {
