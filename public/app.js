@@ -523,7 +523,6 @@ function showLock(message = "PIN required") {
   els.csvButton.hidden = true;
   els.storageState.textContent = "Locked";
   els.accessMessage.textContent = message;
-  els.accessInput.focus();
 }
 
 function hideLock() {
