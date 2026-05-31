@@ -24,7 +24,7 @@ const els = {
   goalPace: document.getElementById("goalPace"),
   heroCashMeta: document.getElementById("heroCashMeta"),
   heroA3Price: document.getElementById("heroA3Price"),
-  heroA5Price: document.getElementById("heroA5Price"),
+  heroMiniPrice: document.getElementById("heroMiniPrice"),
   blockerTitle: document.getElementById("blockerTitle"),
   blockerSummary: document.getElementById("blockerSummary"),
   blockerList: document.getElementById("blockerList"),
@@ -492,7 +492,7 @@ function renderGoalMeter(goal, sampleOnly, data) {
   els.goalSaved.textContent = sampleOnly ? "Bank link pending" : money.format(cash);
   els.heroCashMeta.textContent = sampleOnly ? "no live cash" : "current cash";
   els.heroA3Price.textContent = money.format(a3Price);
-  els.heroA5Price.textContent = "$60,590";
+  els.heroMiniPrice.textContent = "$39,875";
   els.goalTarget.textContent = `${money.format(a3Price)} whole purchase`;
 
   if (sampleOnly) {

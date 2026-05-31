@@ -429,7 +429,7 @@ body.locked-view .lock-panel {
   background: #070707;
 }
 
-.dream-image-a5 {
+.dream-image-mini {
   left: auto;
   right: auto;
   width: 100%;
@@ -442,7 +442,7 @@ body.locked-view .lock-panel {
   filter: contrast(1.05) saturate(1.04) brightness(1.08);
 }
 
-.dream-image-a5 img {
+.dream-image-mini img {
   object-position: center center;
   filter: contrast(1.05) saturate(1.02) brightness(.92);
 }
@@ -518,7 +518,7 @@ body.locked-view .lock-panel {
   backdrop-filter: blur(9px) saturate(1.05);
 }
 
-.build-card-a5 {
+.build-card-mini {
   justify-self: end;
 }
 
@@ -2172,7 +2172,7 @@ details.panel {
     aspect-ratio: 16 / 9;
   }
 
-  .dream-image-a5 {
+  .dream-image-mini {
     inset: auto;
     width: 100%;
     height: auto;
@@ -2181,7 +2181,7 @@ details.panel {
     border-left: 0;
   }
 
-  .dream-image-a5 img {
+  .dream-image-mini img {
     object-position: center center;
     filter: contrast(1.05) saturate(1.02) brightness(.88);
   }
@@ -2208,7 +2208,7 @@ details.panel {
   }
 
   .build-card,
-  .build-card-a5 {
+  .build-card-mini {
     justify-self: stretch;
     min-height: 0;
     padding: 13px 14px;
@@ -2635,12 +2635,14 @@ details.panel {
   filter: contrast(1.05) saturate(1.03) brightness(1.04);
 }
 
-.car-profile-a5 .dream-image img {
+.car-profile-mini .dream-image img {
+  object-fit: cover;
+  object-position: center 72%;
   filter: contrast(1.05) saturate(1.02) brightness(.92);
 }
 
 .car-profile .build-card,
-.car-profile .build-card-a5 {
+.car-profile .build-card-mini {
   justify-self: stretch;
   align-content: start;
   min-height: 0;
@@ -2661,6 +2663,15 @@ details.panel {
   max-width: none;
   font-size: clamp(1.72rem, 3vw, 2.7rem);
   line-height: .98;
+}
+
+.car-profile-mini .build-card h1 {
+  font-size: clamp(1.52rem, 2.32vw, 2.24rem);
+  white-space: nowrap;
+}
+
+.car-profile-mini .build-card h1 span {
+  display: inline;
 }
 
 .car-profile .build-trim {
@@ -2696,6 +2707,10 @@ details.panel {
   padding: 1px;
   border-top: 1px solid rgba(255, 250, 241, .12);
   background: rgba(255, 250, 241, .1);
+}
+
+.car-gallery-mini {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .car-gallery a {
@@ -2803,8 +2818,17 @@ details.panel {
   }
 
   .car-profile .build-card,
-  .car-profile .build-card-a5 {
+  .car-profile .build-card-mini {
     padding: 18px;
+  }
+
+  .car-profile-mini .build-card h1 {
+    font-size: clamp(1.32rem, 6vw, 1.72rem);
+    white-space: normal;
+  }
+
+  .car-profile-mini .build-card h1 span {
+    display: block;
   }
 
   .car-profile .build-features {
