@@ -274,7 +274,7 @@ function defaultDownPaymentSimAmount(data) {
 }
 
 function wholePurchaseProgressText(goal, cash, a3Price) {
-  const price = Math.max(1, Number(a3Price || goal?.a3?.priceAsBuilt || 46690));
+  const price = Math.max(1, Number(a3Price || goal?.a3?.priceAsBuilt || 46095));
   const progress = clamp(Number(cash || 0) / price, 0, 1);
   return `${Math.round(progress * 100)}% of whole price in cash`;
 }
@@ -370,7 +370,7 @@ function renderPurchaseSimulation(data, sampleOnly) {
   const cash = Number(accounts.cash || 0);
   const balance = Number(accounts.debtTotal || 0);
   const cashFloor = Number(settings.cashFloor || 0);
-  const a3Price = Math.max(0, Number(data?.goal?.priceAsBuilt || goal.a3?.priceAsBuilt || 46690));
+  const a3Price = Math.max(0, Number(data?.goal?.priceAsBuilt || goal.a3?.priceAsBuilt || 46095));
 
   if (!els.simDownPaymentInput.value.trim()) {
     els.simDownPaymentInput.value = money.format(defaultDownPaymentSimAmount(data));
@@ -428,7 +428,7 @@ function renderBlockers(analysis, sampleOnly) {
   const settings = analysis?.settings || {};
   const goal = analysis?.goal || {};
   const cash = Number(accounts.cash || 0);
-  const a3Price = Math.max(0, Number(goal.a3?.priceAsBuilt || 46690));
+  const a3Price = Math.max(0, Number(goal.a3?.priceAsBuilt || 46095));
   const spending = Array.isArray(analysis?.improvements?.spending) ? analysis.improvements.spending : [];
   const biggestRepeat = spending.find((item) => item?.category !== "Past purchase") || spending[0];
 
@@ -486,7 +486,7 @@ function renderBlockers(analysis, sampleOnly) {
 
 function renderGoalMeter(goal, sampleOnly, data) {
   const cash = Math.max(0, Number(data?.analysis?.accounts?.cash ?? 0));
-  const a3Price = Math.max(0, Number(data?.goal?.priceAsBuilt || goal.a3?.priceAsBuilt || 46690));
+  const a3Price = Math.max(0, Number(data?.goal?.priceAsBuilt || goal.a3?.priceAsBuilt || 46095));
   const progress = !sampleOnly && a3Price > 0 ? clamp(cash / a3Price, 0, 1) : 0;
   els.goalMeterFill.style.width = `${Math.round(progress * 100)}%`;
   els.goalSaved.textContent = sampleOnly ? "Bank link pending" : money.format(cash);
