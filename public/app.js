@@ -793,13 +793,21 @@ function renderDailyScan(improvements, accounts) {
   const rows = Array.isArray(scan.rows) ? scan.rows : [];
   const purchaseTotal = Number(scan.total || 0);
   const creditsTotal = Number(scan.creditsTotal || 0);
+  const otherInflowTotal = Number(scan.otherInflowTotal || 0);
+  const inflowTotal = Number(scan.inflowTotal || (creditsTotal + otherInflowTotal));
   const netOut = Number.isFinite(Number(scan.netOut))
     ? Number(scan.netOut || 0)
-    : Math.max(0, purchaseTotal - creditsTotal);
+    : Math.max(0, purchaseTotal - inflowTotal);
+  let scanWindow = `${money.format(purchaseTotal)} purchases / ${scan.window || "latest 7 days"}`;
+  if (creditsTotal > 0 && otherInflowTotal > 0) {
+    scanWindow = `${money.format(netOut)} net out / ${money.format(creditsTotal)} credits/returns / ${money.format(otherInflowTotal)} in`;
+  } else if (creditsTotal > 0) {
+    scanWindow = `${money.format(netOut)} net out / ${money.format(creditsTotal)} credits/returns`;
+  } else if (otherInflowTotal > 0) {
+    scanWindow = `${money.format(netOut)} net out / ${money.format(otherInflowTotal)} in`;
+  }
   els.dailyScanWindow.textContent = accounts.connected
-    ? creditsTotal > 0
-      ? `${money.format(netOut)} net out / ${money.format(creditsTotal)} credits/returns`
-      : `${money.format(purchaseTotal)} purchases / ${scan.window || "latest 7 days"}`
+    ? scanWindow
     : "Purchases only";
 
   if (!rows.length) {
@@ -820,20 +828,28 @@ function renderDailyScan(improvements, accounts) {
     const creditMerchants = Array.isArray(row.creditMerchants) && row.creditMerchants.length
       ? row.creditMerchants.join(" / ")
       : "Purchase credits";
+    const otherInflowMerchants = Array.isArray(row.otherInflowMerchants) && row.otherInflowMerchants.length
+      ? row.otherInflowMerchants.join(" / ")
+      : "Other inflow";
     const rowPurchases = Number(row.total || 0);
     const rowCredits = Number(row.credits || 0);
+    const rowOtherInflow = Number(row.otherInflow || 0);
+    const rowInflow = Number(row.inflowTotal || (rowCredits + rowOtherInflow));
     const rowNetOut = Number.isFinite(Number(row.netOut))
       ? Number(row.netOut || 0)
-      : Math.max(0, rowPurchases - rowCredits);
-    const amountText = rowCredits > 0
+      : Math.max(0, rowPurchases - rowInflow);
+    const amountText = rowInflow > 0
       ? rowNetOut > 0
         ? `${money.format(rowNetOut)} net out`
-        : `${money.format(rowCredits - rowPurchases)} net credit`
+        : rowCredits > 0 && rowOtherInflow === 0
+          ? `${money.format(rowInflow - rowPurchases)} net credit`
+          : `${money.format(rowInflow - rowPurchases)} net in`
       : money.format(rowPurchases);
     const parts = [];
     if (row.count > 0) parts.push(`${row.count || 0} purchase${row.count === 1 ? "" : "s"}: ${merchants}`);
     if (rowCredits > 0) parts.push(`${row.creditCount || 0} credit${row.creditCount === 1 ? "" : "s"}/return${row.creditCount === 1 ? "" : "s"}: ${creditMerchants}`);
-    return `<div class="daily-scan-row" data-severity="${escapeHtml(row.severity || "watch")}" data-offset="${rowCredits > 0 ? "true" : "false"}">
+    if (rowOtherInflow > 0) parts.push(`${row.otherInflowCount || 0} inflow${row.otherInflowCount === 1 ? "" : "s"}: ${otherInflowMerchants}`);
+    return `<div class="daily-scan-row" data-severity="${escapeHtml(row.severity || "watch")}" data-offset="${rowInflow > 0 ? "true" : "false"}">
       <time>${escapeHtml(dateLabel(row.date))}</time>
       <div>
         <strong>${escapeHtml(amountText)}</strong>

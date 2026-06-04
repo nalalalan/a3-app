@@ -801,6 +801,16 @@ function isPurchaseOffsetLike(transaction) {
     || String(transaction.plaidAccountType || "").toLowerCase() === "credit";
 }
 
+function isVisibleDailyInflow(transaction) {
+  const inflow = Number(transaction.inflow || 0);
+  if (inflow <= 0) return false;
+  if (isPurchaseOffsetLike(transaction)) return true;
+  if (isDebtPaymentLike(transaction)) return false;
+  const text = `${transaction.type || ""} ${transaction.category || ""} ${transaction.description || ""} ${transaction.merchant || ""}`.toLowerCase();
+  if (/payroll|salary|direct deposit|interest earned/.test(text)) return false;
+  return inflow <= 300;
+}
+
 function groupedSpend(transactions, keyFn) {
   const groups = new Map();
   for (const transaction of transactions) {
@@ -1144,24 +1154,33 @@ function dailyPurchaseScan(flexible14, latestDate, all14 = []) {
   for (let index = 0; index < days; index += 1) {
     const date = new Date(dateMs(latestDate) - (index * 86400000)).toISOString().slice(0, 10);
     const items = (flexible14 || []).filter((transaction) => transaction.date === date && transaction.spend > 0);
-    const offsets = (all14 || []).filter((transaction) => transaction.date === date && isPurchaseOffsetLike(transaction));
-    if (!items.length && !offsets.length) continue;
+    const inflows = (all14 || []).filter((transaction) => transaction.date === date && isVisibleDailyInflow(transaction));
+    const offsets = inflows.filter((transaction) => isPurchaseOffsetLike(transaction));
+    const otherInflows = inflows.filter((transaction) => !isPurchaseOffsetLike(transaction));
+    if (!items.length && !inflows.length) continue;
     const total = sum(items.map((transaction) => transaction.spend));
     const credits = sum(offsets.map((transaction) => transaction.inflow));
-    const netOut = Math.max(0, total - credits);
+    const otherInflow = sum(otherInflows.map((transaction) => transaction.inflow));
+    const inflowTotal = credits + otherInflow;
+    const netOut = Math.max(0, total - inflowTotal);
     const merchants = groupedSpend(items, (transaction) => transaction.merchant).slice(0, 3);
     const creditMerchants = groupedInflow(offsets, (transaction) => transaction.merchant).slice(0, 3);
+    const otherInflowMerchants = groupedInflow(otherInflows, (transaction) => transaction.merchant).slice(0, 3);
     const top = merchants[0];
     const topItems = top ? items.filter((transaction) => transaction.merchant === top.label) : items;
     rows.push({
       date,
       total,
       credits,
+      otherInflow,
+      inflowTotal,
       netOut,
       count: items.length,
       creditCount: offsets.length,
+      otherInflowCount: otherInflows.length,
       merchants: merchants.map((merchant) => `${merchant.label} ${moneyText(merchant.total)}`),
       creditMerchants: creditMerchants.map((merchant) => `${merchant.label} ${moneyText(merchant.total)}`),
+      otherInflowMerchants: otherInflowMerchants.map((merchant) => `${merchant.label} ${moneyText(merchant.total)}`),
       topMerchant: top?.label || "",
       next: dailyPurchaseAction(top?.label, topItems),
       severity: netOut >= 160 || items.length >= 5 ? "danger" : netOut >= 60 || items.length >= 3 ? "watch" : "good"
@@ -1169,7 +1188,9 @@ function dailyPurchaseScan(flexible14, latestDate, all14 = []) {
   }
   const total = sum(rows.map((row) => row.total));
   const creditsTotal = sum(rows.map((row) => row.credits));
-  const netOut = Math.max(0, total - creditsTotal);
+  const otherInflowTotal = sum(rows.map((row) => row.otherInflow));
+  const inflowTotal = creditsTotal + otherInflowTotal;
+  const netOut = Math.max(0, total - inflowTotal);
   const byMerchant = groupedSpend(flexible14 || [], (transaction) => transaction.merchant).slice(0, 1);
   return {
     window: "latest 7 days",
@@ -1177,6 +1198,8 @@ function dailyPurchaseScan(flexible14, latestDate, all14 = []) {
     spendingDays: rows.length,
     total,
     creditsTotal,
+    otherInflowTotal,
+    inflowTotal,
     netOut,
     dailyAverage: netOut / days,
     averageSpendingDay: rows.length ? netOut / rows.length : 0,
@@ -1510,7 +1533,7 @@ function immediateImprovements(input) {
       topMerchants: [],
       topCategories: [],
       progress: { window: "latest 7d + 90d record", totalMonthlyPace: 0, rows: [] },
-      dailyScan: { window: "latest 7 days", days: 7, spendingDays: 0, total: 0, creditsTotal: 0, netOut: 0, dailyAverage: 0, averageSpendingDay: 0, topMerchant: "", rows: [] },
+      dailyScan: { window: "latest 7 days", days: 7, spendingDays: 0, total: 0, creditsTotal: 0, otherInflowTotal: 0, inflowTotal: 0, netOut: 0, dailyAverage: 0, averageSpendingDay: 0, topMerchant: "", rows: [] },
       spending: [],
       items: [
         { label: "Live balances", detail: "The full A3 decision needs current balances and purchases.", severity: "watch" },
