@@ -791,6 +791,16 @@ function isFixedOrTransferLike(transaction) {
     || /rent|utilities|payroll|income|deposit|transfer in|transfer out|zelle payment.*landlord/.test(text);
 }
 
+function isPurchaseOffsetLike(transaction) {
+  const inflow = Number(transaction.inflow || 0);
+  if (inflow <= 0) return false;
+  if (isFixedOrTransferLike(transaction)) return false;
+  const text = `${transaction.type || ""} ${transaction.category || ""} ${transaction.description || ""} ${transaction.merchant || ""}`.toLowerCase();
+  if (/payroll|salary|ach credit|direct deposit|interest earned|transfer|zelle|venmo|cash app/.test(text)) return false;
+  return /refund|return|cashback|statement credit|merchant credit|credit adjustment|purchase adjustment|reversal/.test(text)
+    || String(transaction.plaidAccountType || "").toLowerCase() === "credit";
+}
+
 function groupedSpend(transactions, keyFn) {
   const groups = new Map();
   for (const transaction of transactions) {
@@ -804,6 +814,26 @@ function groupedSpend(transactions, keyFn) {
     return {
       label,
       total: sum(sorted.map((item) => item.spend)),
+      count: sorted.length,
+      latestDate: sorted[0]?.date || "",
+      category: sorted[0]?.category || ""
+    };
+  }).sort((a, b) => b.total - a.total);
+}
+
+function groupedInflow(transactions, keyFn) {
+  const groups = new Map();
+  for (const transaction of transactions) {
+    if (transaction.inflow <= 0) continue;
+    const key = keyFn(transaction) || "Credit";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(transaction);
+  }
+  return [...groups.entries()].map(([label, items]) => {
+    const sorted = items.sort((a, b) => dateMs(b.date) - dateMs(a.date));
+    return {
+      label,
+      total: sum(sorted.map((item) => item.inflow)),
       count: sorted.length,
       latestDate: sorted[0]?.date || "",
       category: sorted[0]?.category || ""
@@ -1108,36 +1138,48 @@ function dailyPurchaseAction(topLabel, items) {
   return "Repeat purchase.";
 }
 
-function dailyPurchaseScan(flexible14, latestDate) {
+function dailyPurchaseScan(flexible14, latestDate, all14 = []) {
   const days = 7;
   const rows = [];
   for (let index = 0; index < days; index += 1) {
     const date = new Date(dateMs(latestDate) - (index * 86400000)).toISOString().slice(0, 10);
     const items = (flexible14 || []).filter((transaction) => transaction.date === date && transaction.spend > 0);
-    if (!items.length) continue;
+    const offsets = (all14 || []).filter((transaction) => transaction.date === date && isPurchaseOffsetLike(transaction));
+    if (!items.length && !offsets.length) continue;
     const total = sum(items.map((transaction) => transaction.spend));
+    const credits = sum(offsets.map((transaction) => transaction.inflow));
+    const netOut = Math.max(0, total - credits);
     const merchants = groupedSpend(items, (transaction) => transaction.merchant).slice(0, 3);
+    const creditMerchants = groupedInflow(offsets, (transaction) => transaction.merchant).slice(0, 3);
     const top = merchants[0];
     const topItems = top ? items.filter((transaction) => transaction.merchant === top.label) : items;
     rows.push({
       date,
       total,
+      credits,
+      netOut,
       count: items.length,
+      creditCount: offsets.length,
       merchants: merchants.map((merchant) => `${merchant.label} ${moneyText(merchant.total)}`),
+      creditMerchants: creditMerchants.map((merchant) => `${merchant.label} ${moneyText(merchant.total)}`),
       topMerchant: top?.label || "",
       next: dailyPurchaseAction(top?.label, topItems),
-      severity: total >= 160 || items.length >= 5 ? "danger" : total >= 60 || items.length >= 3 ? "watch" : "good"
+      severity: netOut >= 160 || items.length >= 5 ? "danger" : netOut >= 60 || items.length >= 3 ? "watch" : "good"
     });
   }
   const total = sum(rows.map((row) => row.total));
+  const creditsTotal = sum(rows.map((row) => row.credits));
+  const netOut = Math.max(0, total - creditsTotal);
   const byMerchant = groupedSpend(flexible14 || [], (transaction) => transaction.merchant).slice(0, 1);
   return {
     window: "latest 7 days",
     days,
     spendingDays: rows.length,
     total,
-    dailyAverage: total / days,
-    averageSpendingDay: rows.length ? total / rows.length : 0,
+    creditsTotal,
+    netOut,
+    dailyAverage: netOut / days,
+    averageSpendingDay: rows.length ? netOut / rows.length : 0,
     topMerchant: byMerchant[0]?.label || "",
     rows
   };
@@ -1468,7 +1510,7 @@ function immediateImprovements(input) {
       topMerchants: [],
       topCategories: [],
       progress: { window: "latest 7d + 90d record", totalMonthlyPace: 0, rows: [] },
-      dailyScan: { window: "latest 7 days", days: 7, spendingDays: 0, total: 0, dailyAverage: 0, averageSpendingDay: 0, topMerchant: "", rows: [] },
+      dailyScan: { window: "latest 7 days", days: 7, spendingDays: 0, total: 0, creditsTotal: 0, netOut: 0, dailyAverage: 0, averageSpendingDay: 0, topMerchant: "", rows: [] },
       spending: [],
       items: [
         { label: "Live balances", detail: "The full A3 decision needs current balances and purchases.", severity: "watch" },
@@ -1542,7 +1584,7 @@ function immediateImprovements(input) {
     topMerchants: byMerchant,
     topCategories: byCategory,
     progress,
-    dailyScan: dailyPurchaseScan(flexible, latestDate),
+    dailyScan: dailyPurchaseScan(flexible, latestDate, last14),
     spending: spendingTriage(flexible, flexible90, byCategory, latestDate),
     items: items.slice(0, 6)
   };

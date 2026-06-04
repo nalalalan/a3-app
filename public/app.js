@@ -791,8 +791,15 @@ function progressDetail(row) {
 function renderDailyScan(improvements, accounts) {
   const scan = improvements?.dailyScan || {};
   const rows = Array.isArray(scan.rows) ? scan.rows : [];
+  const purchaseTotal = Number(scan.total || 0);
+  const creditsTotal = Number(scan.creditsTotal || 0);
+  const netOut = Number.isFinite(Number(scan.netOut))
+    ? Number(scan.netOut || 0)
+    : Math.max(0, purchaseTotal - creditsTotal);
   els.dailyScanWindow.textContent = accounts.connected
-    ? `${money.format(scan.total || 0)} / ${scan.window || "latest 7 days"}`
+    ? creditsTotal > 0
+      ? `${money.format(netOut)} net out / ${money.format(creditsTotal)} credits/returns`
+      : `${money.format(purchaseTotal)} purchases / ${scan.window || "latest 7 days"}`
     : "Purchases only";
 
   if (!rows.length) {
@@ -810,11 +817,27 @@ function renderDailyScan(improvements, accounts) {
     const merchants = Array.isArray(row.merchants) && row.merchants.length
       ? row.merchants.join(" / ")
       : row.topMerchant || "Purchases";
-    return `<div class="daily-scan-row" data-severity="${escapeHtml(row.severity || "watch")}">
+    const creditMerchants = Array.isArray(row.creditMerchants) && row.creditMerchants.length
+      ? row.creditMerchants.join(" / ")
+      : "Purchase credits";
+    const rowPurchases = Number(row.total || 0);
+    const rowCredits = Number(row.credits || 0);
+    const rowNetOut = Number.isFinite(Number(row.netOut))
+      ? Number(row.netOut || 0)
+      : Math.max(0, rowPurchases - rowCredits);
+    const amountText = rowCredits > 0
+      ? rowNetOut > 0
+        ? `${money.format(rowNetOut)} net out`
+        : `${money.format(rowCredits - rowPurchases)} net credit`
+      : money.format(rowPurchases);
+    const parts = [];
+    if (row.count > 0) parts.push(`${row.count || 0} purchase${row.count === 1 ? "" : "s"}: ${merchants}`);
+    if (rowCredits > 0) parts.push(`${row.creditCount || 0} credit${row.creditCount === 1 ? "" : "s"}/return${row.creditCount === 1 ? "" : "s"}: ${creditMerchants}`);
+    return `<div class="daily-scan-row" data-severity="${escapeHtml(row.severity || "watch")}" data-offset="${rowCredits > 0 ? "true" : "false"}">
       <time>${escapeHtml(dateLabel(row.date))}</time>
       <div>
-        <strong>${escapeHtml(money.format(row.total || 0))}</strong>
-        <span>${escapeHtml(`${row.count || 0} purchase${row.count === 1 ? "" : "s"}: ${merchants}`)}</span>
+        <strong>${escapeHtml(amountText)}</strong>
+        <span>${escapeHtml(parts.join(" / "))}</span>
       </div>
     </div>`;
   }).join("");
@@ -1075,11 +1098,11 @@ function netWindowMode(allRows, rangeDays, title, label, axisTitle) {
 function netModeData(data) {
   const rows = normalizedDailyNetRows(data);
   return {
-    week: netWindowMode(rows, 7, "Week net", "Last 7 days", "$/week"),
-    month: netWindowMode(rows, 30, "Month net", "Last 30 days", "$/month"),
-    quarter: netWindowMode(rows, 90, "90-day net", "Last 90 days", "$/90 days"),
-    year: netWindowMode(rows, 365, "Year net", "Last 1 year", "$/year"),
-    all: netWindowMode(rows, Infinity, "All-time net", rows[0] ? `Since ${dateLabelWithYear(rows[0].date)}` : "All connected history", "cumulative net")
+    week: netWindowMode(rows, 7, "7-day cashflow", "Last 7 days", "$/7 days"),
+    month: netWindowMode(rows, 30, "30-day cashflow", "Last 30 days", "$/30 days"),
+    quarter: netWindowMode(rows, 90, "90-day cashflow", "Last 90 days", "$/90 days"),
+    year: netWindowMode(rows, 365, "1-year cashflow", "Last 1 year", "$/year"),
+    all: netWindowMode(rows, Infinity, "All-time cashflow", rows[0] ? `Since ${dateLabelWithYear(rows[0].date)}` : "All connected history", "cumulative")
   };
 }
 

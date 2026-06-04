@@ -9,6 +9,7 @@
   --line-soft: rgba(246, 239, 230, .07);
   --rose: #cf97a5;
   --blue: #8193b8;
+  --credit: #88a7b1;
   --sage: #718b79;
   --good: #8fa693;
   --watch: #b89a69;
@@ -1279,11 +1280,15 @@ body.locked-view .lock-panel {
 }
 
 .daily-scan-row[data-severity="danger"] strong {
-  color: #f1b8ad;
+  color: #dbc08f;
 }
 
 .daily-scan-row[data-severity="good"] strong {
   color: var(--ink);
+}
+
+.daily-scan-row[data-offset="true"] strong {
+  color: var(--credit);
 }
 
 .spend-panel {
@@ -1453,7 +1458,7 @@ body.locked-view .lock-panel {
 }
 
 .spend-leak-row[data-severity="danger"] strong {
-  color: #f1b8ad;
+  color: #dbc08f;
 }
 
 .receipt-breakdown {
@@ -1710,7 +1715,7 @@ body.locked-view .lock-panel {
 }
 
 .net-head strong[data-net="negative"] {
-  color: rgba(241, 184, 173, .95);
+  color: rgba(219, 192, 143, .96);
 }
 
 .net-mode-row {
@@ -1761,7 +1766,7 @@ body.locked-view .lock-panel {
 }
 
 .net-mode-button strong[data-net="negative"] {
-  color: rgba(241, 184, 173, .92);
+  color: rgba(219, 192, 143, .9);
 }
 
 .net-mode-button.is-active {
@@ -1778,7 +1783,7 @@ body.locked-view .lock-panel {
 }
 
 .net-mode-button.is-active strong[data-net="negative"] {
-  color: rgba(241, 184, 173, .96);
+  color: rgba(219, 192, 143, .96);
 }
 
 .net-chart-frame {
@@ -1822,7 +1827,7 @@ body.locked-view .lock-panel {
 }
 
 .net-bar.negative {
-  fill: rgba(214, 142, 130, .72);
+  fill: rgba(184, 154, 105, .68);
 }
 
 .net-bar.is-current {
@@ -1850,7 +1855,7 @@ body.locked-view .lock-panel {
 }
 
 .net-point.negative {
-  fill: rgba(241, 184, 173, .9);
+  fill: rgba(219, 192, 143, .9);
 }
 
 .net-point.is-current {
