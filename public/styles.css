@@ -69,6 +69,7 @@ body.locked-view .summary-row,
 body.locked-view .move-strip,
 body.locked-view .purchase-sim-panel,
 body.locked-view .exit-panel,
+body.locked-view .drive-panel,
 body.locked-view .action-panel,
 body.locked-view .cut-panel,
 body.locked-view .daily-panel,
@@ -1101,6 +1102,106 @@ body.locked-view .lock-panel {
 
 .decision-checks p {
   padding-top: 8px;
+}
+
+.drive-panel {
+  position: relative;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: minmax(230px, .42fr) minmax(0, 1fr);
+  gap: 28px;
+  width: min(calc(100% - 72px), 1040px);
+  margin: 14px auto 0;
+  padding: 16px 0 4px;
+  border-top: 1px solid rgba(129, 147, 184, .18);
+  border-bottom: 1px solid rgba(246, 239, 230, .08);
+}
+
+.drive-panel-head {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  min-width: 0;
+  padding-right: 20px;
+}
+
+.drive-panel-head h2 {
+  color: var(--ink);
+  font-size: clamp(1.24rem, 2.3vw, 1.72rem);
+  font-weight: 790;
+  line-height: 1.02;
+  overflow-wrap: anywhere;
+}
+
+.drive-panel-head span {
+  max-width: 34ch;
+  color: rgba(246, 239, 230, .68);
+  font-size: .94rem;
+  font-weight: 680;
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+}
+
+.drive-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  min-width: 0;
+}
+
+.drive-card,
+.drive-close {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid rgba(129, 147, 184, .18);
+  border-radius: 4px;
+  background: rgba(129, 147, 184, .045);
+}
+
+.drive-card-main {
+  border-color: rgba(246, 239, 230, .18);
+  background: rgba(246, 239, 230, .04);
+}
+
+.drive-card strong,
+.drive-close strong {
+  color: #c2d0ec;
+  font-size: .74rem;
+  font-weight: 820;
+  line-height: 1.12;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.drive-card-main strong {
+  color: var(--ink);
+}
+
+.drive-card span,
+.drive-close span {
+  min-width: 0;
+  color: rgba(246, 239, 230, .74);
+  font-size: .89rem;
+  font-weight: 680;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.drive-close {
+  grid-column: 2;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  margin-top: 10px;
+  background: rgba(246, 239, 230, .028);
+  border-color: rgba(246, 239, 230, .1);
+}
+
+.drive-close strong {
+  color: #d9c4ae;
 }
 
 .move-strip {
@@ -2568,6 +2669,40 @@ details.panel {
   .decision-metrics strong {
     justify-self: start;
     text-align: left;
+  }
+
+  .drive-panel {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 14px;
+    padding-top: 15px;
+  }
+
+  .drive-panel-head {
+    padding-right: 0;
+  }
+
+  .drive-panel-head span {
+    max-width: calc(100vw - 42px);
+  }
+
+  .drive-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .drive-card,
+  .drive-close {
+    padding: 13px;
+  }
+
+  .drive-card span,
+  .drive-close span {
+    font-size: .88rem;
+  }
+
+  .drive-close {
+    grid-column: auto;
+    grid-template-columns: 1fr;
   }
 
   .action-panel {
