@@ -40,6 +40,10 @@ const els = {
   affordabilityWhen: document.getElementById("affordabilityWhen"),
   affordabilityPace: document.getElementById("affordabilityPace"),
   affordabilityAssumption: document.getElementById("affordabilityAssumption"),
+  decisionFinanceRow: document.getElementById("decisionFinanceRow"),
+  decisionFinanceRead: document.getElementById("decisionFinanceRead"),
+  decisionThoughtRow: document.getElementById("decisionThoughtRow"),
+  decisionThoughtRead: document.getElementById("decisionThoughtRead"),
   gapValue: document.getElementById("gapValue"),
   gapLabel: document.getElementById("gapLabel"),
   actionLabel: document.getElementById("actionLabel"),
@@ -325,7 +329,7 @@ function renderAffordabilityForecast(data, sampleOnly, downPayment, cashAfter, c
       : "No date: monthly pace is not positive.";
   } else if (drainsCash && balance > 0) {
     severity = "danger";
-    verdict = "No. Draining cash while balance remains is not smart.";
+    verdict = "No. Cash buffer breaks while balance remains.";
     when = pace > 0
       ? `Around ${forecastMonthLabel(months)} after balance and ${money.format(cashFloor)} buffer.`
       : "No date: monthly pace is not positive.";
@@ -336,14 +340,14 @@ function renderAffordabilityForecast(data, sampleOnly, downPayment, cashAfter, c
       ? `Around ${forecastMonthLabel(months)} if the cash buffer survives.`
       : "No date: monthly pace is not positive.";
   } else if (balance > 0) {
-    severity = "danger";
-    verdict = "No. Pay the existing balance first.";
+    severity = "watch";
+    verdict = "Not yet. Balance, payment, and buffer need room.";
     when = pace > 0
       ? `Around ${forecastMonthLabel(months)} for balance + down payment + buffer.`
       : "No date: monthly pace is not positive.";
   } else if (pace <= 0) {
-    severity = "danger";
-    verdict = "No. Monthly pace is not positive.";
+    severity = "watch";
+    verdict = "No date. Monthly pace is not positive.";
     when = "No reliable afford-by date.";
   } else if (cashGap > 0) {
     verdict = "Not yet.";
@@ -409,8 +413,8 @@ function renderPurchaseSimulation(data, sampleOnly) {
     els.simHealth.textContent = `No: ${money.format(cashAfter)} cash left; ${money.format(balance)} balance remains.`;
     els.simHealthRow.dataset.severity = "danger";
   } else if (balance > 0) {
-    els.simHealth.textContent = `No: ${money.format(balance)} balance remains.`;
-    els.simHealthRow.dataset.severity = "danger";
+    els.simHealth.textContent = `Not yet: ${money.format(balance)} balance remains beside the new payment.`;
+    els.simHealthRow.dataset.severity = "watch";
   } else if (cashAfter <= cashFloor) {
     els.simHealth.textContent = `No: ${money.format(cashAfter)} cash left.`;
     els.simHealthRow.dataset.severity = "danger";
@@ -421,6 +425,70 @@ function renderPurchaseSimulation(data, sampleOnly) {
     els.simHealth.textContent = `Maybe: ${money.format(cashAfter)} cash left before loan costs.`;
     els.simHealthRow.dataset.severity = "watch";
   }
+}
+
+function currentNetValue(data, modeKey) {
+  const modes = netModeData(data);
+  const mode = modes?.[modeKey];
+  const current = mode?.current || (Array.isArray(mode?.rows) ? mode.rows[mode.rows.length - 1] : null);
+  return current && Number.isFinite(Number(current.net)) ? Number(current.net) : null;
+}
+
+function setDecisionRowState(row, state) {
+  if (!row) return;
+  if (state) {
+    row.dataset.state = state;
+  } else {
+    delete row.dataset.state;
+  }
+}
+
+function renderDecisionFrame(data, sampleOnly) {
+  if (!els.decisionFinanceRead || !els.decisionThoughtRead) return;
+  const analysis = data?.analysis || {};
+  const accounts = analysis.accounts || {};
+  const connected = Boolean(accounts.connected) && !sampleOnly;
+
+  if (!connected) {
+    els.decisionFinanceRead.textContent = "Live cash, card/loan balance, 7-day net, and 30-day net are needed before saying yes.";
+    els.decisionThoughtRead.textContent = "Wanting the car is still allowed; the responsible version waits for live numbers before a deposit.";
+    setDecisionRowState(els.decisionFinanceRow, "watch");
+    setDecisionRowState(els.decisionThoughtRow, "watch");
+    return;
+  }
+
+  const cash = Number(accounts.cash || 0);
+  const balance = Number(accounts.debtTotal || 0);
+  const weekNet = currentNetValue(data, "week");
+  const monthNet = currentNetValue(data, "month");
+  const financeParts = [
+    `${money.format(cash)} cash`,
+    `${money.format(balance)} card/loan balance`,
+    weekNet === null ? "no 7-day net yet" : `${money.format(weekNet)} latest 7d net`,
+    monthNet === null ? "no 30-day net yet" : `${money.format(monthNet)} 30d net`
+  ];
+  els.decisionFinanceRead.textContent = `${financeParts.join(" / ")}.`;
+
+  const weekNegative = weekNet !== null && weekNet < 0;
+  const monthNegative = monthNet !== null && monthNet < 0;
+  const hasBalance = balance > 0;
+  let thought = "This can be a normal planned upgrade if payment, insurance, cash buffer, and exit price all stay boring.";
+  let state = "steady";
+
+  if (hasBalance && (weekNegative || monthNegative)) {
+    thought = "Wanting it is okay. Current numbers say no rushed deposit: payment, insurance, buffer, and balance plan have to survive together.";
+    state = "watch";
+  } else if (hasBalance) {
+    thought = "Wanting it is okay. The constraint is not guilt; it is fitting the payment beside the card/loan balance and cash buffer.";
+    state = "watch";
+  } else if (weekNegative || monthNegative) {
+    thought = "Wanting it is okay. Cashflow says slow down: no add-ons, no urgency, and no loaner above the walk price.";
+    state = "watch";
+  }
+
+  els.decisionThoughtRead.textContent = thought;
+  setDecisionRowState(els.decisionFinanceRow, state);
+  setDecisionRowState(els.decisionThoughtRow, state);
 }
 
 function renderBlockers(analysis, sampleOnly) {
@@ -1347,6 +1415,7 @@ function render(data) {
   renderGoalMeter(goal, sampleOnly, data);
   renderBlockers(analysis, sampleOnly);
   renderPurchaseSimulation(data, sampleOnly);
+  renderDecisionFrame(data, sampleOnly);
 
   if (sampleOnly) {
     const plaidReviewPending = Boolean(data.plaid?.productionReviewPending);
