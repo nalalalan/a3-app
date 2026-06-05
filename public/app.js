@@ -44,6 +44,10 @@ const els = {
   decisionFinanceRead: document.getElementById("decisionFinanceRead"),
   decisionThoughtRow: document.getElementById("decisionThoughtRow"),
   decisionThoughtRead: document.getElementById("decisionThoughtRead"),
+  decisionCashRead: document.getElementById("decisionCashRead"),
+  decisionBalanceRead: document.getElementById("decisionBalanceRead"),
+  decisionWeekRead: document.getElementById("decisionWeekRead"),
+  decisionMonthRead: document.getElementById("decisionMonthRead"),
   gapValue: document.getElementById("gapValue"),
   gapLabel: document.getElementById("gapLabel"),
   actionLabel: document.getElementById("actionLabel"),
@@ -450,8 +454,12 @@ function renderDecisionFrame(data, sampleOnly) {
   const connected = Boolean(accounts.connected) && !sampleOnly;
 
   if (!connected) {
-    els.decisionFinanceRead.textContent = "Live cash, card/loan balance, 7-day net, and 30-day net are needed before saying yes.";
-    els.decisionThoughtRead.textContent = "Wanting the car is still allowed; the responsible version waits for live numbers before a deposit.";
+    els.decisionFinanceRead.textContent = "Need live cash, balance, and cashflow.";
+    els.decisionThoughtRead.textContent = "Wanting it is allowed. Wait for live numbers.";
+    setText(els.decisionCashRead, "--");
+    setText(els.decisionBalanceRead, "--");
+    setText(els.decisionWeekRead, "--");
+    setText(els.decisionMonthRead, "--");
     setDecisionRowState(els.decisionFinanceRow, "watch");
     setDecisionRowState(els.decisionThoughtRow, "watch");
     return;
@@ -461,31 +469,33 @@ function renderDecisionFrame(data, sampleOnly) {
   const balance = Number(accounts.debtTotal || 0);
   const weekNet = currentNetValue(data, "week");
   const monthNet = currentNetValue(data, "month");
-  const financeParts = [
-    `${money.format(cash)} cash`,
-    `${money.format(balance)} card/loan balance`,
-    weekNet === null ? "no 7-day net yet" : `${money.format(weekNet)} latest 7d net`,
-    monthNet === null ? "no 30-day net yet" : `${money.format(monthNet)} 30d net`
-  ];
-  els.decisionFinanceRead.textContent = `${financeParts.join(" / ")}.`;
+  setText(els.decisionCashRead, money.format(cash));
+  setText(els.decisionBalanceRead, money.format(balance));
+  setText(els.decisionWeekRead, weekNet === null ? "--" : money.format(weekNet));
+  setText(els.decisionMonthRead, monthNet === null ? "--" : money.format(monthNet));
 
   const weekNegative = weekNet !== null && weekNet < 0;
   const monthNegative = monthNet !== null && monthNet < 0;
   const hasBalance = balance > 0;
-  let thought = "This can be a normal planned upgrade if payment, insurance, cash buffer, and exit price all stay boring.";
+  let thought = "Normal planned upgrade if payment and exit stay boring.";
+  let financeRead = "Payment, insurance, buffer, exit price.";
   let state = "steady";
 
   if (hasBalance && (weekNegative || monthNegative)) {
-    thought = "Wanting it is okay. Current numbers say no rushed deposit: payment, insurance, buffer, and balance plan have to survive together.";
+    thought = "Wanting it is okay. No rushed deposit.";
+    financeRead = "Slow timing, not shame.";
     state = "watch";
   } else if (hasBalance) {
-    thought = "Wanting it is okay. The constraint is not guilt; it is fitting the payment beside the card/loan balance and cash buffer.";
+    thought = "Wanting it is okay. Fit payment beside balance.";
+    financeRead = "Balance is the constraint; guilt is not.";
     state = "watch";
   } else if (weekNegative || monthNegative) {
-    thought = "Wanting it is okay. Cashflow says slow down: no add-ons, no urgency, and no loaner above the walk price.";
+    thought = "Wanting it is okay. Cashflow says slow down.";
+    financeRead = "No add-ons, no urgency, no above-walk loaner.";
     state = "watch";
   }
 
+  els.decisionFinanceRead.textContent = financeRead;
   els.decisionThoughtRead.textContent = thought;
   setDecisionRowState(els.decisionFinanceRow, state);
   setDecisionRowState(els.decisionThoughtRow, state);

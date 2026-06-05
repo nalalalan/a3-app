@@ -13,7 +13,7 @@
     <link rel="icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons" type="image/svg+xml">
     <link rel="apple-touch-icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons">
     <link rel="manifest" href="/site.webmanifest?v=20260516-a3-three-rings">
-    <link rel="stylesheet" href="/styles.css?v=20260605-exit-frame">
+    <link rel="stylesheet" href="/styles.css?v=20260605-categorized-frame">
   </head>
   <body class="locked-view">
     <header class="suite-topbar" aria-label="a3 navigation">
@@ -193,49 +193,70 @@
       <section class="exit-panel" aria-label="Thoughtful A3 decision frame">
         <div class="exit-panel-head">
           <h2>Thoughtful, not trapped</h2>
-          <span>Wanting the A3 is valid. The finance job is to make the payment boring, the exit clean, and the price disciplined.</span>
+          <span>Buying can be okay. Fit the payment, protect the buffer, keep the exit clean.</span>
         </div>
-        <div class="exit-list">
-          <div class="exit-row exit-row-permission">
-            <strong>Permission</strong>
-            <span>A good few-years car is enough. Changing later costs money; it is not a permanent life mistake.</span>
-          </div>
-          <div class="exit-row exit-row-live" id="decisionFinanceRow">
-            <strong>Current read</strong>
-            <span id="decisionFinanceRead">Live cash, card/loan balance, and cashflow will fill this row.</span>
-          </div>
-          <div class="exit-row exit-row-live" id="decisionThoughtRow">
-            <strong>Thought</strong>
-            <span id="decisionThoughtRead">The responsible version is not never buying; it is refusing a rushed or overpriced buy.</span>
-          </div>
-          <div class="exit-row">
-            <strong>Why A3</strong>
-            <span>Small/manageable, quiet/premium, normal/desirable enough to trade later.</span>
-          </div>
-          <div class="exit-row">
-            <strong>2025 loaner</strong>
-            <span>White A3 Premium, black interior, 5k miles. Good only if priced like a compromised loaner.</span>
-          </div>
-          <div class="exit-row exit-row-price">
-            <strong>Price line</strong>
-            <span>$31,500 target / $32,000 CPO stretch / walk at $33,000 before tax, title, and doc fees.</span>
-          </div>
-          <div class="exit-row">
-            <strong>Spec loss</strong>
-            <span>Premium, not Premium Plus; black, not beige; likely less comfort, audio, camera, and driver assist.</span>
-          </div>
-          <div class="exit-row">
-            <strong>Before yes</strong>
-            <span>Window sticker, Carfax, sale status, warranty start, no damage/paint/wheel repair, bad-pavement and highway drive.</span>
-          </div>
-          <div class="exit-row">
-            <strong>Buy if</strong>
-            <span>Quiet cabin, easy placement, black interior feels fine, clean history, no add-ons, target price.</span>
-          </div>
-          <div class="exit-row exit-row-walk">
-            <strong>Walk if</strong>
-            <span>Dark, cheap, noisy, rushed, add-ons, or mid/high $30ks.</span>
-          </div>
+        <div class="decision-stack">
+          <article class="decision-group decision-group-permission" id="decisionThoughtRow">
+            <div class="decision-group-head">
+              <strong>Permission</strong>
+              <span id="decisionThoughtRead">Wanting the car is allowed. Refuse a rushed or overpriced buy.</span>
+            </div>
+            <p>A good few-years car is enough. Changing later is money friction, not a life mistake.</p>
+          </article>
+
+          <article class="decision-group decision-group-live" id="decisionFinanceRow">
+            <div class="decision-group-head">
+              <strong>Numbers</strong>
+              <span id="decisionFinanceRead">Live cash, balance, and cashflow decide timing.</span>
+            </div>
+            <div class="decision-metrics" aria-label="Current finance read">
+              <div>
+                <span>Cash</span>
+                <strong id="decisionCashRead">--</strong>
+              </div>
+              <div>
+                <span>Balance</span>
+                <strong id="decisionBalanceRead">--</strong>
+              </div>
+              <div>
+                <span>7d net</span>
+                <strong id="decisionWeekRead">--</strong>
+              </div>
+              <div>
+                <span>30d net</span>
+                <strong id="decisionMonthRead">--</strong>
+              </div>
+            </div>
+          </article>
+
+          <article class="decision-group decision-group-deal">
+            <div class="decision-group-head">
+              <strong>Loaner deal</strong>
+              <span>$31.5k target / $32k CPO stretch / walk at $33k before tax, title, doc.</span>
+            </div>
+            <p>White 2025 A3 Premium loaner, black interior, 5k miles. Only if priced like a compromise.</p>
+            <details class="decision-checks">
+              <summary>Spec compromises</summary>
+              <p>Premium, not Premium Plus; black, not beige; likely less comfort, audio, camera, and driver assist.</p>
+            </details>
+          </article>
+
+          <article class="decision-group decision-group-yesno">
+            <div class="decision-yesno">
+              <div>
+                <strong>Buy if</strong>
+                <span>Quiet, easy, clean history, no add-ons, target price.</span>
+              </div>
+              <div>
+                <strong>Walk if</strong>
+                <span>Dark, cheap, noisy, rushed, add-ons, mid/high $30ks.</span>
+              </div>
+            </div>
+            <details class="decision-checks">
+              <summary>Checks before yes</summary>
+              <p>Window sticker, Carfax, sale status, warranty start, no damage/paint/wheel repair, bad-pavement and highway drive.</p>
+            </details>
+          </article>
         </div>
       </section>
 
@@ -423,6 +444,6 @@
     </main>
 
     <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
-    <script src="/app.js?v=20260605-exit-frame" defer></script>
+    <script src="/app.js?v=20260605-categorized-frame" defer></script>
   </body>
 </html>
