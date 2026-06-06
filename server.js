@@ -2737,7 +2737,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(port, () => {
-  console.log(`A3 financial advisor running at http://localhost:${port}`);
+  console.log(`A3 ownership cockpit running at http://localhost:${port}`);
   monitorTick("startup").catch(() => {});
   if (Number.isFinite(monitorIntervalMs) && monitorIntervalMs >= 60000) {
     setInterval(() => {

@@ -1,6 +1,6 @@
 # a3.aolabs.io
 
-Persistent A3 financial readiness monitor for Chase CSV exports.
+Persistent Audi A3 ownership cockpit for desire, price anchors, and private telemetry.
 
 ## Current build
 
