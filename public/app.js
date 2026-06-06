@@ -628,7 +628,7 @@ if (els.unlockButton) {
       await loadState();
     } catch (error) {
       showLock(error.message);
-      setBusy("locked");
+      setBusy("private");
     }
   });
 }
@@ -648,8 +648,8 @@ renderSources();
 
 loadState().catch((error) => {
   if (error.locked) {
-    setBusy("locked");
-    showLock(error.message);
+    setBusy("private");
+    showLock();
     return;
   }
   setBusy("setup path");
