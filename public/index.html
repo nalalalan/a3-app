@@ -4,16 +4,16 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>a3.aolabs.io</title>
-    <meta name="description" content="Audi A3 cockpit telemetry and ownership desire board.">
+    <meta name="description" content="Audi A3 cockpit telemetry.">
     <link rel="canonical" href="https://a3.aolabs.io/">
     <meta property="og:title" content="a3.aolabs.io">
-    <meta property="og:description" content="Audi A3 cockpit telemetry and ownership desire board.">
+    <meta property="og:description" content="Audi A3 cockpit telemetry.">
     <meta property="og:url" content="https://a3.aolabs.io/">
     <meta property="og:type" content="website">
     <link rel="icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons" type="image/svg+xml">
     <link rel="apple-touch-icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons">
     <link rel="manifest" href="/site.webmanifest?v=20260516-a3-three-rings">
-    <link rel="stylesheet" href="/styles.css?v=20260607-instrument-panel">
+    <link rel="stylesheet" href="/styles.css?v=20260607-calm-target">
   </head>
   <body class="locked-view">
     <header class="suite-topbar" aria-label="a3 navigation">
@@ -42,33 +42,27 @@
           <div class="a3-hero-copy">
             <span class="eyebrow">Audi A3 Now</span>
             <h1>
-              <span>Quiet cabin.</span>
-              <span>White</span>
-              <span>exterior.</span>
-              <span>Private</span>
-              <span>escape.</span>
+              <span>Audi A3.</span>
             </h1>
-            <p>Small luxury sedan. Boston within reach. Door closes, seat heat on, music on.</p>
+            <p>2025 Premium. White exterior. Black interior. 5k miles. Former loaner.</p>
             <div class="feature-pills" aria-label="A3 ownership anchors">
-              <span>Compact luxury</span>
-              <span>Quiet cabin</span>
-              <span>Easy Boston access</span>
-              <span>Private reset</span>
+              <span>Small sedan</span>
+              <span>White exterior</span>
+              <span>Black interior</span>
               <span>Heated seats</span>
-              <span>Vroom vroom</span>
             </div>
             <div class="hero-spec-row" aria-label="A3 spec anchors">
               <div>
-                <span>As-built anchor</span>
-                <strong id="heroA3Price">$46,095</strong>
+                <span>Amazing price</span>
+                <strong id="heroA3Price">$31,500</strong>
               </div>
               <div>
                 <span>Audi code</span>
                 <strong id="heroA3Code">AWG0XSW9</strong>
               </div>
               <div>
-                <span>Cabin</span>
-                <strong id="heroA3Cabin">Parchment Beige</strong>
+                <span>Option</span>
+                <strong id="heroA3Cabin">white / black / 5k</strong>
               </div>
             </div>
           </div>
@@ -83,35 +77,6 @@
         <input id="accessInput" type="password" inputmode="numeric" autocomplete="current-password" placeholder="PIN">
         <button id="unlockButton" type="button">Unlock</button>
         <span id="accessMessage"></span>
-      </section>
-
-      <section class="option-panel" aria-label="Current A3 option">
-        <div class="section-head">
-          <h2>Current A3 option</h2>
-          <p>2025 Audi A3 Premium &middot; white exterior &middot; black interior &middot; 5k miles &middot; former loaner</p>
-        </div>
-        <div class="option-grid">
-          <article class="option-list">
-            <h3>Price bands</h3>
-            <ul>
-              <li>$31.5k clean target</li>
-              <li>$32k CPO stretch</li>
-              <li>$33k+ upper band</li>
-            </ul>
-          </article>
-          <article class="option-list">
-            <h3>Dealer variables</h3>
-            <ul>
-              <li>Window sticker</li>
-              <li>Carfax</li>
-              <li>Warranty start date</li>
-              <li>CPO status</li>
-              <li>Out-the-door price</li>
-              <li>Insurance quote</li>
-              <li>Damage / paint / wheel / interior repair history</li>
-            </ul>
-          </article>
-        </div>
       </section>
 
       <section class="telemetry-panel private-telemetry" aria-label="Current telemetry">
@@ -297,7 +262,7 @@
                 <li>Rainy-night cabin cocoon</li>
                 <li>"I can leave whenever" freedom</li>
                 <li>Quiet cabin, climate control, door closed, outside world drops away</li>
-                <li>Autonomy and environmental control</li>
+                <li>Environmental control</li>
                 <li>Music reward / dopamine-related pleasure</li>
                 <li>Private decompression / lower sensory load</li>
               </ul>
@@ -306,9 +271,9 @@
         </div>
       </section>
 
-      <section class="debt-physics" aria-label="Debt physics">
+      <section class="debt-physics" aria-label="Debt payments">
         <div class="section-head">
-          <h2>Debt physics</h2>
+          <h2>Debt payments</h2>
         </div>
         <div id="debtCards" class="debt-grid"></div>
         <form class="debt-calculator" aria-label="APR and months calculator">
@@ -328,9 +293,8 @@
         </form>
       </section>
 
-      <section class="income-ladders" aria-label="Income ladders">
+      <section class="income-ladders" aria-label="Potential income">
         <div class="section-head">
-          <span class="eyebrow">Income ladders</span>
           <h2>Potential income</h2>
         </div>
         <ul class="income-list">
@@ -339,27 +303,26 @@
             <span id="ladderCurrentIncome">Detected pattern pending</span>
             <em id="ladderCurrentDetail">Data source pending.</em>
           </li>
-          <li><strong>Research assistantship / stipend stability</strong><span>0-12 months / $25k-$50k / advisor or program funding / research continuity.</span></li>
-          <li><strong>Tutoring / teaching / paid workshops</strong><span>0-6 months / $20-$100/hr / explanation skill / flexible schedule.</span></li>
-          <li><strong>Grant-funded research / fellowships</strong><span>3-18 months / variable / proposal, sponsor fit, lab direction.</span></li>
-          <li><strong>Mechanical / R&amp;D engineering job</strong><span>6-24 months / $80k-$150k / CAD, testing, build evidence, hardware intuition.</span></li>
-          <li><strong>Robotics engineering job</strong><span>6-24 months / $85k-$160k / controls, demos, portfolio, physical systems.</span></li>
-          <li><strong>Disney Imagineering-style path</strong><span>Mechanical/R&amp;D engineer / show mechanical engineer / robotics-controls-mechatronics / principal R&amp;D lead / creative technology / leadership or founder product path. Salary context varies.</span></li>
-          <li><strong>Software / AI tools engineering</strong><span>3-18 months / $100k-$250k+ / shipping tools, automation, AO Labs infrastructure.</span></li>
-          <li><strong>Contract prototyping / CAD / robotics consulting</strong><span>1-12 months / variable / portfolio, leads, build skill.</span></li>
-          <li><strong>Productized tools from research</strong><span>6-36 months / variable / repeatable user pain, technical product.</span></li>
-          <li><strong>Open-source / SaaS around robotics tooling</strong><span>6-36 months / variable / distribution, tooling, technical leverage.</span></li>
-          <li><strong>Photography / creative side income</strong><span>0-12 months / modest-variable / clients, editing flow, aesthetics.</span></li>
-          <li><strong>Senior systems path</strong><span>$250k/year zone / senior robotics, software, AI systems, applied ML, consulting plus salary.</span></li>
-          <li><strong>Staff / principal / ownership layer</strong><span>$500k/year zone / staff engineering, principal engineering, AI infrastructure, startup equity, specialized consulting.</span></li>
-          <li><strong>Founder / liquidity / ownership income</strong><span>$1M/year zone / startup equity, acquisition, executive or chief scientist path, product ownership. Power-law path.</span></li>
+          <li><strong>R&amp;D Mechanical Engineer - Robotics / Morphing Surfaces</strong><span>Post-graduation target role.</span></li>
+          <li><strong>Walt Disney Imagineering</strong><span>Best life-fit target: robotics, animatronics, show systems, physical effects, creative engineering.</span></li>
+          <li><strong>Toyota Research Institute</strong><span>Serious robotics R&amp;D backup: physical systems, simulation, robot behavior, applied research.</span></li>
+          <li><strong>Intuitive Surgical</strong><span>High-salary precise mechanism backup: surgical robotics, continuum robots, mechanisms, product-grade hardware.</span></li>
+          <li><strong>$120k-$140k base</strong><span>A3 salary target.</span></li>
+          <li><strong>$110k</strong><span>Minimum workable zone if rent is low and debt is controlled.</span></li>
+          <li><strong>$120k</strong><span>Real target.</span></li>
+          <li><strong>$130k-$140k</strong><span>Clean zone.</span></li>
+          <li><strong>Under $100k</strong><span>A3 likely feels heavy.</span></li>
+          <li><strong>Career sentence</strong><span>Targeting a $120k+ R&amp;D Mechanical Engineer role in robotics, focused on morphing surfaces, physical robotic systems, animatronics, compliant mechanisms, and simulation-guided prototyping.</span></li>
+          <li><strong>Fit basis</strong><span>Soft robotic morphing surfaces, inverse simulation, compliant mechanisms, pneumatic routing, Wavevis, FluxCell, NASA soft robotic arm work, Sandia nonlinear dynamics / FEA, continuum robots, physical prototyping, mechanical design.</span></li>
         </ul>
       </section>
 
-      <details class="sources-drawer">
-        <summary>Sources / evidence</summary>
+      <section class="sources-panel" aria-label="Sources and evidence">
+        <div class="section-head">
+          <h2>Sources / evidence</h2>
+        </div>
         <div id="sourceList" class="source-list"></div>
-      </details>
+      </section>
 
       <details class="settings-panel private-telemetry">
         <summary>Settings / import</summary>
@@ -427,6 +390,6 @@
     </main>
 
     <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
-    <script src="/app.js?v=20260607-instrument-panel" defer></script>
+    <script src="/app.js?v=20260607-calm-target" defer></script>
   </body>
 </html>

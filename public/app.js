@@ -95,25 +95,81 @@ const debtRows = [
 ];
 
 const sources = [
-  ["Autonomy & motivation", "Ryan & Deci 2000 Self-Determination Theory", "https://doi.org/10.1037/0003-066X.55.1.68"],
-  ["Music reward", "Salimpoor et al. 2011 dopamine and music pleasure", "https://doi.org/10.1038/nn.2726"],
-  ["Music reward", "Blood & Zatorre 2001 intensely pleasurable music", "https://doi.org/10.1073/pnas.191355898"],
-  ["Experiences and happiness", "Van Boven & Gilovich 2003 To do or to have?", "https://doi.org/10.1037/0022-3514.85.6.1193"],
-  ["Experiences and happiness", "Dunn, Gilbert, Wilson 2011 spending money for happiness", "https://doi.org/10.1016/j.jcps.2011.02.002"],
-  ["Urban parks happiness", "Park visits and happiness study", "https://arxiv.org/abs/1906.08335"],
-  ["Nature exposure", "Short-term nature exposure meta-analysis", "https://arxiv.org/abs/2401.16459"],
-  ["Autism transportation independence", "Rutgers/VTC Lubin & Feeley 2016 autism transportation issues", "https://vtc.rutgers.edu/publication/transportation-issues-of-adults-on-the-autism-spectrum-findings-from-focus-group-discussions/"],
-  ["Transportation and employment", "Blumenberg & Pierce 2017 auto access and employment", "https://doi.org/10.1177/0739456X16633501"],
-  ["Transportation and employment", "Raphael & Rice 2002 car ownership, employment, earnings", "https://doi.org/10.1016/S0094-1190(02)00017-7"],
-  ["Transportation and healthcare", "Transportation barriers and healthcare access review", "https://pmc.ncbi.nlm.nih.gov/articles/PMC4265215/"],
-  ["Debt-to-income", "CFPB debt-to-income ratio explanation", "https://www.consumerfinance.gov/ask-cfpb/what-is-a-debt-to-income-ratio-en-1791/"],
-  ["Household debt context", "Federal Reserve Bank of New York household debt and credit", "https://www.newyorkfed.org/microeconomics/hhdc"],
-  ["Debt and mental health", "Richardson, Elliott & Roberts 2013 systematic review", "https://doi.org/10.1016/j.cpr.2012.12.002"],
-  ["Mechanical engineer pay", "BLS Mechanical Engineers Occupational Outlook Handbook", "https://www.bls.gov/ooh/architecture-and-engineering/mechanical-engineers.htm"],
-  ["Disney role context", "Disney Careers", "https://www.disneycareers.com/"],
-  ["Disney salary context", "Indeed Disney mechanical engineer pay context", "https://www.indeed.com/cmp/Disney-Parks,-Experiences-and-Products/salaries/Mechanical-Engineer"],
-  ["Disney salary context", "Levels.fyi Disney software engineer compensation context", "https://www.levels.fyi/companies/disney/salaries/software-engineer"],
-  ["Audi A3 specs/features", "Current app build PDF", "/a3-awg0xsw9.pdf"]
+  {
+    title: "BLS Mechanical Engineers",
+    url: "https://www.bls.gov/ooh/architecture-and-engineering/mechanical-engineers.htm",
+    why: "Official salary baseline: $102,320 median mechanical engineer pay and $123,080 median in scientific R&D services."
+  },
+  {
+    title: "O*NET Robotics Engineers",
+    url: "https://www.onetonline.org/link/summary/17-2199.08",
+    why: "Robotics engineer benchmark: $117,750 annual median for the closest robotics-specific occupation page."
+  },
+  {
+    title: "BLS Software Developers",
+    url: "https://www.bls.gov/ooh/computer-and-information-technology/software-developers.htm",
+    why: "Software/tools upside benchmark: $133,080 median software developer pay and 16% projected developer growth."
+  },
+  {
+    title: "Disney Careers",
+    url: "https://jobs.disneycareers.com/",
+    why: "Company path source for Imagineering roles, ride/show systems, creative technology, and technical R&D openings."
+  },
+  {
+    title: "Toyota Research Institute Careers",
+    url: "https://www.tri.global/careers",
+    why: "Company path source for serious robotics R&D, simulation, robot behavior, and applied research roles."
+  },
+  {
+    title: "Intuitive Surgical Careers",
+    url: "https://careers.intuitive.com/en/jobs/",
+    why: "Company path source for surgical robotics, mechanism design, precise hardware, and product-grade robotics roles."
+  },
+  {
+    title: "Ryan & Deci 2000 Self-Determination Theory",
+    url: "https://doi.org/10.1037/0003-066X.55.1.68",
+    why: "Supports the A3 pleasure map's control layer: private mobility and environmental control are real well-being variables."
+  },
+  {
+    title: "Salimpoor et al. 2011 Music and Dopamine",
+    url: "https://doi.org/10.1038/nn.2726",
+    why: "Supports the music-in-car reward claim: music pleasure is tied to dopamine-related reward response."
+  },
+  {
+    title: "Blood & Zatorre 2001 Music Reward",
+    url: "https://doi.org/10.1073/pnas.191355898",
+    why: "Supports the private-drive-with-music tier: intensely pleasurable music activates reward-related brain regions."
+  },
+  {
+    title: "Lubin & Feeley 2016 Autism Transportation Issues",
+    url: "https://vtc.rutgers.edu/publication/transportation-issues-of-adults-on-the-autism-spectrum-findings-from-focus-group-discussions/",
+    why: "Supports the independence layer: transportation access affects autistic adults' participation and community access."
+  },
+  {
+    title: "Blumenberg & Pierce 2017 Auto Access and Employment",
+    url: "https://doi.org/10.1177/0739456X16633501",
+    why: "Supports the career-radius claim: car access can change reachable jobs, events, and work opportunities."
+  },
+  {
+    title: "CFPB Debt-to-Income Ratio",
+    url: "https://www.consumerfinance.gov/ask-cfpb/what-is-a-debt-to-income-ratio-en-1791/",
+    why: "Debt table basis: monthly debt payments are best read as claims against income."
+  },
+  {
+    title: "New York Fed Household Debt and Credit",
+    url: "https://www.newyorkfed.org/microeconomics/hhdc",
+    why: "Debt context source for household credit balances, auto loans, and broader credit conditions."
+  },
+  {
+    title: "Richardson, Elliott & Roberts 2013 Debt and Health Review",
+    url: "https://doi.org/10.1016/j.cpr.2012.12.002",
+    why: "Debt pressure source: unsecured debt is associated with mental and physical health outcomes in the review literature."
+  },
+  {
+    title: "Audi A3 Build PDF",
+    url: "/a3-awg0xsw9.pdf",
+    why: "Local source for the A3 code, build reference, and car image/spec basis used on this page."
+  }
 ];
 
 let lastState = null;
@@ -362,11 +418,11 @@ function renderDebtCalculator() {
 
 function renderSources() {
   if (!els.sourceList) return;
-  els.sourceList.innerHTML = sources.map(([group, title, url]) => `
-    <a class="source-card" href="${escapeHtml(url)}" target="_blank" rel="noreferrer">
-      <span>${escapeHtml(group)}</span>
-      <strong>${escapeHtml(title)}</strong>
-      <em>${escapeHtml(url)}</em>
+  els.sourceList.innerHTML = sources.map((source) => `
+    <a class="source-card" href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer">
+      <strong>${escapeHtml(source.title)}</strong>
+      <span>${escapeHtml(source.why)}</span>
+      <em>${escapeHtml(source.url)}</em>
     </a>
   `).join("");
 }
@@ -476,18 +532,52 @@ function netWindowMode(rows, days, title, emptyRange, axisTitle) {
   }
   const latest = rows[rows.length - 1].date;
   const start = Number.isFinite(days) ? daysAgoKey(latest, days - 1) : rows[0].date;
-  const visible = rows.filter((item) => item.date >= start && item.date <= latest);
+  const raw = rows.filter((item) => item.date >= start && item.date <= latest);
+  if (!raw.length) {
+    return { rows: [], current: null, highlight: null, title, axisTitle, key: "date", currentLabel: () => emptyRange, rangeLabel: () => "Telemetry pending.", pointLabel: () => "" };
+  }
+  let cumulative = 0;
+  const summary = raw.reduce((acc, item) => {
+    acc.inflow += Number(item.inflow || 0);
+    acc.spend += Number(item.spend || 0);
+    return acc;
+  }, { inflow: 0, spend: 0 });
+  const visible = [
+    {
+      ...raw[0],
+      net: 0,
+      inflow: 0,
+      spend: 0,
+      baseline: true,
+      date: raw[0].date,
+      year: Number(String(raw[0].date || "").slice(0, 4)),
+      chartIndex: 0
+    },
+    ...raw.map((item, index) => {
+      cumulative += Number(item.net || 0);
+      return {
+        ...item,
+        rawNet: Number(item.net || 0),
+        net: cumulative,
+        chartIndex: index + 1
+      };
+    })
+  ];
   const current = visible[visible.length - 1] || null;
+  if (current) {
+    current.inflow = summary.inflow;
+    current.spend = summary.spend;
+  }
   return {
     rows: visible,
     current,
     highlight: current,
     title,
     axisTitle,
-    key: "date",
-    currentLabel: () => visible.length ? `${dateLabel(visible[0].date)} - ${dateLabel(visible[visible.length - 1].date)}` : emptyRange,
-    rangeLabel: () => visible.length ? `${dateLabelWithYear(visible[0].date)} - ${dateLabelWithYear(visible[visible.length - 1].date)}` : "Telemetry pending.",
-    pointLabel: (item) => dateLabel(item.date)
+    key: "chartIndex",
+    currentLabel: () => raw.length ? `${dateLabel(raw[0].date)} - ${dateLabel(raw[raw.length - 1].date)}` : emptyRange,
+    rangeLabel: () => raw.length ? `${dateLabelWithYear(raw[0].date)} - ${dateLabelWithYear(raw[raw.length - 1].date)}` : "Telemetry pending.",
+    pointLabel: (item) => item.baseline ? "Start" : dateLabel(item.date)
   };
 }
 
@@ -688,10 +778,9 @@ function renderTelemetry(data, sampleOnly) {
 
 function renderBuild(data) {
   const goal = data.goal || {};
-  const price = Number(goal.priceAsBuilt || 46095);
-  setText(els.heroA3Price, money.format(price));
+  setText(els.heroA3Price, "$31,500");
   setText(els.heroA3Code, goal.audiCode || "AWG0XSW9");
-  setText(els.heroA3Cabin, cleanVisibleText(goal.interior || "Parchment Beige"));
+  setText(els.heroA3Cabin, "white / black / 5k");
   setText(els.heroMiniPrice, "$39,825");
   setText(els.a3Build, cleanVisibleText(`${goal.exterior || "Arkona White"} / ${goal.interior || "Parchment Beige-Steel Gray"} / ${goal.package || "Black optic package"}`));
 }
