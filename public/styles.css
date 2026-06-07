@@ -261,21 +261,62 @@ ul {
     linear-gradient(180deg, #171613, #080807);
 }
 
-.a3-hero-image {
-  display: block;
+.a3-media-stack {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 132px;
   min-width: 0;
   min-height: 100%;
   background: #060606;
+}
+
+.a3-hero-image {
+  display: block;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .a3-hero-image img {
   display: block;
   width: 100%;
   height: 100%;
-  min-height: 620px;
+  min-height: 488px;
   object-fit: cover;
   object-position: 50% 50%;
   filter: contrast(1.08) saturate(1.02) brightness(1.05);
+}
+
+.a3-hero-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  min-width: 0;
+  border-top: 1px solid rgba(245, 240, 232, .12);
+  background: rgba(245, 240, 232, .12);
+}
+
+.a3-hero-strip img {
+  display: block;
+  width: 100%;
+  height: 132px;
+  object-fit: cover;
+  filter: contrast(1.1) saturate(1.03) brightness(.98);
+}
+
+.a3-hero-strip img:nth-child(1) {
+  object-position: 50% 48%;
+}
+
+.a3-hero-strip img:nth-child(2) {
+  object-position: 50% 62%;
+}
+
+.a3-hero-strip img:nth-child(3) {
+  object-position: 50% 54%;
+}
+
+.a3-hero-strip img:nth-child(4) {
+  object-position: 54% 50%;
 }
 
 .a3-hero-copy {
@@ -1056,9 +1097,17 @@ summary {
     min-height: 0;
   }
 
+  .a3-media-stack {
+    grid-template-rows: auto 120px;
+  }
+
   .a3-hero-image img {
     min-height: 480px;
     aspect-ratio: 16 / 9;
+  }
+
+  .a3-hero-strip img {
+    height: 120px;
   }
 
   .a3-hero-copy h1 {
@@ -1151,6 +1200,18 @@ summary {
     min-height: 310px;
     aspect-ratio: 16 / 10;
     object-position: 50% 50%;
+  }
+
+  .a3-media-stack {
+    grid-template-rows: auto auto;
+  }
+
+  .a3-hero-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .a3-hero-strip img {
+    height: 118px;
   }
 
   .a3-hero-copy {
