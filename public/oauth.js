@@ -34,11 +34,11 @@ async function exchange(publicToken, metadata) {
 async function resumePlaid() {
   const token = localStorage.getItem("a3PlaidLinkToken");
   if (!token) {
-    setState("Blocked", "Open a3 and start bank connect again.");
+    setState("Return path", "Open a3 and start bank connect again.");
     return;
   }
   if (!window.Plaid) {
-    setState("Blocked", "Plaid script blocked.");
+    setState("Return path", "Plaid script pending.");
     return;
   }
   const handler = window.Plaid.create({
@@ -49,12 +49,12 @@ async function resumePlaid() {
       await exchange(publicToken, metadata);
     },
     onExit: (error) => {
-      setState(error ? "Blocked" : "Closed", error?.display_message || error?.error_message || "Return to a3.");
+      setState(error ? "Return path" : "Closed", error?.display_message || error?.error_message || "Return to a3.");
     }
   });
   handler.open();
 }
 
 resumePlaid().catch((error) => {
-  setState("Blocked", error.message);
+  setState("Return path", error.message);
 });

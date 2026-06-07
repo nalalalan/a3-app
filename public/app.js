@@ -27,6 +27,14 @@ const els = {
   telemetryNet30: document.getElementById("telemetryNet30"),
   telemetryNet90: document.getElementById("telemetryNet90"),
   telemetryNetYear: document.getElementById("telemetryNetYear"),
+  dailyScanWindow: document.getElementById("dailyScanWindow"),
+  dailyScanList: document.getElementById("dailyScanList"),
+  netWindow: document.getElementById("netWindow"),
+  netCurrent: document.getElementById("netCurrent"),
+  netModeButtons: Array.from(document.querySelectorAll("[data-net-mode]")),
+  netChart: document.getElementById("netChart"),
+  netAverage: document.getElementById("netAverage"),
+  netRange: document.getElementById("netRange"),
   recentPatterns: document.getElementById("recentPatterns"),
   currentIncomeValue: document.getElementById("currentIncomeValue"),
   currentIncomeDetail: document.getElementById("currentIncomeDetail"),
@@ -44,6 +52,8 @@ const els = {
   eventList: document.getElementById("eventList"),
   transactionList: document.getElementById("transactionList")
 };
+
+let activeNetMode = localStorage.getItem("a3NetMode") || "week";
 
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -69,37 +79,19 @@ const dayName = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC"
 });
 
+const dayNameWithYear = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  timeZone: "UTC"
+});
+
 const debtRows = [
-  {
-    amount: 5000,
-    feel: "Light if income is stable; visible but small.",
-    constrain: "One subscription-like monthly claim.",
-    light: "Keep APR low, keep the term finite, clear it before bigger choices."
-  },
-  {
-    amount: 10000,
-    feel: "Manageable if income is stable and the payment stays small. Heavy when cash stays near 0.",
-    constrain: "A recurring claim on future Alan every month.",
-    light: "Pair it with stable income and avoid stacking extra balances beside it."
-  },
-  {
-    amount: 25000,
-    feel: "Real monthly gravity. Still understandable with a steady plan.",
-    constrain: "Rent, car payment, insurance, food, and savings all compete with it.",
-    light: "Use lower APR, shorter horizon, and income expansion to keep the claim breathable."
-  },
-  {
-    amount: 50000,
-    feel: "Large monthly claim on future Alan. Morality is irrelevant; capacity is the question.",
-    constrain: "Narrows flexibility unless income is strong or the payoff horizon is deliberate.",
-    light: "Treat the payment as assigned income before spending the rest."
-  },
-  {
-    amount: 100000,
-    feel: "Powerful leverage or heavy pressure, depending on income.",
-    constrain: "Requires a high-income plan, long horizon, or ownership upside.",
-    light: "Reserve this level for income ladders with strong proof or business ownership."
-  }
+  { amount: 5000 },
+  { amount: 10000 },
+  { amount: 25000 },
+  { amount: 50000 },
+  { amount: 100000 }
 ];
 
 const sources = [
@@ -147,6 +139,13 @@ function setText(element, value) {
 
 function cleanVisibleText(value) {
   return String(value ?? "")
+    .replace(/Alan decides/gi, "")
+    .replace(/Permission/gi, "Telemetry")
+    .replace(/Wanting it is okay/gi, "Current desire")
+    .replace(/Wanting the car is allowed/gi, "Current desire")
+    .replace(/Buying can be okay/gi, "Purchase scenario")
+    .replace(/Thoughtful, not trapped/gi, "Current telemetry")
+    .replace(/Facts only\. Calm telemetry\./gi, "Current telemetry.")
     .replace(/\bNo\b[:.]?\s*/gi, "")
     .replace(/not ready/gi, "runway forming")
     .replace(/unsafe/gi, "high zone")
@@ -166,6 +165,20 @@ function cleanVisibleText(value) {
 function dateLabel(date) {
   if (!date) return "pending";
   return dayName.format(new Date(`${date}T00:00:00Z`));
+}
+
+function dateLabelWithYear(date) {
+  if (!date) return "pending";
+  return dayNameWithYear.format(new Date(`${date}T00:00:00Z`));
+}
+
+function moneyShort(value) {
+  const numeric = Number(value || 0);
+  const sign = numeric < 0 ? "-" : "";
+  const abs = Math.abs(numeric);
+  if (abs >= 1000000) return `${sign}$${(abs / 1000000).toFixed(abs >= 10000000 ? 0 : 1)}m`;
+  if (abs >= 1000) return `${sign}$${(abs / 1000).toFixed(abs >= 10000 ? 0 : 1)}k`;
+  return `${sign}$${Math.round(abs)}`;
 }
 
 function monthLabel(month) {
@@ -221,7 +234,7 @@ function monthlyIncomeRead(data, sampleOnly) {
   if (avgInflow <= 0) {
     return {
       value: "Telemetry pending",
-      detail: "Import CSV or connect bank to estimate."
+      detail: "Data source pending."
     };
   }
   return {
@@ -320,31 +333,18 @@ function renderDebtPhysics() {
     const low = loanPayment(row.amount, 7, 60);
     const high = loanPayment(row.amount, 20, 60);
     return `
-      <article class="debt-card">
-        <div class="debt-card-head">
-          <span>${escapeHtml(money.format(row.amount))}</span>
-          <strong>${escapeHtml(money.format(low.payment))}/mo at 7%</strong>
+      <article class="debt-row">
+        <strong>${escapeHtml(money.format(row.amount))}</strong>
+        <div>
+          <span>7% APR / 60mo</span>
+          <b>${escapeHtml(money.format(low.payment))}/mo</b>
+          <em>${escapeHtml(money.format(low.interest))} interest</em>
         </div>
-        <div class="debt-rate-grid">
-          <div>
-            <span>7% APR / 60mo</span>
-            <strong>${escapeHtml(money.format(low.payment))}/mo</strong>
-            <em>${escapeHtml(money.format(low.interest))} interest</em>
-          </div>
-          <div>
-            <span>20% APR / 60mo</span>
-            <strong>${escapeHtml(money.format(high.payment))}/mo</strong>
-            <em>${escapeHtml(money.format(high.interest))} interest</em>
-          </div>
+        <div>
+          <span>20% APR / 60mo</span>
+          <b>${escapeHtml(money.format(high.payment))}/mo</b>
+          <em>${escapeHtml(money.format(high.interest))} interest</em>
         </div>
-        <dl>
-          <dt>Feels like</dt>
-          <dd>${escapeHtml(row.feel)}</dd>
-          <dt>Constrains</dt>
-          <dd>${escapeHtml(row.constrain)}</dd>
-          <dt>Keeps light</dt>
-          <dd>${escapeHtml(row.light)}</dd>
-        </dl>
       </article>
     `;
   }).join("");
@@ -388,7 +388,7 @@ function renderPatterns(data, sampleOnly) {
   ].slice(0, 4);
 
   if (!rows.length) {
-    els.recentPatterns.innerHTML = `<div class="mini-row"><strong>Pattern layer quiet</strong><span>${sampleOnly ? "Sample telemetry loaded." : "Telemetry will appear after import or bank sync."}</span></div>`;
+    els.recentPatterns.innerHTML = `<div class="mini-row"><strong>Pattern layer quiet</strong><span>${sampleOnly ? "Sample telemetry loaded." : "Telemetry pending."}</span></div>`;
     return;
   }
 
@@ -398,6 +398,262 @@ function renderPatterns(data, sampleOnly) {
       <span>${escapeHtml(cleanVisibleText(item.detail))}</span>
     </div>
   `).join("");
+}
+
+function renderDailyScan(data, accounts = {}) {
+  if (!els.dailyScanList) return;
+  const scan = data?.analysis?.improvements?.dailyScan || {};
+  const rows = Array.isArray(scan.rows) ? scan.rows : [];
+  const purchaseTotal = Number(scan.total || 0);
+  const creditsTotal = Number(scan.creditsTotal || 0);
+  const otherInflowTotal = Number(scan.otherInflowTotal || 0);
+  const inflowTotal = Number(scan.inflowTotal || (creditsTotal + otherInflowTotal));
+  const netOut = Number.isFinite(Number(scan.netOut))
+    ? Number(scan.netOut || 0)
+    : Math.max(0, purchaseTotal - inflowTotal);
+  let scanWindow = `${money.format(purchaseTotal)} purchases / ${scan.window || "latest 7 days"}`;
+  if (creditsTotal > 0 && otherInflowTotal > 0) {
+    scanWindow = `${money.format(netOut)} net out / ${money.format(creditsTotal)} credits/returns / ${money.format(otherInflowTotal)} in`;
+  } else if (creditsTotal > 0) {
+    scanWindow = `${money.format(netOut)} net out / ${money.format(creditsTotal)} credits/returns`;
+  } else if (otherInflowTotal > 0) {
+    scanWindow = `${money.format(netOut)} net out / ${money.format(otherInflowTotal)} in`;
+  }
+  setText(els.dailyScanWindow, accounts.connected ? scanWindow : "Purchases only");
+
+  if (!rows.length) {
+    els.dailyScanList.innerHTML = `<div class="daily-scan-row" data-severity="quiet">
+      <time>${accounts.connected ? "Quiet" : "Waiting"}</time>
+      <div>
+        <strong>${accounts.connected ? "Clear scan" : "Awaiting telemetry"}</strong>
+        <span>Payments and transfers excluded.</span>
+      </div>
+    </div>`;
+    return;
+  }
+
+  els.dailyScanList.innerHTML = rows.map((row) => {
+    const merchants = Array.isArray(row.merchants) && row.merchants.length
+      ? row.merchants.join(" / ")
+      : row.topMerchant || "Purchases";
+    const creditMerchants = Array.isArray(row.creditMerchants) && row.creditMerchants.length
+      ? row.creditMerchants.join(" / ")
+      : "Purchase credits";
+    const otherInflowMerchants = Array.isArray(row.otherInflowMerchants) && row.otherInflowMerchants.length
+      ? row.otherInflowMerchants.join(" / ")
+      : "Other inflow";
+    const rowPurchases = Number(row.total || 0);
+    const rowCredits = Number(row.credits || 0);
+    const rowOtherInflow = Number(row.otherInflow || 0);
+    const rowInflow = Number(row.inflowTotal || (rowCredits + rowOtherInflow));
+    const rowNetOut = Number.isFinite(Number(row.netOut))
+      ? Number(row.netOut || 0)
+      : Math.max(0, rowPurchases - rowInflow);
+    const amountText = rowInflow > 0
+      ? rowNetOut > 0
+        ? `${money.format(rowNetOut)} net out`
+        : rowCredits > 0 && rowOtherInflow === 0
+          ? `${money.format(rowInflow - rowPurchases)} net credit`
+          : `${money.format(rowInflow - rowPurchases)} net in`
+      : money.format(rowPurchases);
+    const parts = [];
+    if (Number(row.count || 0) > 0) parts.push(`${row.count || 0} purchase${row.count === 1 ? "" : "s"}: ${merchants}`);
+    if (rowCredits > 0) parts.push(`${row.creditCount || 0} credit${row.creditCount === 1 ? "" : "s"}/return${row.creditCount === 1 ? "" : "s"}: ${creditMerchants}`);
+    if (rowOtherInflow > 0) parts.push(`${row.otherInflowCount || 0} inflow${row.otherInflowCount === 1 ? "" : "s"}: ${otherInflowMerchants}`);
+    return `<div class="daily-scan-row" data-severity="${escapeHtml(row.severity || "watch")}" data-offset="${rowInflow > 0 ? "true" : "false"}">
+      <time>${escapeHtml(dateLabel(row.date))}</time>
+      <div>
+        <strong>${escapeHtml(cleanVisibleText(amountText))}</strong>
+        <span>${escapeHtml(cleanVisibleText(parts.join(" / ")))}</span>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function netWindowMode(rows, days, title, emptyRange, axisTitle) {
+  if (!rows.length) {
+    return { rows: [], current: null, highlight: null, title, axisTitle, key: "date", currentLabel: () => emptyRange, rangeLabel: () => "Telemetry pending.", pointLabel: () => "" };
+  }
+  const latest = rows[rows.length - 1].date;
+  const start = Number.isFinite(days) ? daysAgoKey(latest, days - 1) : rows[0].date;
+  const visible = rows.filter((item) => item.date >= start && item.date <= latest);
+  const current = visible[visible.length - 1] || null;
+  return {
+    rows: visible,
+    current,
+    highlight: current,
+    title,
+    axisTitle,
+    key: "date",
+    currentLabel: () => visible.length ? `${dateLabel(visible[0].date)} - ${dateLabel(visible[visible.length - 1].date)}` : emptyRange,
+    rangeLabel: () => visible.length ? `${dateLabelWithYear(visible[0].date)} - ${dateLabelWithYear(visible[visible.length - 1].date)}` : "Telemetry pending.",
+    pointLabel: (item) => dateLabel(item.date)
+  };
+}
+
+function netModeData(data) {
+  const rows = dailyRows(data).map((item) => ({
+    ...item,
+    year: Number(String(item.date || "").slice(0, 4))
+  }));
+  return {
+    week: netWindowMode(rows, 7, "7-day cashflow", "Last 7 days", "$/7 days"),
+    month: netWindowMode(rows, 30, "30-day cashflow", "Last 30 days", "$/30 days"),
+    quarter: netWindowMode(rows, 90, "90-day cashflow", "Last 90 days", "$/90 days"),
+    year: netWindowMode(rows, 365, "1-year cashflow", "Last 1 year", "$/year"),
+    all: netWindowMode(rows, Infinity, "All-time cashflow", rows[0] ? `Since ${dateLabelWithYear(rows[0].date)}` : "All connected history", "cumulative")
+  };
+}
+
+function axisTicks(modeKey, rows) {
+  const ticks = [];
+  if (!Array.isArray(rows) || !rows.length) return ticks;
+  const add = (index, label) => {
+    if (!Number.isFinite(index) || index < 0 || index >= rows.length || !label) return;
+    if (ticks.some((item) => item.index === index || item.label === label)) return;
+    ticks.push({ index, label });
+  };
+
+  if (modeKey === "week") {
+    rows.forEach((item, index) => add(index, dateLabel(item.date)));
+    return ticks;
+  }
+
+  if (modeKey === "month") {
+    [0, 6, 13, 20, 27, rows.length - 1].forEach((index) => add(index, dateLabel(rows[index]?.date)));
+    return ticks;
+  }
+
+  if (modeKey === "quarter") {
+    add(0, dateLabel(rows[0].date));
+    rows.forEach((item, index) => {
+      if (String(item.date || "").endsWith("-01")) add(index, dateLabel(item.date));
+    });
+    add(rows.length - 1, dateLabel(rows[rows.length - 1].date));
+    return ticks;
+  }
+
+  add(0, modeKey === "all" ? String(rows[0].year || String(rows[0].date).slice(0, 4)) : monthLabel(String(rows[0].date).slice(0, 7)));
+  rows.forEach((item, index) => {
+    const date = String(item.date || "");
+    if (date.slice(5) === "01-01") add(index, String(date.slice(0, 4)));
+  });
+  add(rows.length - 1, modeKey === "all" ? String(rows[rows.length - 1].year || String(rows[rows.length - 1].date).slice(0, 4)) : monthLabel(String(rows[rows.length - 1].date).slice(0, 7)));
+  return ticks;
+}
+
+function renderNetModeButtons(modes) {
+  for (const button of els.netModeButtons) {
+    const modeKey = button.dataset.netMode || "week";
+    const mode = modes[modeKey];
+    const current = mode?.current || null;
+    const value = button.querySelector("strong");
+    const isActive = modeKey === activeNetMode;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+    if (value) {
+      value.textContent = current ? money.format(current.net || 0) : "--";
+      if (current) {
+        value.dataset.net = Number(current.net || 0) >= 0 ? "positive" : "negative";
+      } else {
+        delete value.dataset.net;
+      }
+    }
+  }
+}
+
+function renderMonthlyNet(data) {
+  if (!els.netChart) return;
+  const modes = netModeData(data);
+  if (!modes[activeNetMode]) activeNetMode = "week";
+  const mode = modes[activeNetMode] || modes.week;
+  const visible = Array.isArray(mode.rows) ? mode.rows : [];
+  const current = mode.current || visible[visible.length - 1] || null;
+  const highlight = mode.highlight || visible[visible.length - 1] || current;
+  renderNetModeButtons(modes);
+
+  if (!visible.length || !current || !highlight) {
+    setText(els.netWindow, "Awaiting transactions");
+    setText(els.netCurrent, "--");
+    els.netChart.innerHTML = "";
+    setText(els.netAverage, "Awaiting history.");
+    setText(els.netRange, "Telemetry pending.");
+    return;
+  }
+
+  setText(els.netWindow, mode.currentLabel(current));
+  setText(els.netCurrent, money.format(current.net));
+  els.netCurrent.dataset.net = current.net >= 0 ? "positive" : "negative";
+  setText(els.netAverage, `${money.format(current.inflow || 0)} in - ${money.format(current.spend || 0)} out`);
+  setText(els.netRange, mode.rangeLabel(visible));
+  const chartTitle = document.querySelector(".net-head h3");
+  if (chartTitle) chartTitle.textContent = mode.title;
+  els.netChart.setAttribute("aria-label", `${mode.title} history`);
+
+  const width = 720;
+  const height = 260;
+  const plotLeft = 64;
+  const plotRight = width - 24;
+  const plotTop = 22;
+  const plotBottom = height - 44;
+  const plotW = plotRight - plotLeft;
+  const plotH = plotBottom - plotTop;
+  const nets = visible.map((item) => Number(item.net || 0));
+  const maxAbs = Math.max(1, ...nets.map((value) => Math.abs(value))) * 1.08;
+  const yFor = (value) => plotTop + ((maxAbs - value) / (maxAbs * 2)) * plotH;
+  const step = visible.length > 1 ? plotW / (visible.length - 1) : 0;
+  const xFor = (index) => plotLeft + (index * step);
+  const lineD = visible.map((item, index) => {
+    const value = Number(item.net || 0);
+    const command = index === 0 ? "M" : "L";
+    return `${command}${xFor(index).toFixed(2)},${yFor(value).toFixed(2)}`;
+  }).join(" ");
+
+  const points = visible.map((item, index) => {
+    const value = Number(item.net || 0);
+    const currentClass = mode.key && item[mode.key] === highlight[mode.key] ? " is-current" : "";
+    const signClass = value >= 0 ? "positive" : "negative";
+    return `<circle class="net-point ${signClass}${currentClass}" cx="${xFor(index).toFixed(2)}" cy="${yFor(value).toFixed(2)}" r="${currentClass ? 4.5 : 2.15}">
+      <title>${escapeHtml(mode.pointLabel(item))}: ${escapeHtml(money.format(value))} ${escapeHtml(mode.axisTitle || "net")}</title>
+    </circle>`;
+  }).join("");
+
+  const gridValues = [maxAbs, maxAbs / 2, 0, -maxAbs / 2, -maxAbs];
+  const grid = gridValues.map((value) => {
+    const y = yFor(value);
+    const zeroClass = Math.abs(value) < 1 ? " is-zero" : "";
+    return `<g class="net-grid${zeroClass}">
+      <line x1="${plotLeft}" x2="${plotRight}" y1="${y.toFixed(2)}" y2="${y.toFixed(2)}"></line>
+      <text x="${plotLeft - 12}" y="${(y + 4).toFixed(2)}">${escapeHtml(moneyShort(value))}</text>
+    </g>`;
+  }).join(" ");
+
+  const ticks = axisTicks(activeNetMode, visible);
+  const labelEvery = ticks.length > 8 ? Math.max(1, Math.ceil(ticks.length / 7)) : 1;
+  const xLabels = ticks.map((item, labelIndex) => {
+    if (labelIndex % labelEvery !== 0 && labelIndex !== ticks.length - 1) return "";
+    const anchor = item.index === visible.length - 1 ? " end" : "";
+    const x = xFor(item.index);
+    return `<text class="net-axis-label${anchor}" x="${x.toFixed(2)}" y="${height - 22}">${escapeHtml(String(item.label))}</text>`;
+  }).join("");
+
+  const foundCurrent = mode.key ? visible.findIndex((item) => item[mode.key] === highlight[mode.key]) : -1;
+  const currentIndex = foundCurrent >= 0 ? foundCurrent : visible.length - 1;
+  const currentX = xFor(currentIndex);
+  const currentY = yFor(Number(highlight.net || 0));
+  const currentLabelX = currentX > width - 120 ? currentX - 8 : currentX + 8;
+  const currentAnchor = currentX > width - 120 ? " end" : "";
+
+  els.netChart.innerHTML = `
+    ${grid}
+    <path class="net-line" d="${lineD}"></path>
+    ${points}
+    <line class="net-current-rule" x1="${currentX.toFixed(2)}" x2="${currentX.toFixed(2)}" y1="${plotTop}" y2="${plotBottom}"></line>
+    <circle class="net-current-dot" cx="${currentX.toFixed(2)}" cy="${currentY.toFixed(2)}" r="5"></circle>
+    <text class="net-current-label${currentAnchor}" x="${currentLabelX.toFixed(2)}" y="${Math.max(plotTop + 14, currentY - 10).toFixed(2)}">${escapeHtml(moneyShort(highlight.net))}</text>
+    ${xLabels}
+    <text class="net-axis-title" x="${plotRight}" y="${height - 8}">${escapeHtml(mode.axisTitle || "")}</text>
+  `;
 }
 
 function renderTelemetry(data, sampleOnly) {
@@ -414,9 +670,9 @@ function renderTelemetry(data, sampleOnly) {
   const income = monthlyIncomeRead(data, sampleOnly);
 
   setText(els.telemetryCash, financeStateLabel(cash));
-  setText(els.telemetryCashMeta, accounts.connected ? `updated ${dateTimeLabel(accounts.lastUpdatedAt)}` : sampleOnly ? "sample / import layer" : "current cash");
+  setText(els.telemetryCashMeta, "cash");
   setText(els.telemetryBalance, financeStateLabel(balance));
-  setText(els.telemetryBalanceMeta, accounts.connected ? "credit + loan accounts" : "private account layer");
+  setText(els.telemetryBalanceMeta, "credit + loan accounts");
   setText(els.telemetryNet7, financeStateLabel(net7));
   setText(els.telemetryNet30, financeStateLabel(net30));
   setText(els.telemetryNet90, financeStateLabel(net90));
@@ -426,6 +682,8 @@ function renderTelemetry(data, sampleOnly) {
   setText(els.ladderCurrentIncome, income.value);
   setText(els.ladderCurrentDetail, income.detail);
   renderPatterns(data, sampleOnly);
+  renderDailyScan(data, accounts);
+  renderMonthlyNet(data);
 }
 
 function renderBuild(data) {
@@ -641,6 +899,14 @@ if (els.accessInput) {
 
 [els.debtAmountInput, els.debtAprInput, els.debtMonthsInput].filter(Boolean).forEach((input) => {
   input.addEventListener("input", renderDebtCalculator);
+});
+
+els.netModeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    activeNetMode = button.dataset.netMode || "week";
+    localStorage.setItem("a3NetMode", activeNetMode);
+    if (lastState) renderMonthlyNet(lastState);
+  });
 });
 
 renderDebtPhysics();

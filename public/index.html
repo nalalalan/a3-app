@@ -4,16 +4,16 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>a3.aolabs.io</title>
-    <meta name="description" content="Audi A3 ownership cockpit for price anchors, telemetry, and desire.">
+    <meta name="description" content="Audi A3 cockpit telemetry and ownership desire board.">
     <link rel="canonical" href="https://a3.aolabs.io/">
     <meta property="og:title" content="a3.aolabs.io">
-    <meta property="og:description" content="Audi A3 ownership cockpit for price anchors, telemetry, and desire.">
+    <meta property="og:description" content="Audi A3 cockpit telemetry and ownership desire board.">
     <meta property="og:url" content="https://a3.aolabs.io/">
     <meta property="og:type" content="website">
     <link rel="icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons" type="image/svg+xml">
     <link rel="apple-touch-icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons">
     <link rel="manifest" href="/site.webmanifest?v=20260516-a3-three-rings">
-    <link rel="stylesheet" href="/styles.css?v=20260606-cockpit-desire">
+    <link rel="stylesheet" href="/styles.css?v=20260607-instrument-panel">
   </head>
   <body class="locked-view">
     <header class="suite-topbar" aria-label="a3 navigation">
@@ -48,7 +48,7 @@
               <span>Private</span>
               <span>escape.</span>
             </h1>
-            <p>Small luxury sedan. Boston within reach. Door closes, seat heat on, music on. Alan decides.</p>
+            <p>Small luxury sedan. Boston within reach. Door closes, seat heat on, music on.</p>
             <div class="feature-pills" aria-label="A3 ownership anchors">
               <span>Compact luxury</span>
               <span>Quiet cabin</span>
@@ -73,21 +73,6 @@
             </div>
           </div>
         </article>
-
-        <article class="mini-alternate-card" aria-label="MINI alternate">
-          <a class="mini-image" href="/mini-cooper-fwc3k9x3.pdf" aria-label="MINI build PDF">
-            <img src="/mini-cooper-exterior.jpeg?v=20260531-fwc3k9x3" alt="MINI Cooper S in white exterior">
-          </a>
-          <div>
-            <span class="eyebrow">Tiny alternate</span>
-            <h2>MINI Cooper S</h2>
-            <p>Small, playful, lower gravity. Useful comparison, secondary to the A3 desire path.</p>
-            <div class="mini-meta">
-              <strong id="heroMiniPrice">$39,825</strong>
-              <span>FWC3K9X3</span>
-            </div>
-          </div>
-        </article>
       </section>
 
       <section id="lockPanel" class="lock-panel" aria-label="Private telemetry access" hidden>
@@ -100,92 +85,155 @@
         <span id="accessMessage"></span>
       </section>
 
+      <section class="option-panel" aria-label="Current A3 option">
+        <div class="section-head">
+          <h2>Current A3 option</h2>
+          <p>2025 Audi A3 Premium &middot; white exterior &middot; black interior &middot; 5k miles &middot; former loaner</p>
+        </div>
+        <div class="option-grid">
+          <article class="option-list">
+            <h3>Price bands</h3>
+            <ul>
+              <li>$31.5k clean target</li>
+              <li>$32k CPO stretch</li>
+              <li>$33k+ upper band</li>
+            </ul>
+          </article>
+          <article class="option-list">
+            <h3>Dealer variables</h3>
+            <ul>
+              <li>Window sticker</li>
+              <li>Carfax</li>
+              <li>Warranty start date</li>
+              <li>CPO status</li>
+              <li>Out-the-door price</li>
+              <li>Insurance quote</li>
+              <li>Damage / paint / wheel / interior repair history</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="telemetry-panel private-telemetry" aria-label="Current telemetry">
+        <div class="section-head">
+          <h2>Current telemetry</h2>
+          <p>Cash, balance, and recent flow.</p>
+        </div>
+        <div class="telemetry-grid">
+          <article class="telemetry-gauge">
+            <span>Cash</span>
+            <strong id="telemetryCash">Awaiting telemetry</strong>
+            <em id="telemetryCashMeta">cash</em>
+          </article>
+          <article class="telemetry-gauge">
+            <span>Card / loan balance</span>
+            <strong id="telemetryBalance">Awaiting telemetry</strong>
+            <em id="telemetryBalanceMeta">credit + loan accounts</em>
+          </article>
+          <article class="telemetry-gauge">
+            <span>7-day cashflow</span>
+            <strong id="telemetryNet7">Awaiting telemetry</strong>
+            <em>recent flow</em>
+          </article>
+          <article class="telemetry-gauge">
+            <span>30-day cashflow</span>
+            <strong id="telemetryNet30">Awaiting telemetry</strong>
+            <em>monthly flow</em>
+          </article>
+          <article class="telemetry-gauge">
+            <span>90-day cashflow</span>
+            <strong id="telemetryNet90">Awaiting telemetry</strong>
+            <em>quarter flow</em>
+          </article>
+          <article class="telemetry-gauge">
+            <span>Year cashflow</span>
+            <strong id="telemetryNetYear">Awaiting telemetry</strong>
+            <em>year flow</em>
+          </article>
+        </div>
+
+        <section class="net-panel" aria-label="Cashflow chart">
+          <div class="net-head">
+            <div>
+              <h3>7-day cashflow</h3>
+              <span id="netWindow">Awaiting transactions</span>
+            </div>
+            <strong id="netCurrent">--</strong>
+          </div>
+          <div class="net-mode-row" id="netModeRow" role="group" aria-label="Cashflow period">
+            <button type="button" class="net-mode-button is-active" data-net-mode="week" aria-pressed="true">
+              <span>7 days</span>
+              <strong>--</strong>
+            </button>
+            <button type="button" class="net-mode-button" data-net-mode="month" aria-pressed="false">
+              <span>30 days</span>
+              <strong>--</strong>
+            </button>
+            <button type="button" class="net-mode-button" data-net-mode="quarter" aria-pressed="false">
+              <span>90 days</span>
+              <strong>--</strong>
+            </button>
+            <button type="button" class="net-mode-button" data-net-mode="year" aria-pressed="false">
+              <span>Year</span>
+              <strong>--</strong>
+            </button>
+            <button type="button" class="net-mode-button" data-net-mode="all" aria-pressed="false">
+              <span>All time</span>
+              <strong>--</strong>
+            </button>
+          </div>
+          <div class="net-chart-frame">
+            <svg id="netChart" class="net-chart" viewBox="0 0 720 260" role="img" aria-label="Cashflow history"></svg>
+          </div>
+          <div class="net-foot">
+            <span id="netAverage">Awaiting history.</span>
+            <span id="netRange">Telemetry pending.</span>
+          </div>
+        </section>
+
+        <div class="finance-grid">
+          <section class="daily-panel" aria-label="Daily purchase scan">
+            <div class="daily-panel-head">
+              <h3>Daily scan</h3>
+              <span id="dailyScanWindow">Purchases only</span>
+            </div>
+            <div id="dailyScanList" class="daily-scan-list">
+              <div class="daily-scan-row">
+                <time>Waiting</time>
+                <div>
+                  <strong>Awaiting telemetry</strong>
+                  <span>Payments and transfers excluded.</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="pattern-panel" aria-label="Recent patterns">
+            <div class="daily-panel-head">
+              <h3>Recent patterns</h3>
+              <span>Telemetry</span>
+            </div>
+            <div id="recentPatterns" class="mini-list"></div>
+          </section>
+        </div>
+      </section>
+
       <section class="pleasure-map" aria-label="A3 Pleasure Map">
         <div class="section-head">
-          <span class="eyebrow">A3 Pleasure Map</span>
-          <h2>Predicted happiness, sensory reward, and life impact.</h2>
-        </div>
-        <div class="tier-legend" aria-label="Tier legend">
-          <span><strong>D</strong> useful</span>
-          <span><strong>C</strong> satisfying</span>
-          <span><strong>B</strong> life smoother</span>
-          <span><strong>A</strong> mood/life expansion</span>
-          <span><strong>S</strong> body-level bliss / private luxury escape</span>
+          <h2>A3 Pleasure Map</h2>
         </div>
         <div class="tier-stack">
-          <article class="tier-card tier-s">
-            <div class="tier-rank">S-TIER</div>
+          <article class="tier-card tier-d">
+            <div class="tier-rank">D-TIER</div>
             <div class="tier-body">
-              <h3>Private luxury escape</h3>
-              <p>The highest-value effect: Alan gets a private mobile room. Door closes, outside world drops away, seat heat on, music on, climate controlled, quiet Audi cabin, white exterior / dark or beige cabin, people-free, waiting-free, explaining-free. This is the emotional core: escape, ownership, bodily calm, and "this is mine" pleasure.</p>
+              <h3>Practical backup layer</h3>
               <ul>
-                <li>Night drive with music</li>
-                <li>Park by the Charles / Boston harbor / quiet overlook</li>
-                <li>Heated seat decompression after lab, rehearsal, or social load</li>
-                <li>Sit in the car for 10 minutes before going home</li>
-                <li>Rainy-night cabin cocoon</li>
-                <li>"I can leave whenever" freedom</li>
-              </ul>
-              <p class="angle">Autonomy and environmental control support well-being and motivation. Music activates reward circuitry and dopamine-related pleasure. Private decompression reduces transition friction and sensory load.</p>
-            </div>
-          </article>
-
-          <article class="tier-card tier-a">
-            <div class="tier-rank">A-TIER</div>
-            <div class="tier-body">
-              <h3>Boston becomes emotionally close</h3>
-              <p>The car compresses Boston from "logistics project" into "keys to go." That matters because the life Alan wants is partly in Boston: research events, coffee, camera walks, bookstores, dates, concerts, food, night drives, river walks, and leaving exactly when done.</p>
-              <ul>
-                <li>Drive to Boston for one specific coffee / bookstore / camera walk</li>
-                <li>MIT / Harvard / robotics talk / lab visit</li>
-                <li>Symphony, concert, date, restaurant, late-night reset</li>
-                <li>Boston as a 2-4 hour controlled getaway instead of a giant ordeal</li>
-              </ul>
-              <p class="angle">Experiences and anticipation can improve happiness. Getaways and novelty create memory density and break repetitive loops. Urban parks, walks, and short nature exposure can improve mood.</p>
-            </div>
-          </article>
-
-          <article class="tier-card tier-a">
-            <div class="tier-rank">A-TIER</div>
-            <div class="tier-body">
-              <h3>Nervous-system control pod</h3>
-              <p>Alan gets control over sound, temperature, timing, smell, light, people, exit, route, and stimulation. This is sensory self-governance.</p>
-              <ul>
-                <li>Heated seat + climate = instant body regulation</li>
-                <li>Quiet cabin instead of public noise</li>
-                <li>Waiting outside in bad weather becomes avoidable</li>
-                <li>Leave events before overload</li>
-                <li>Keep a clean private object that feels consistent every time</li>
-              </ul>
-              <p class="angle">Transportation independence matters for autistic adults' participation, employment, and community access. Control and autonomy reduce friction.</p>
-            </div>
-          </article>
-
-          <article class="tier-card tier-b">
-            <div class="tier-rank">B-TIER</div>
-            <div class="tier-body">
-              <h3>Career radius expansion</h3>
-              <p>The A3 gives Alan a bigger professional radius. Talks, demos, networking, makerspaces, labs, conferences, interviews, rehearsals, product shoots, and research errands become easier to say yes to.</p>
-              <ul>
-                <li>Robotics talks in Boston/Cambridge</li>
-                <li>Lab visits</li>
-                <li>Industry meetups</li>
-                <li>Carrying gear/camera/violin/laptop without transit burden</li>
-                <li>Post-event decompression before driving home</li>
-              </ul>
-            </div>
-          </article>
-
-          <article class="tier-card tier-b">
-            <div class="tier-rank">B-TIER</div>
-            <div class="tier-body">
-              <h3>Low-friction life</h3>
-              <p>The car turns errands from emotional tasks into easy missions. Groceries, pharmacy, appointments, returns, winter/rain travel, carrying things, and spontaneous plans become less stupid.</p>
-              <ul>
-                <li>Grocery run without carrying bags</li>
-                <li>Appointment without transit stress</li>
-                <li>Carry violin/camera/laptop safely</li>
-                <li>Late-night food or pharmacy without negotiating logistics</li>
+                <li>Weather capacity</li>
+                <li>Emergency travel</li>
+                <li>Carrying things</li>
+                <li>Visiting people</li>
+                <li>Appointment flexibility</li>
+                <li>Escape route</li>
               </ul>
             </div>
           </article>
@@ -194,10 +242,11 @@
             <div class="tier-rank">C-TIER</div>
             <div class="tier-body">
               <h3>Object pleasure</h3>
-              <p>The car is also just a beautiful object. Door close, steering wheel, key, white paint, black accents, Audi interface, cabin lighting, clean dashboard. The object itself can become a daily reward cue.</p>
               <ul>
-                <li>Looking back at the car after parking</li>
-                <li>Cleaning/detailing ritual</li>
+                <li>White paint</li>
+                <li>Black accents</li>
+                <li>Audi steering wheel</li>
+                <li>Clean dashboard</li>
                 <li>Door-thunk satisfaction</li>
                 <li>Morning start ritual</li>
                 <li>Driving playlist ritual</li>
@@ -205,103 +254,61 @@
             </div>
           </article>
 
-          <article class="tier-card tier-d">
-            <div class="tier-rank">D-TIER</div>
+          <article class="tier-card tier-b">
+            <div class="tier-rank">B-TIER</div>
             <div class="tier-body">
-              <h3>Practical backup layer</h3>
-              <p>Even when the car is simply useful, it adds backup capacity: weather, emergencies, carrying things, visiting people, appointment flexibility, and escape routes.</p>
+              <h3>Low-friction life</h3>
+              <ul>
+                <li>Grocery run without carrying bags</li>
+                <li>Appointment without transit stress</li>
+                <li>Violin / camera / laptop carried safely</li>
+                <li>Late-night food or pharmacy</li>
+                <li>Winter / rain travel</li>
+                <li>Spontaneous plans</li>
+              </ul>
             </div>
           </article>
-        </div>
-      </section>
 
-      <section class="option-panel" aria-label="Current A3 option">
-        <div class="section-head">
-          <span class="eyebrow">Current A3 option</span>
-          <h2>2025 Audi A3 Premium, white exterior, black interior, 5k miles, former loaner.</h2>
-        </div>
-        <div class="option-grid">
-          <article class="option-main">
-            <img src="/a3-detail.jpg?v=20260601-a3-awg0xsw9" alt="Audi A3 detail">
-            <div>
-              <h3>Price anchors</h3>
-              <div class="anchor-row">
-                <span>$31.5k clean target</span>
-                <span>$32k CPO stretch</span>
-                <span>$33k+ high zone</span>
-              </div>
+          <article class="tier-card tier-a">
+            <div class="tier-rank">A-TIER</div>
+            <div class="tier-body">
+              <h3>Boston becomes emotionally close</h3>
+              <ul>
+                <li>Keys to Boston</li>
+                <li>Coffee / bookstore / camera walk</li>
+                <li>MIT / Harvard / robotics talk / lab visit</li>
+                <li>Symphony / concert / date / restaurant</li>
+                <li>River walk / night drive</li>
+                <li>2-4 hour controlled getaway</li>
+              </ul>
             </div>
           </article>
-          <article class="open-loops">
-            <h3>Open loops</h3>
-            <ul>
-              <li>Window sticker</li>
-              <li>Carfax</li>
-              <li>Warranty start date</li>
-              <li>CPO status</li>
-              <li>OTD price</li>
-              <li>Insurance quote</li>
-              <li>Damage/paint/wheel/interior repair history</li>
-            </ul>
-          </article>
-        </div>
-      </section>
 
-      <section class="telemetry-panel private-telemetry" aria-label="Current picture">
-        <div class="section-head">
-          <span class="eyebrow">Current picture</span>
-          <h2>Facts only. Calm telemetry. Alan decides.</h2>
-        </div>
-        <div class="telemetry-grid">
-          <article class="telemetry-gauge">
-            <span>Cash</span>
-            <strong id="telemetryCash">Awaiting telemetry</strong>
-            <em id="telemetryCashMeta">current cash</em>
-          </article>
-          <article class="telemetry-gauge">
-            <span>Card/loan balance</span>
-            <strong id="telemetryBalance">Awaiting telemetry</strong>
-            <em id="telemetryBalanceMeta">private account layer</em>
-          </article>
-          <article class="telemetry-gauge">
-            <span>7-day cashflow</span>
-            <strong id="telemetryNet7">Awaiting telemetry</strong>
-            <em>recent pulse</em>
-          </article>
-          <article class="telemetry-gauge">
-            <span>30-day cashflow</span>
-            <strong id="telemetryNet30">Awaiting telemetry</strong>
-            <em>monthly pulse</em>
-          </article>
-          <article class="telemetry-gauge">
-            <span>90-day cashflow</span>
-            <strong id="telemetryNet90">Awaiting telemetry</strong>
-            <em>quarter pulse</em>
-          </article>
-          <article class="telemetry-gauge">
-            <span>Year cashflow</span>
-            <strong id="telemetryNetYear">Awaiting telemetry</strong>
-            <em>longer runway</em>
-          </article>
-        </div>
-        <div class="pattern-row">
-          <article>
-            <h3>Recent patterns</h3>
-            <div id="recentPatterns" class="mini-list"></div>
-          </article>
-          <article>
-            <h3>Detected income pattern</h3>
-            <strong id="currentIncomeValue">Awaiting telemetry</strong>
-            <span id="currentIncomeDetail">Import CSV or connect bank to estimate.</span>
+          <article class="tier-card tier-s">
+            <div class="tier-rank">S-TIER</div>
+            <div class="tier-body">
+              <h3>Private luxury escape</h3>
+              <ul>
+                <li>The car becomes a room</li>
+                <li>Night drive with music</li>
+                <li>Park by the Charles / Boston harbor / quiet overlook</li>
+                <li>Heated seat decompression after lab, rehearsal, or social load</li>
+                <li>Sit in the car for 10 minutes before going home</li>
+                <li>Rainy-night cabin cocoon</li>
+                <li>"I can leave whenever" freedom</li>
+                <li>Quiet cabin, climate control, door closed, outside world drops away</li>
+                <li>Autonomy and environmental control</li>
+                <li>Music reward / dopamine-related pleasure</li>
+                <li>Private decompression / lower sensory load</li>
+              </ul>
+            </div>
           </article>
         </div>
       </section>
 
       <section class="debt-physics" aria-label="Debt physics">
         <div class="section-head">
-          <span class="eyebrow">Debt physics</span>
-          <h2>Debt is future income already assigned.</h2>
-          <p>Informational only. The table translates balances into monthly claims at 7% APR and 20% APR over 60 months.</p>
+          <h2>Debt physics</h2>
         </div>
         <div id="debtCards" class="debt-grid"></div>
         <form class="debt-calculator" aria-label="APR and months calculator">
@@ -324,71 +331,29 @@
       <section class="income-ladders" aria-label="Income ladders">
         <div class="section-head">
           <span class="eyebrow">Income ladders</span>
-          <h2>How income changes the A3 ownership scenario and life radius.</h2>
+          <h2>Potential income</h2>
         </div>
-        <div class="income-grid">
-          <article class="income-card income-current">
-            <span>Current income</span>
-            <h3 id="ladderCurrentIncome">Detected pattern pending</h3>
-            <p id="ladderCurrentDetail">Connect data / import CSV to estimate current source and monthly pace.</p>
-          </article>
-          <article class="income-card">
-            <span>$50k/year</span>
-            <h3>Assistantship / stipend / small contracts</h3>
-            <p>Research assistantship, stipend, part-time research, tutoring, or small contracts. A3 likely feels like a major luxury object; payment control matters.</p>
-          </article>
-          <article class="income-card">
-            <span>$100k/year</span>
-            <h3>Mechanical / robotics / R&D engineer range</h3>
-            <p>BLS lists mechanical engineers at a $102,320 median annual wage for May 2024, with 9% projected growth from 2024-2034. This is the first zone where A3 ownership can feel more normal if debt and rent stay controlled.</p>
-          </article>
-          <article class="income-card">
-            <span>$250k/year</span>
-            <h3>Senior systems path</h3>
-            <p>Senior robotics, software, AI systems, Disney tech/software high level, robotics company, applied ML/robotics, or consulting plus salary. A3 becomes easy; bigger luxury choices become possible.</p>
-          </article>
-          <article class="income-card">
-            <span>$500k/year</span>
-            <h3>Staff / principal / ownership layer</h3>
-            <p>Staff/principal engineering in high-comp tech, senior AI infrastructure, robotics/AI startup equity, specialized consulting plus product income, patent or research infrastructure.</p>
-          </article>
-          <article class="income-card">
-            <span>$1M/year</span>
-            <h3>Power law / ownership income</h3>
-            <p>Founder path, startup equity or acquisition, executive/principal fellow/chief scientist path, high-end consulting plus product plus ownership. Rare path, not base case.</p>
-          </article>
-        </div>
-
-        <article class="imagineering-path">
-          <div>
-            <span class="eyebrow">Disney Imagineering-style path</span>
-            <h3>Robotics + physical systems + show-quality experience design.</h3>
-            <p>WDI-style work sits at the intersection of mechanical systems, robotics, show/ride systems, human experience, reliability, safety, creative engineering, and cross-disciplinary R&D. For Alan, the relevant path is robotics + physical systems + show-quality experience design + portfolio/demos + leadership.</p>
-          </div>
-          <ul>
-            <li>Mechanical/R&D engineer</li>
-            <li>Show mechanical engineer</li>
-            <li>Robotics / controls / mechatronics</li>
-            <li>Principal engineer / R&D lead</li>
-            <li>Creative technology / experience engineering</li>
-            <li>Leadership, patents, specialized systems, or founder/product path</li>
-          </ul>
-          <p class="source-note">BLS is the official wage baseline. Disney Careers, Indeed, and Levels.fyi are market context with uncertainty.</p>
-        </article>
-
-        <div class="method-grid" aria-label="Other income methods">
-          <article><strong>Research assistantship / stipend stability</strong><span>0-12 months / $25k-$50k / advisor or program funding / fits research continuity.</span></article>
-          <article><strong>Robotics engineering job</strong><span>6-24 months / $85k-$160k / demos, controls, portfolio / fits physical systems.</span></article>
-          <article><strong>Mechanical/R&D engineering job</strong><span>6-24 months / $80k-$150k / CAD, testing, build evidence / fits hardware intuition.</span></article>
-          <article><strong>Software/AI tools engineering</strong><span>3-18 months / $100k-$250k+ / shipping tools / fits AO Labs infrastructure.</span></article>
-          <article><strong>Contract prototyping / CAD / robotics consulting</strong><span>1-12 months / variable / portfolio and leads / fits build skill.</span></article>
-          <article><strong>Tutoring / teaching / paid workshops</strong><span>Now-6 months / $20-$100/hr / clear offer / fits explanation skill.</span></article>
-          <article><strong>Grant-funded research / fellowships</strong><span>3-18 months / variable / proposal and sponsor fit / fits lab direction.</span></article>
-          <article><strong>Productized tools from research</strong><span>6-36 months / variable / repeatable user pain / fits Codex-built systems.</span></article>
-          <article><strong>Open-source / SaaS around robotics tooling</strong><span>6-36 months / variable / distribution / fits technical leverage.</span></article>
-          <article><strong>Photography / creative side income</strong><span>Now-12 months / modest-variable / clients and editing flow / fits aesthetics, not base-case income.</span></article>
-          <article><strong>Startup/founder path</strong><span>12-60 months / power law / customer, product, ownership / fits ambition with volatility.</span></article>
-        </div>
+        <ul class="income-list">
+          <li>
+            <strong>Current detected income</strong>
+            <span id="ladderCurrentIncome">Detected pattern pending</span>
+            <em id="ladderCurrentDetail">Data source pending.</em>
+          </li>
+          <li><strong>Research assistantship / stipend stability</strong><span>0-12 months / $25k-$50k / advisor or program funding / research continuity.</span></li>
+          <li><strong>Tutoring / teaching / paid workshops</strong><span>0-6 months / $20-$100/hr / explanation skill / flexible schedule.</span></li>
+          <li><strong>Grant-funded research / fellowships</strong><span>3-18 months / variable / proposal, sponsor fit, lab direction.</span></li>
+          <li><strong>Mechanical / R&amp;D engineering job</strong><span>6-24 months / $80k-$150k / CAD, testing, build evidence, hardware intuition.</span></li>
+          <li><strong>Robotics engineering job</strong><span>6-24 months / $85k-$160k / controls, demos, portfolio, physical systems.</span></li>
+          <li><strong>Disney Imagineering-style path</strong><span>Mechanical/R&amp;D engineer / show mechanical engineer / robotics-controls-mechatronics / principal R&amp;D lead / creative technology / leadership or founder product path. Salary context varies.</span></li>
+          <li><strong>Software / AI tools engineering</strong><span>3-18 months / $100k-$250k+ / shipping tools, automation, AO Labs infrastructure.</span></li>
+          <li><strong>Contract prototyping / CAD / robotics consulting</strong><span>1-12 months / variable / portfolio, leads, build skill.</span></li>
+          <li><strong>Productized tools from research</strong><span>6-36 months / variable / repeatable user pain, technical product.</span></li>
+          <li><strong>Open-source / SaaS around robotics tooling</strong><span>6-36 months / variable / distribution, tooling, technical leverage.</span></li>
+          <li><strong>Photography / creative side income</strong><span>0-12 months / modest-variable / clients, editing flow, aesthetics.</span></li>
+          <li><strong>Senior systems path</strong><span>$250k/year zone / senior robotics, software, AI systems, applied ML, consulting plus salary.</span></li>
+          <li><strong>Staff / principal / ownership layer</strong><span>$500k/year zone / staff engineering, principal engineering, AI infrastructure, startup equity, specialized consulting.</span></li>
+          <li><strong>Founder / liquidity / ownership income</strong><span>$1M/year zone / startup equity, acquisition, executive or chief scientist path, product ownership. Power-law path.</span></li>
+        </ul>
       </section>
 
       <details class="sources-drawer">
@@ -462,6 +427,6 @@
     </main>
 
     <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
-    <script src="/app.js?v=20260606-cockpit-desire" defer></script>
+    <script src="/app.js?v=20260607-instrument-panel" defer></script>
   </body>
 </html>
