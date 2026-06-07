@@ -298,13 +298,10 @@ ul {
 
 .a3-hero-copy h1 {
   max-width: 12ch;
-  font-size: clamp(3.2rem, 6.2vw, 7.4rem);
+  font-size: clamp(3.2rem, 5vw, 6.2rem);
   font-weight: 760;
   line-height: .88;
-}
-
-.a3-hero-copy h1 span {
-  display: block;
+  white-space: nowrap;
 }
 
 .a3-hero-copy p {
@@ -510,23 +507,25 @@ ul {
 
 .tier-stack {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
 .tier-card {
   display: grid;
-  grid-template-columns: 108px minmax(0, 1fr);
-  gap: 18px;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 12px;
   align-items: start;
-  padding: 18px;
+  padding: 14px;
   border: 1px solid rgba(245, 240, 232, .12);
   border-radius: 8px;
   background: rgba(255, 255, 255, .035);
 }
 
 .tier-s {
+  grid-column: 1 / -1;
   background:
-    linear-gradient(120deg, rgba(209, 166, 91, .15), rgba(255, 255, 255, .035) 45%),
+    linear-gradient(120deg, rgba(209, 166, 91, .2), rgba(255, 255, 255, .04) 48%),
     rgba(255, 255, 255, .035);
   border-color: rgba(209, 166, 91, .34);
 }
@@ -534,23 +533,23 @@ ul {
 .tier-rank {
   display: grid;
   place-items: center;
-  min-height: 74px;
+  min-height: 40px;
   border-radius: 7px;
   background: rgba(0, 0, 0, .28);
   color: var(--amber);
-  font-size: .8rem;
+  font-size: .68rem;
   font-weight: 900;
   letter-spacing: .08em;
 }
 
 .tier-body {
   display: grid;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
 }
 
 .tier-body h3 {
-  font-size: clamp(1.28rem, 2vw, 1.9rem);
+  font-size: clamp(1.12rem, 1.7vw, 1.56rem);
   line-height: 1.04;
 }
 
@@ -565,14 +564,18 @@ ul {
 .tx span,
 .empty {
   color: rgba(245, 240, 232, .72);
-  font-size: .95rem;
-  line-height: 1.38;
+  font-size: .9rem;
+  line-height: 1.28;
 }
 
 .tier-body ul {
   display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px 12px;
+}
+
+.tier-s .tier-body ul {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 7px 14px;
 }
 
 .tier-body li {
@@ -943,36 +946,43 @@ summary {
 
 .source-list {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-  border-top: 1px solid rgba(245, 240, 232, .1);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .source-card {
   display: grid;
-  gap: 7px;
+  align-content: start;
+  gap: 8px;
   min-width: 0;
-  padding: 13px 0;
-  border-bottom: 1px solid rgba(245, 240, 232, .08);
+  padding: 12px;
+  border: 1px solid rgba(245, 240, 232, .1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .028);
 }
 
-.source-card strong,
-.source-card span,
+.source-card p,
 .source-card em {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
+.source-card p {
+  color: rgba(245, 240, 232, .68);
+  font-size: .86rem;
+  line-height: 1.28;
+}
+
 .source-card strong {
-  font-size: clamp(1rem, 1.5vw, 1.16rem);
+  color: var(--ink);
+  font-size: .9rem;
 }
 
 .source-card span {
-  color: rgba(245, 240, 232, .7);
-  font-size: .94rem;
+  color: rgba(245, 240, 232, .66);
+  font-size: .86rem;
   font-weight: 640;
   letter-spacing: 0;
-  line-height: 1.34;
   text-transform: none;
 }
 
@@ -1353,11 +1363,15 @@ summary {
 
 .tier-body ul {
   grid-template-columns: 1fr;
-  gap: 8px;
+  gap: 6px 12px;
 }
 
 .tier-card {
-  grid-template-columns: 92px minmax(0, 1fr);
+  grid-template-columns: 74px minmax(0, 1fr);
+}
+
+.tier-s .tier-body ul {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .telemetry-panel {
@@ -1696,44 +1710,58 @@ summary {
   font-size: .98rem;
 }
 
-.income-list {
-  grid-template-columns: 1fr;
+.income-matrix {
+  display: grid;
+  gap: 0;
+  margin: 0;
 }
 
-.income-list li {
+.income-matrix div {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 5px;
-  align-items: start;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 14px;
+  align-items: baseline;
   min-width: 0;
-  padding: 13px 0;
+  padding: 9px 0;
   border-top: 1px solid rgba(245, 240, 232, .09);
 }
 
-.income-list li:first-child {
+.income-matrix div:first-child {
   border-top: 0;
 }
 
-.income-list strong {
+.income-matrix dt {
+  color: var(--amber);
+  font-size: .78rem;
+  font-weight: 840;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.income-matrix dd {
   min-width: 0;
-  color: var(--ink);
-  line-height: 1.16;
+  margin: 0;
+  color: rgba(245, 240, 232, .78);
+  font-size: .95rem;
+  font-weight: 680;
+  line-height: 1.32;
   overflow-wrap: anywhere;
 }
 
-.income-list span,
-.income-list em {
-  min-width: 0;
-  color: rgba(245, 240, 232, .68);
-  font-size: .94rem;
+.income-matrix em {
+  color: var(--soft);
+  font-size: .86rem;
   font-style: normal;
-  line-height: 1.34;
-  overflow-wrap: anywhere;
+  font-weight: 640;
 }
 
 @media (max-width: 1120px) {
   .a3-hero-card {
     grid-template-columns: 1fr;
+  }
+
+  .source-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .debt-row {
@@ -1744,9 +1772,15 @@ summary {
 @media (max-width: 760px) {
   .option-grid,
   .finance-grid,
-  .income-list li,
-  .income-list li:first-child {
+  .source-list,
+  .tier-stack,
+  .tier-s .tier-body ul {
     grid-template-columns: 1fr;
+  }
+
+  .income-matrix div {
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 10px;
   }
 
   .net-head,

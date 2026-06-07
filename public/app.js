@@ -420,8 +420,7 @@ function renderSources() {
   if (!els.sourceList) return;
   els.sourceList.innerHTML = sources.map((source) => `
     <a class="source-card" href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer">
-      <strong>${escapeHtml(source.title)}</strong>
-      <span>${escapeHtml(source.why)}</span>
+      <p><strong>${escapeHtml(source.title)}</strong> <span>${escapeHtml(source.why)}</span></p>
       <em>${escapeHtml(source.url)}</em>
     </a>
   `).join("");
