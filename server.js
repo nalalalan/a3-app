@@ -1432,7 +1432,7 @@ function overallReview(input) {
   if ((foodCategory || food) && !foodImproving) bad.push(`Food and drink is still leaking: ${moneyText(foodCategory?.total || food.amount90 || food.amount)} in 90 days.`);
 
   const must = [];
-  if (cardBalance > 0) must.push(`Do not treat cash as car money until the ${moneyText(cardBalance)} card/loan balance is lower.`);
+  if (cardBalance > 0) must.push(`Balance pressure: ${moneyText(cardBalance)} across credit/loan accounts in the snapshot.`);
   if (amazon) must.push("Amazon repeat item.");
   if (openai) must.push("OpenAI: remove duplicate plans or API auto-funding that is not doing current work.");
   if (food && !foodImproving) must.push("Food: use food already paid for before another order.");
@@ -1442,7 +1442,7 @@ function overallReview(input) {
 
   return {
     verdict: cardBalance > 0
-      ? "Not A3-ready yet. The blocker is the card/loan balance plus repeat spending."
+      ? "A3 pressure is the credit/loan balance plus repeat spending."
       : "Full purchase still needs payment, insurance, debt, and cashflow fit.",
     summary: `Whole purchase: ${moneyText(A3_GOAL.priceAsBuilt)}. Current picture: ${moneyText(cardBalance)} card/loan balance, ${moneyText(cash)} cash.`,
     good: good.slice(0, 4),
@@ -1546,13 +1546,13 @@ function buildQueueItems(analysis, spendingLocks) {
   const activeLock = (spendingLocks || []).find((lock) => lock.active);
 
   if (!analysis.totals?.balanceKnown) {
-    items.push("car path: current cash unavailable; open A3 once with the saved PIN");
+    items.push("a3: finance snapshot waiting on a saved-PIN browser view");
   } else if (debtTotal > 0) {
-    items.push(`car path: not ready; ${moneyText(debtTotal)} card/loan balance remains before an A3 buy`);
+    items.push(`a3: balance pressure; ${moneyText(debtTotal)} across credit/loan accounts, ${moneyText(analysis.accounts?.cash)} cash, ${moneyText(flexible14)} flexible spend latest 14d`);
   } else if (fullPurchaseGap > 0) {
-    items.push(`car path: full-cost gap ${moneyText(fullPurchaseGap)} before tax, fees, insurance, and interest`);
+    items.push(`a3: full-cost gap ${moneyText(fullPurchaseGap)} before tax, fees, insurance, and interest`);
   } else {
-    items.push(`car path: ${analysis.readiness?.label || "review"}; ${analysis.readiness?.reason || "A3 fit still needs review"}`);
+    items.push(`a3: ${analysis.readiness?.label || "review"}; ${analysis.readiness?.reason || "A3 fit still needs review"}`);
   }
 
   if (topProgress) {
@@ -1714,8 +1714,8 @@ function immediateImprovements(input) {
 
   if (debtTotal > 0) {
     items.push({
-      label: "Mistake to avoid",
-      detail: `Do not treat cash as car money while $${Math.round(debtTotal).toLocaleString("en-US")} card/loan balance remains.`,
+      label: "Balance pressure",
+      detail: `A3 finance pressure: $${Math.round(debtTotal).toLocaleString("en-US")} across credit/loan accounts in the snapshot.`,
       severity: "danger"
     });
   } else if (goal.fullPurchaseGap > 0) {
@@ -1755,7 +1755,7 @@ function immediateImprovements(input) {
   if (debtTotal > 0) {
     items.push({
       label: "Card spend",
-      detail: "Only necessary charges until cash and balances improve.",
+      detail: "New card charges are the active pressure.",
       severity: "danger"
     });
   }
@@ -2174,7 +2174,7 @@ function readinessState(input) {
   const { transactions, balanceKnown, balance, cashFloor, bufferDays, spendChange, watch, goal, accounts } = input;
   if (!transactions.length) return { label: "no data", reason: "Import CSV", color: "muted" };
   if (accounts?.debtTotal > 0) {
-    return { label: "not ready", reason: "Connected balances block a responsible A3 buy", color: "danger" };
+    return { label: "balance pressure", reason: "Connected balances are the current A3 pressure point", color: "danger" };
   }
   if ((balanceKnown && balance < cashFloor) || (bufferDays !== null && bufferDays < 5)) {
     return { label: "danger", reason: "Cash cushion pressure", color: "danger" };
@@ -2191,7 +2191,7 @@ function readinessState(input) {
 function oneAction(input) {
   const { readiness, watch, recurring, categories, goal, balanceKnown, accounts } = input;
   if (!balanceKnown) return { label: "Add balance", detail: "Full A3 decision needs current cash" };
-  if (accounts?.debtTotal > 0) return { label: "Do not buy yet", detail: `$${Math.round(accounts.debtTotal).toLocaleString("en-US")} card/loan balance has to come down first` };
+  if (accounts?.debtTotal > 0) return { label: "Balance pressure", detail: `$${Math.round(accounts.debtTotal).toLocaleString("en-US")} across credit/loan accounts in the snapshot` };
   if (readiness.label === "danger") return { label: "Protect cash", detail: "Pause flexible spend until next deposit" };
   if (watch[0]?.label === "Spend up") return { label: "Slow spend", detail: watch[0].detail };
   if (watch[0]) return { label: "Check pattern", detail: watch[0].label };
