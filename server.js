@@ -1425,24 +1425,24 @@ function overallReview(input) {
   }
 
   const bad = [];
-  if (cardBalance > 0) bad.push(`${moneyText(cardBalance)} card/loan balance is ahead of any car decision.`);
+  if (cardBalance > 0) bad.push(`${moneyText(cardBalance)} credit/loan load in the current snapshot.`);
   if (fullPurchaseGap > 0) bad.push(`${moneyText(fullPurchaseGap)} below the car price before tax, fees, insurance, and interest.`);
-  if (flexible14 > 0) bad.push(`${moneyText(flexible14)} flexible spend in the latest 14 days is too high for an A3 push.`);
+  if (flexible14 > 0) bad.push(`${moneyText(flexible14)} flexible spend in the latest 14 days.`);
   if (amazon) bad.push(`Amazon is the largest repeatable leak: ${moneyText(amazon.amount90)} in 90 days across ${amazon.count} charges.`);
   if ((foodCategory || food) && !foodImproving) bad.push(`Food and drink is still leaking: ${moneyText(foodCategory?.total || food.amount90 || food.amount)} in 90 days.`);
 
   const must = [];
-  if (cardBalance > 0) must.push(`Balance pressure: ${moneyText(cardBalance)} across credit/loan accounts in the snapshot.`);
+  if (openai) must.push("Bad purchase: OpenAI/tool spend is showing in the current snapshot.");
+  if (cardBalance > 0) must.push(`Credit/loan load: ${moneyText(cardBalance)} in the current snapshot.`);
   if (amazon) must.push("Amazon repeat item.");
-  if (openai) must.push("OpenAI: remove duplicate plans or API auto-funding that is not doing current work.");
-  if (food && !foodImproving) must.push("Food: use food already paid for before another order.");
-  if (lyft && !rideImproving) must.push("Rides: batch trips; walk or transit when the schedule allows.");
+  if (food && !foodImproving) must.push("Food: repeat order pattern still visible.");
+  if (lyft && !rideImproving) must.push("Rides: trip spend still visible.");
   if (subscriptions.length) must.push(`Subscription audit: ${subscriptions.join(", ")}.`);
-  if (!must.length) must.push("Keep cash steady and review the full A3 purchase before committing.");
+  if (!must.length) must.push("Cash and full-cost snapshot are steady enough for review.");
 
   return {
     verdict: cardBalance > 0
-      ? "A3 pressure is the credit/loan balance plus repeat spending."
+      ? "A3 money read: credit/loan load plus repeat spending."
       : "Full purchase still needs payment, insurance, debt, and cashflow fit.",
     summary: `Whole purchase: ${moneyText(A3_GOAL.priceAsBuilt)}. Current picture: ${moneyText(cardBalance)} card/loan balance, ${moneyText(cash)} cash.`,
     good: good.slice(0, 4),
@@ -1536,6 +1536,12 @@ function uniqueQueueItems(items) {
   return result;
 }
 
+function badPurchaseText(watch) {
+  const item = (watch || []).find((entry) => /unusual charge/i.test(entry.detail || ""));
+  if (!item?.label || !item?.detail) return "";
+  return `${item.label}: ${item.detail}`;
+}
+
 function buildQueueItems(analysis, spendingLocks) {
   const items = [];
   const debtTotal = Number(analysis.accounts?.debtTotal || 0);
@@ -1544,11 +1550,14 @@ function buildQueueItems(analysis, spendingLocks) {
   const topProgress = analysis.improvements?.progress?.rows?.[0];
   const topSpend = analysis.improvements?.spending?.[0];
   const activeLock = (spendingLocks || []).find((lock) => lock.active);
+  const badPurchase = badPurchaseText(analysis.watch);
 
   if (!analysis.totals?.balanceKnown) {
     items.push("a3: finance snapshot waiting on a saved-PIN browser view");
+  } else if (badPurchase) {
+    items.push(`a3: bad purchase; ${badPurchase}; ${moneyText(flexible14)} flexible spend latest 14d`);
   } else if (debtTotal > 0) {
-    items.push(`a3: balance pressure; ${moneyText(debtTotal)} across credit/loan accounts, ${moneyText(analysis.accounts?.cash)} cash, ${moneyText(flexible14)} flexible spend latest 14d`);
+    items.push(`a3: credit/loan load ${moneyText(debtTotal)}; ${moneyText(analysis.accounts?.cash)} cash; ${moneyText(flexible14)} flexible spend latest 14d`);
   } else if (fullPurchaseGap > 0) {
     items.push(`a3: full-cost gap ${moneyText(fullPurchaseGap)} before tax, fees, insurance, and interest`);
   } else {
@@ -1567,7 +1576,7 @@ function buildQueueItems(analysis, spendingLocks) {
     items.push(`${activeLock.label} lock: ${activeLock.status}; ${activeLock.daysLeft}d left`);
   }
 
-  items.push(`${analysis.action?.label || "Review"}: ${analysis.action?.detail || analysis.readiness?.reason || "check A3 state"}`);
+  items.push(`${analysis.action?.label || "Review"}: ${analysis.action?.detail || analysis.readiness?.reason || "A3 state snapshot"}`);
   return uniqueQueueItems(items);
 }
 
@@ -1714,8 +1723,8 @@ function immediateImprovements(input) {
 
   if (debtTotal > 0) {
     items.push({
-      label: "Balance pressure",
-      detail: `A3 finance pressure: $${Math.round(debtTotal).toLocaleString("en-US")} across credit/loan accounts in the snapshot.`,
+      label: "Credit/loan load",
+      detail: `$${Math.round(debtTotal).toLocaleString("en-US")} across credit/loan accounts in the snapshot.`,
       severity: "danger"
     });
   } else if (goal.fullPurchaseGap > 0) {
@@ -1728,7 +1737,7 @@ function immediateImprovements(input) {
 
   items.push({
     label: "Cash today",
-    detail: `$${Math.round(cash).toLocaleString("en-US")} current cash. Cash does not change the balance blocker.`,
+    detail: `$${Math.round(cash).toLocaleString("en-US")} current cash in the snapshot.`,
     severity: cushion < 500 ? "danger" : "watch"
   });
 
@@ -2173,8 +2182,12 @@ function analyze(store) {
 function readinessState(input) {
   const { transactions, balanceKnown, balance, cashFloor, bufferDays, spendChange, watch, goal, accounts } = input;
   if (!transactions.length) return { label: "no data", reason: "Import CSV", color: "muted" };
+  const badPurchase = badPurchaseText(watch);
+  if (badPurchase) {
+    return { label: "bad purchase", reason: badPurchase, color: "danger" };
+  }
   if (accounts?.debtTotal > 0) {
-    return { label: "balance pressure", reason: "Connected balances are the current A3 pressure point", color: "danger" };
+    return { label: "credit/loan load", reason: `$${Math.round(accounts.debtTotal).toLocaleString("en-US")} across credit/loan accounts in the current snapshot`, color: "danger" };
   }
   if ((balanceKnown && balance < cashFloor) || (bufferDays !== null && bufferDays < 5)) {
     return { label: "danger", reason: "Cash cushion pressure", color: "danger" };
@@ -2190,14 +2203,16 @@ function readinessState(input) {
 
 function oneAction(input) {
   const { readiness, watch, recurring, categories, goal, balanceKnown, accounts } = input;
-  if (!balanceKnown) return { label: "Add balance", detail: "Full A3 decision needs current cash" };
-  if (accounts?.debtTotal > 0) return { label: "Balance pressure", detail: `$${Math.round(accounts.debtTotal).toLocaleString("en-US")} across credit/loan accounts in the snapshot` };
-  if (readiness.label === "danger") return { label: "Protect cash", detail: "Pause flexible spend until next deposit" };
-  if (watch[0]?.label === "Spend up") return { label: "Slow spend", detail: watch[0].detail };
-  if (watch[0]) return { label: "Check pattern", detail: watch[0].label };
-  if (recurring[0]) return { label: "Review recurring", detail: recurring[0].merchant };
-  if (categories[0]) return { label: "Hold category", detail: categories[0].category };
-  return { label: "Keep pace", detail: "Review after new transactions" };
+  if (!balanceKnown) return { label: "No balance snapshot", detail: "Current cash is missing" };
+  const badPurchase = badPurchaseText(watch);
+  if (badPurchase) return { label: "Bad purchase", detail: badPurchase };
+  if (accounts?.debtTotal > 0) return { label: "Credit/loan load", detail: `$${Math.round(accounts.debtTotal).toLocaleString("en-US")} across credit/loan accounts in the snapshot` };
+  if (readiness.label === "danger") return { label: "Cash cushion", detail: "Flexible spend is active before the next deposit" };
+  if (watch[0]?.label === "Spend up") return { label: "Spend up", detail: watch[0].detail };
+  if (watch[0]) return { label: "Pattern visible", detail: watch[0].label };
+  if (recurring[0]) return { label: "Recurring spend", detail: recurring[0].merchant };
+  if (categories[0]) return { label: "Category spend", detail: categories[0].category };
+  return { label: "Current pace", detail: "New transactions will refresh the read" };
 }
 
 function changeSummary(previous, current) {
