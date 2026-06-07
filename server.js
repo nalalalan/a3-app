@@ -8,6 +8,7 @@ const port = Number(process.env.PORT || 3000);
 const publicDir = path.join(__dirname, "public");
 const dataDir = path.resolve(process.env.A3_DATA_DIR || path.join(__dirname, ".a3-data"));
 const statePath = path.join(dataDir, "state.json");
+const queueSnapshotPath = path.join(dataDir, "queue-snapshot.json");
 const openAiApiKey = process.env.OPENAI_API_KEY || "";
 const openAiModel = process.env.OPENAI_MODEL || "gpt-5-mini";
 const monitorIntervalMs = Number(process.env.A3_MONITOR_INTERVAL_MS || 12 * 60 * 60 * 1000);
@@ -139,7 +140,8 @@ function defaultStore() {
     bankConnections: [],
     bankAccounts: [],
     bankSyncs: [],
-    spendingLocks: []
+    spendingLocks: [],
+    queueSnapshot: null
   };
 }
 
@@ -159,7 +161,8 @@ async function readStore() {
       bankConnections: Array.isArray(parsed.bankConnections) ? parsed.bankConnections : [],
       bankAccounts: Array.isArray(parsed.bankAccounts) ? parsed.bankAccounts : [],
       bankSyncs: Array.isArray(parsed.bankSyncs) ? parsed.bankSyncs : [],
-      spendingLocks: Array.isArray(parsed.spendingLocks) ? parsed.spendingLocks : []
+      spendingLocks: Array.isArray(parsed.spendingLocks) ? parsed.spendingLocks : [],
+      queueSnapshot: parsed.queueSnapshot && typeof parsed.queueSnapshot === "object" ? parsed.queueSnapshot : null
     };
   } catch {
     return defaultStore();
@@ -178,7 +181,8 @@ async function writeStore(store) {
     bankConnections: store.bankConnections || [],
     bankAccounts: store.bankAccounts || [],
     bankSyncs: (store.bankSyncs || []).slice(-120),
-    spendingLocks: (store.spendingLocks || []).slice(-160)
+    spendingLocks: (store.spendingLocks || []).slice(-160),
+    queueSnapshot: store.queueSnapshot || null
   };
   await fsp.writeFile(statePath, JSON.stringify(next, null, 2));
   return next;
@@ -1509,6 +1513,172 @@ function spendingLockStatuses(store, analysis) {
   });
 }
 
+function queueMoney(value) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return { value: null, text: "unknown" };
+  return { value: Math.round(amount), text: moneyText(amount) };
+}
+
+function compactQueueItem(text) {
+  return String(text || "").replace(/\s+/g, " ").trim();
+}
+
+function uniqueQueueItems(items) {
+  const seen = new Set();
+  const result = [];
+  for (const item of items.map(compactQueueItem).filter(Boolean)) {
+    const key = item.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(item);
+    if (result.length >= 4) break;
+  }
+  return result;
+}
+
+function buildQueueItems(analysis, spendingLocks) {
+  const items = [];
+  const debtTotal = Number(analysis.accounts?.debtTotal || 0);
+  const fullPurchaseGap = Number(analysis.goal?.fullPurchaseGap || 0);
+  const flexible14 = Number(analysis.improvements?.flexible14 || 0);
+  const topProgress = analysis.improvements?.progress?.rows?.[0];
+  const topSpend = analysis.improvements?.spending?.[0];
+  const activeLock = (spendingLocks || []).find((lock) => lock.active);
+
+  if (!analysis.totals?.balanceKnown) {
+    items.push("car path: current cash unavailable; open A3 once with the saved PIN");
+  } else if (debtTotal > 0) {
+    items.push(`car path: not ready; ${moneyText(debtTotal)} card/loan balance remains before an A3 buy`);
+  } else if (fullPurchaseGap > 0) {
+    items.push(`car path: full-cost gap ${moneyText(fullPurchaseGap)} before tax, fees, insurance, and interest`);
+  } else {
+    items.push(`car path: ${analysis.readiness?.label || "review"}; ${analysis.readiness?.reason || "A3 fit still needs review"}`);
+  }
+
+  if (topProgress) {
+    items.push(`${topProgress.label}: ${topProgress.detail}; ${topProgress.impactLabel}`);
+  } else if (topSpend) {
+    items.push(`${topSpend.label}: ${topSpend.issue || topSpend.impactLabel || "repeat spend"}; ${topSpend.next || "hold the next charge"}`);
+  } else if (flexible14 > 0) {
+    items.push(`spend: ${moneyText(flexible14)} flexible spend in the latest 14d`);
+  }
+
+  if (activeLock) {
+    items.push(`${activeLock.label} lock: ${activeLock.status}; ${activeLock.daysLeft}d left`);
+  }
+
+  items.push(`${analysis.action?.label || "Review"}: ${analysis.action?.detail || analysis.readiness?.reason || "check A3 state"}`);
+  return uniqueQueueItems(items);
+}
+
+function buildQueueSnapshot(store, analysis, source = "unknown") {
+  const now = new Date().toISOString();
+  const plaid = plaidStatus(store);
+  const autoUpdate = autoUpdateStatus(store);
+  const spendingLocks = spendingLockStatuses(store, analysis);
+  const previous = store.queueSnapshot && typeof store.queueSnapshot === "object" ? store.queueSnapshot : {};
+  const previousFreshness = previous.freshness || {};
+  const lastAuthenticatedViewAt = source === "authenticated_state_view"
+    ? now
+    : previousFreshness.lastAuthenticatedViewAt || "";
+  const activeLocks = spendingLocks.filter((lock) => lock.active).map((lock) => ({
+    label: lock.label,
+    status: lock.status,
+    daysLeft: lock.daysLeft,
+    impactLabel: lock.impactLabel || "",
+    next: lock.next || ""
+  })).slice(0, 4);
+
+  return {
+    ok: true,
+    kind: "a3_queue_snapshot",
+    version: 1,
+    generatedAt: now,
+    source,
+    visibility: "queue_summary_not_raw_accounts_or_transactions",
+    car: {
+      name: A3_GOAL.name,
+      trim: A3_GOAL.trim,
+      audiCode: A3_GOAL.audiCode,
+      priceAsBuilt: queueMoney(A3_GOAL.priceAsBuilt)
+    },
+    carPath: {
+      readiness: analysis.readiness || null,
+      action: analysis.action || null,
+      purchasePrice: queueMoney(A3_GOAL.priceAsBuilt),
+      fullPurchaseGap: queueMoney(analysis.goal?.fullPurchaseGap),
+      downPaymentGap: queueMoney(analysis.goal?.downPaymentGap),
+      monthlyRoom: queueMoney(analysis.goal?.monthlyRoom)
+    },
+    financeRead: {
+      plaidConnected: plaid.connected,
+      accounts: plaid.accountCount,
+      transactions: Number(analysis.totals?.transactionCount || 0),
+      latestTransactionDate: analysis.latestDate || "",
+      lastSyncAt: autoUpdate.lastSyncAt || plaid.lastSyncAt || "",
+      lastSyncError: autoUpdate.lastError || plaid.lastError || "",
+      balanceKnown: Boolean(analysis.totals?.balanceKnown),
+      currentCash: queueMoney(analysis.accounts?.cash),
+      cardLoanBalance: queueMoney(analysis.accounts?.debtTotal),
+      netCashAfterBalance: queueMoney(analysis.accounts?.netCashAfterDebt),
+      spend30: queueMoney(analysis.totals?.spend30),
+      net30: queueMoney(analysis.totals?.net30),
+      flexible14: queueMoney(analysis.improvements?.flexible14),
+      bufferDays: Number.isFinite(Number(analysis.totals?.bufferDays))
+        ? Number(Number(analysis.totals.bufferDays).toFixed(1))
+        : null
+    },
+    immediate: {
+      queueItems: buildQueueItems(analysis, spendingLocks),
+      watch: (analysis.watch || []).slice(0, 4).map((item) => ({
+        label: item.label,
+        detail: item.detail,
+        severity: item.severity
+      })),
+      locks: activeLocks,
+      progress: (analysis.improvements?.progress?.rows || []).slice(0, 3).map((row) => ({
+        label: row.label,
+        status: row.status,
+        detail: row.detail,
+        impactLabel: row.impactLabel
+      }))
+    },
+    freshness: {
+      generatedAt: now,
+      lastAuthenticatedViewAt,
+      latestTransactionDate: analysis.latestDate || "",
+      accountLastUpdatedAt: analysis.accounts?.lastUpdatedAt || "",
+      plaidLastSyncAt: autoUpdate.lastSyncAt || plaid.lastSyncAt || "",
+      staleBoundary: lastAuthenticatedViewAt
+        ? ""
+        : "No authenticated A3 browser view has published this snapshot yet."
+    },
+    boundaries: [
+      "No raw account rows are included.",
+      "No raw transaction rows are included.",
+      "The locked /api/state endpoint remains the source for the full private A3 view."
+    ]
+  };
+}
+
+async function publishQueueSnapshot(store, analysis, source = "unknown") {
+  const snapshot = buildQueueSnapshot(store, analysis, source);
+  store.queueSnapshot = snapshot;
+  await fsp.mkdir(dataDir, { recursive: true });
+  await fsp.writeFile(queueSnapshotPath, JSON.stringify(snapshot, null, 2));
+  return snapshot;
+}
+
+async function readStoredQueueSnapshot(store) {
+  if (store.queueSnapshot && typeof store.queueSnapshot === "object") return store.queueSnapshot;
+  try {
+    const parsed = JSON.parse(await fsp.readFile(queueSnapshotPath, "utf8"));
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 function immediateImprovements(input) {
   const { accounts, goal, settings, withFlow, latestDate, paymentStatus } = input;
   const cash = Number(accounts.cash || 0);
@@ -2371,6 +2541,7 @@ async function monitorTick(reason = "interval") {
   if (materialChange && store.settings.advisorCadence !== "manual") {
     await runAdvisor(store, reason);
   }
+  await publishQueueSnapshot(store, analysis, reason === "startup" ? "monitor_startup" : reason === "interval" ? "monitor_interval" : `monitor_${reason}`);
   await writeStore(store);
   return snapshot;
 }
@@ -2381,6 +2552,7 @@ async function handleApi(req, res, requestUrl) {
     const analysis = analyze(store);
     const plaid = plaidStatus(store);
     const autoUpdate = autoUpdateStatus(store);
+    const queueSnapshot = await readStoredQueueSnapshot(store);
     sendJson(res, 200, {
       ok: true,
       app: "a3.aolabs.io",
@@ -2392,9 +2564,36 @@ async function handleApi(req, res, requestUrl) {
       plaidConnected: plaid.connected,
       accounts: plaid.accountCount,
       transactions: analysis.totals.transactionCount,
+      queueSnapshot: {
+        available: Boolean(queueSnapshot),
+        generatedAt: queueSnapshot?.generatedAt || "",
+        lastAuthenticatedViewAt: queueSnapshot?.freshness?.lastAuthenticatedViewAt || ""
+      },
       autoUpdate,
       checkedAt: new Date().toISOString()
     });
+    return true;
+  }
+
+  if (requestUrl.pathname === "/api/queue-snapshot" && req.method === "GET") {
+    const store = await readStore();
+    const snapshot = await readStoredQueueSnapshot(store);
+    if (!snapshot) {
+      sendJson(res, 200, {
+        ok: true,
+        kind: "a3_queue_snapshot",
+        available: false,
+        queueItems: ["A3 queue snapshot not published yet; open A3 once with the saved PIN."],
+        freshness: {
+          generatedAt: "",
+          lastAuthenticatedViewAt: "",
+          staleBoundary: "No authenticated A3 browser view has published this snapshot yet."
+        },
+        checkedAt: new Date().toISOString()
+      });
+      return true;
+    }
+    sendJson(res, 200, { ...snapshot, ok: true, available: true, checkedAt: new Date().toISOString() });
     return true;
   }
 
@@ -2421,6 +2620,8 @@ async function handleApi(req, res, requestUrl) {
   if (requestUrl.pathname === "/api/state" && req.method === "GET") {
     const store = await readStore();
     const analysis = analyze(store);
+    const queueSnapshot = await publishQueueSnapshot(store, analysis, "authenticated_state_view");
+    await writeStore(store);
     sendJson(res, 200, {
       ok: true,
       goal: A3_GOAL,
@@ -2429,6 +2630,7 @@ async function handleApi(req, res, requestUrl) {
       plaid: plaidStatus(store),
       autoUpdate: autoUpdateStatus(store),
       analysis,
+      queueSnapshot,
       spendingLocks: spendingLockStatuses(store, analysis),
       imports: store.imports.slice(-10).reverse(),
       snapshots: store.snapshots.slice(-12).reverse().map((snapshot) => ({
@@ -2482,13 +2684,13 @@ async function handleApi(req, res, requestUrl) {
       label,
       detail: `${days} days / ${nextLock.impactLabel || "spend freeze"}`
     }];
+    const nextAnalysis = analyze(store);
+    await publishQueueSnapshot(store, nextAnalysis, "spending_lock");
     await writeStore(store);
-    const nextStore = await readStore();
-    const nextAnalysis = analyze(nextStore);
     sendJson(res, 200, {
       ok: true,
       lock: nextLock,
-      spendingLocks: spendingLockStatuses(nextStore, nextAnalysis),
+      spendingLocks: spendingLockStatuses(store, nextAnalysis),
       analysis: nextAnalysis
     });
     return true;
@@ -2592,8 +2794,10 @@ async function handleApi(req, res, requestUrl) {
         error: syncError
       }];
     }
+    const analysis = analyze(store);
+    await publishQueueSnapshot(store, analysis, "bank_connect");
     await writeStore(store);
-    sendJson(res, 200, { ok: true, syncError, plaid: plaidStatus(store), analysis: analyze(store) });
+    sendJson(res, 200, { ok: true, syncError, plaid: plaidStatus(store), analysis });
     return true;
   }
 
@@ -2614,6 +2818,7 @@ async function handleApi(req, res, requestUrl) {
       changes,
       analysis
     }];
+    await publishQueueSnapshot(store, analysis, "bank_sync");
     await writeStore(store);
     const next = await readStore();
     sendJson(res, 200, { ok: true, syncs, plaid: plaidStatus(next), analysis: analyze(next) });
@@ -2634,8 +2839,10 @@ async function handleApi(req, res, requestUrl) {
       label: "Settings changed",
       detail: "A3 planning inputs updated"
     });
+    const analysis = analyze(store);
+    await publishQueueSnapshot(store, analysis, "settings");
     await writeStore(store);
-    sendJson(res, 200, { ok: true, analysis: analyze(store) });
+    sendJson(res, 200, { ok: true, analysis });
     return true;
   }
 
@@ -2662,6 +2869,8 @@ async function handleApi(req, res, requestUrl) {
       label: name,
       detail: `${transactions.length} transactions`
     });
+    const analysis = analyze(store);
+    await publishQueueSnapshot(store, analysis, "csv_import");
     await writeStore(store);
     await monitorTick("import");
     sendJson(res, 200, { ok: true, imported: transactions.length, analysis: analyze(await readStore()) });
