@@ -844,7 +844,8 @@ function projectionScenario(data, days, scenario = {}) {
   const carCostMonthly = buyCar ? carPaymentMonthly + projectionConfig.monthlyInsurance : 0;
   const jobNetMonthly = (projectionConfig.jobBase * projectionConfig.jobTakeHomeRate) / 12;
   const jobNetDaily = jobNetMonthly / 30.4375;
-  const postJobInflowMonthly = hasJob ? Math.max(rates.inflowMonthly, jobNetMonthly) : rates.inflowMonthly;
+  const postJobSalaryMonthly = hasJob ? jobNetMonthly : 0;
+  const postJobInflowMonthly = rates.inflowMonthly + postJobSalaryMonthly;
   const postJobCarMonthly = buyCar ? carCostMonthly : 0;
   const postJobMonthlyNet = postJobInflowMonthly - rates.spendMonthly - postJobCarMonthly;
   let balance = startCash - downPayment;
@@ -863,7 +864,7 @@ function projectionScenario(data, days, scenario = {}) {
     const activePayment = buyCar && elapsedMonths <= projectionConfig.months ? carPaymentMonthly : 0;
     const activeCarMonthly = buyCar ? activePayment + projectionConfig.monthlyInsurance : 0;
     const jobActive = hasJob && date >= projectionConfig.jobStartDate;
-    const inflowDaily = jobActive ? Math.max(rates.inflowDaily, jobNetDaily) : rates.inflowDaily;
+    const inflowDaily = rates.inflowDaily + (jobActive ? jobNetDaily : 0);
     const dailyNet = inflowDaily - rates.spendDaily - (activeCarMonthly / 30.4375);
     balance += dailyNet;
     visible.push({
@@ -886,6 +887,7 @@ function projectionScenario(data, days, scenario = {}) {
     carPaymentMonthly,
     carCostMonthly,
     jobNetMonthly,
+    postJobSalaryMonthly,
     postJobInflowMonthly,
     postJobCarMonthly,
     postJobMonthlyNet,
@@ -1027,7 +1029,7 @@ function renderProjectionChart(mode) {
       return `<g class="projection-job-badge" transform="translate(${badgeX.toFixed(2)} ${badgeY.toFixed(2)})">
         <rect width="${badgeW}" height="${badgeH}" rx="7"></rect>
         <text class="projection-job-badge-title" x="16" y="32">$130k/year</text>
-        <text class="projection-job-badge-sub" x="17" y="55">May 2027 income</text>
+        <text class="projection-job-badge-sub" x="17" y="55">+$7.8k/mo salary layer</text>
         <text class="projection-job-badge-slope ${slopeClass}" x="17" y="78">${escapeHtml(moneySigned(monthlySlope))}/mo net after spend/A3</text>
       </g>`;
     })()
@@ -1079,8 +1081,8 @@ function renderProjection(data) {
     ? `A3 ${money.format(mode.downPayment)} down + ${money.format(mode.carCostMonthly)}/mo`
     : "A3 excluded";
   const slopeText = projectionJob
-    ? `Post-May ${money.format(mode.postJobInflowMonthly)}/mo in - ${money.format(mode.rates.spendMonthly)}/mo spend - ${money.format(mode.postJobCarMonthly)}/mo A3 = ${moneySigned(mode.postJobMonthlyNet)}/mo`
-    : `Future slope ${money.format(mode.postJobInflowMonthly)}/mo in - ${money.format(mode.rates.spendMonthly)}/mo spend - ${money.format(mode.postJobCarMonthly)}/mo A3 = ${moneySigned(mode.postJobMonthlyNet)}/mo`;
+    ? `Post-May ${money.format(mode.rates.inflowMonthly)}/mo current + ${money.format(mode.postJobSalaryMonthly)}/mo salary - ${money.format(mode.rates.spendMonthly)}/mo spend - ${money.format(mode.postJobCarMonthly)}/mo A3 = ${moneySigned(mode.postJobMonthlyNet)}/mo`
+    : `Future slope ${money.format(mode.rates.inflowMonthly)}/mo current - ${money.format(mode.rates.spendMonthly)}/mo spend - ${money.format(mode.postJobCarMonthly)}/mo A3 = ${moneySigned(mode.postJobMonthlyNet)}/mo`;
   setText(els.projectionBasis, `${rateText}. ${carText}.`);
   setText(els.projectionRange, `${slopeText}. ${mode.rangeLabel()}.`);
   const jobDelta = projectionJob && noJobMode.current ? current.net - noJobMode.current.net : 0;
