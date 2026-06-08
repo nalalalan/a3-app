@@ -46,9 +46,6 @@ const els = {
   projectionJobDelta: document.getElementById("projectionJobDelta"),
   projectionCarDelta: document.getElementById("projectionCarDelta"),
   projectionJobStart: document.getElementById("projectionJobStart"),
-  projectionJobImpact: document.getElementById("projectionJobImpact"),
-  projectionJobImpactValue: document.getElementById("projectionJobImpactValue"),
-  projectionJobImpactText: document.getElementById("projectionJobImpactText"),
   recentPatterns: document.getElementById("recentPatterns"),
   currentIncomeValue: document.getElementById("currentIncomeValue"),
   currentIncomeDetail: document.getElementById("currentIncomeDetail"),
@@ -262,11 +259,6 @@ function moneyShort(value) {
   if (abs >= 1000000) return `${sign}$${(abs / 1000000).toFixed(abs >= 10000000 ? 0 : 1)}m`;
   if (abs >= 1000) return `${sign}$${(abs / 1000).toFixed(abs >= 10000 ? 0 : 1)}k`;
   return `${sign}$${Math.round(abs)}`;
-}
-
-function moneySigned(value) {
-  const numeric = Number(value || 0);
-  return `${numeric > 0 ? "+" : ""}${money.format(numeric)}`;
 }
 
 function monthLabel(month) {
@@ -1013,9 +1005,21 @@ function renderProjectionChart(mode) {
       return `${command}${xFor(index).toFixed(2)},${yFor(Number(item.net || 0)).toFixed(2)}`;
     }).join(" ")
     : "";
+  const jobBadge = projectionJob && jobStartIndex > 0
+    ? (() => {
+      const badgeW = 220;
+      const badgeH = 62;
+      const badgeX = Math.min(plotRight - badgeW, Math.max(plotLeft + 8, xFor(jobStartIndex) - badgeW * .45));
+      const badgeY = plotTop + 6;
+      return `<g class="projection-job-badge" transform="translate(${badgeX.toFixed(2)} ${badgeY.toFixed(2)})">
+        <rect width="${badgeW}" height="${badgeH}" rx="7"></rect>
+        <text class="projection-job-badge-title" x="14" y="27">$130k/year</text>
+        <text class="projection-job-badge-sub" x="15" y="48">May 2027 income</text>
+      </g>`;
+    })()
+    : "";
   const jobMarker = projectionJob && jobStartIndex > 0
-    ? `<line class="projection-job-marker" x1="${xFor(jobStartIndex).toFixed(2)}" x2="${xFor(jobStartIndex).toFixed(2)}" y1="${plotTop}" y2="${plotBottom}"></line>
-      <text class="projection-job-label" x="${Math.min(plotRight - 4, xFor(jobStartIndex) + 8).toFixed(2)}" y="${(plotTop + 14).toFixed(2)}">May 2027</text>`
+    ? `<line class="projection-job-marker" x1="${xFor(jobStartIndex).toFixed(2)}" x2="${xFor(jobStartIndex).toFixed(2)}" y1="${plotTop}" y2="${plotBottom}"></line>`
     : "";
   els.projectionChart.innerHTML = `
     ${grid}
@@ -1023,6 +1027,7 @@ function renderProjectionChart(mode) {
     <path class="net-line projection-line" d="${lineD}"></path>
     ${jobSegmentD ? `<path class="net-line projection-job-line" d="${jobSegmentD}"></path>` : ""}
     ${jobMarker}
+    ${jobBadge}
     ${points}
     <line class="net-current-rule" x1="${currentX.toFixed(2)}" x2="${currentX.toFixed(2)}" y1="${plotTop}" y2="${plotBottom}"></line>
     <circle class="net-current-dot" cx="${currentX.toFixed(2)}" cy="${currentY.toFixed(2)}" r="5"></circle>
@@ -1049,9 +1054,6 @@ function renderProjection(data) {
     setText(els.projectionCurrent, "--");
     setText(els.projectionBasis, "Awaiting history.");
     setText(els.projectionRange, "Telemetry pending.");
-    if (els.projectionJobImpact) els.projectionJobImpact.dataset.state = "future";
-    setText(els.projectionJobImpactValue, "--");
-    setText(els.projectionJobImpactText, "May 2027");
     els.projectionChart.innerHTML = "";
     return;
   }
@@ -1076,13 +1078,6 @@ function renderProjection(data) {
   setText(els.projectionJobStart, jobInSpan ? "May 2027 in span" : "May 2027 beyond span");
   if (els.projectionJobDelta) els.projectionJobDelta.dataset.net = jobDelta >= 0 ? "positive" : "negative";
   if (els.projectionCarDelta) els.projectionCarDelta.dataset.net = carDelta >= 0 ? "positive" : "negative";
-  if (els.projectionJobImpact) {
-    els.projectionJobImpact.dataset.state = projectionJob ? (jobInSpan ? "active" : "future") : "excluded";
-  }
-  setText(els.projectionJobImpactValue, projectionJob && jobInSpan ? moneySigned(jobDelta) : "$0");
-  setText(els.projectionJobImpactText, projectionJob
-    ? (jobInSpan ? "May 2027 income" : "May 2027 beyond this span")
-    : "$130k scenario excluded");
   renderProjectionChart(mode);
 }
 
