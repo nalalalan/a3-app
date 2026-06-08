@@ -1037,6 +1037,19 @@ function renderProjectionChart(mode) {
   const jobMarker = projectionJob && jobStartIndex > 0
     ? `<line class="projection-job-marker" x1="${xFor(jobStartIndex).toFixed(2)}" x2="${xFor(jobStartIndex).toFixed(2)}" y1="${plotTop}" y2="${plotBottom}"></line>`
     : "";
+  const downPaymentBadge = projectionBuyCar && Number(mode.downPayment || 0) > 0
+    ? (() => {
+      const badgeW = 190;
+      const badgeH = 48;
+      const badgeX = plotLeft + 10;
+      const badgeY = plotBottom - badgeH - 8;
+      return `<g class="projection-down-badge" transform="translate(${badgeX.toFixed(2)} ${badgeY.toFixed(2)})">
+        <rect width="${badgeW}" height="${badgeH}" rx="7"></rect>
+        <text class="projection-down-badge-title" x="12" y="20">-${escapeHtml(money.format(mode.downPayment))} down today</text>
+        <text class="projection-down-badge-sub" x="12" y="36">chart starts after down payment</text>
+      </g>`;
+    })()
+    : "";
   els.projectionChart.innerHTML = `
     ${grid}
     ${comparisonD ? `<path class="net-line projection-compare-line" d="${comparisonD}"></path>` : ""}
@@ -1044,6 +1057,7 @@ function renderProjectionChart(mode) {
     ${jobSegmentD ? `<path class="net-line projection-job-line" d="${jobSegmentD}"></path>` : ""}
     ${jobMarker}
     ${jobBadge}
+    ${downPaymentBadge}
     ${points}
     <line class="net-current-rule" x1="${currentX.toFixed(2)}" x2="${currentX.toFixed(2)}" y1="${plotTop}" y2="${plotBottom}"></line>
     <circle class="net-current-dot" cx="${currentX.toFixed(2)}" cy="${currentY.toFixed(2)}" r="5"></circle>
@@ -1077,13 +1091,16 @@ function renderProjection(data) {
   setText(els.projectionCurrent, money.format(current.net));
   els.projectionCurrent.dataset.net = current.net >= 0 ? "positive" : "negative";
   const rateText = `${mode.rates.days}d rate ${money.format(mode.rates.inflowMonthly)}/mo in - ${money.format(mode.rates.spendMonthly)}/mo out`;
+  const startText = projectionBuyCar
+    ? `Start ${money.format(mode.startCash)} cash - ${money.format(mode.downPayment)} down = ${money.format(mode.startCash - mode.downPayment)}`
+    : `Start ${money.format(mode.startCash)} cash`;
   const carText = projectionBuyCar
     ? `A3 ${money.format(mode.downPayment)} down + ${money.format(mode.carCostMonthly)}/mo`
     : "A3 excluded";
   const slopeText = projectionJob
     ? `Post-May ${money.format(mode.rates.inflowMonthly)}/mo current + ${money.format(mode.postJobSalaryMonthly)}/mo salary - ${money.format(mode.rates.spendMonthly)}/mo spend - ${money.format(mode.postJobCarMonthly)}/mo A3 = ${moneySigned(mode.postJobMonthlyNet)}/mo`
     : `Future slope ${money.format(mode.rates.inflowMonthly)}/mo current - ${money.format(mode.rates.spendMonthly)}/mo spend - ${money.format(mode.postJobCarMonthly)}/mo A3 = ${moneySigned(mode.postJobMonthlyNet)}/mo`;
-  setText(els.projectionBasis, `${rateText}. ${carText}.`);
+  setText(els.projectionBasis, `${startText}. ${rateText}. ${carText}.`);
   setText(els.projectionRange, `${slopeText}. ${mode.rangeLabel()}.`);
   const jobDelta = projectionJob && noJobMode.current ? current.net - noJobMode.current.net : 0;
   const carDelta = projectionBuyCar && noCarMode.current ? current.net - noCarMode.current.net : 0;

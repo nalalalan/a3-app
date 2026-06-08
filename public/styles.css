@@ -1643,6 +1643,24 @@ summary {
   fill: #d8bf8e;
 }
 
+.projection-down-badge rect {
+  fill: rgba(18, 16, 12, .9);
+  stroke: rgba(216, 191, 142, .48);
+  stroke-width: 1.1;
+}
+
+.projection-down-badge-title {
+  fill: #f2dfb8;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.projection-down-badge-sub {
+  fill: rgba(245, 240, 232, .62);
+  font-size: 10px;
+  font-weight: 760;
+}
+
 .scenario-toggle-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
