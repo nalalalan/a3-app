@@ -13,7 +13,7 @@
     <link rel="icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons" type="image/svg+xml">
     <link rel="apple-touch-icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons">
     <link rel="manifest" href="/site.webmanifest?v=20260516-a3-three-rings">
-    <link rel="stylesheet" href="/styles.css?v=20260607-projection">
+    <link rel="stylesheet" href="/styles.css?v=20260608-projection-delta">
   </head>
   <body class="locked-view">
     <header class="suite-topbar" aria-label="a3 navigation">
@@ -182,6 +182,20 @@
               <span>$130k May 2027</span>
               <em>estimated take-home</em>
             </label>
+          </div>
+          <div class="scenario-readout" aria-label="Scenario delta">
+            <div>
+              <span>Job effect</span>
+              <strong id="projectionJobDelta">--</strong>
+            </div>
+            <div>
+              <span>A3 effect</span>
+              <strong id="projectionCarDelta">--</strong>
+            </div>
+            <div>
+              <span>Job start</span>
+              <strong id="projectionJobStart">May 2027</strong>
+            </div>
           </div>
           <div class="net-mode-row projection-mode-row" id="projectionModeRow" role="group" aria-label="Projection period">
             <button type="button" class="net-mode-button is-active" data-projection-mode="week" aria-pressed="true">
@@ -439,6 +453,6 @@
     </main>
 
     <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
-    <script src="/app.js?v=20260607-projection" defer></script>
+    <script src="/app.js?v=20260608-projection-delta" defer></script>
   </body>
 </html>

@@ -1594,6 +1594,24 @@ summary {
   stroke: rgba(216, 191, 142, .95);
 }
 
+.projection-compare-line {
+  stroke: rgba(245, 240, 232, .28);
+  stroke-width: 1.8;
+  stroke-dasharray: 7 8;
+}
+
+.projection-job-marker {
+  stroke: rgba(216, 191, 142, .42);
+  stroke-width: 1.2;
+  stroke-dasharray: 2 5;
+}
+
+.projection-job-label {
+  fill: rgba(216, 191, 142, .9);
+  font-size: 10px;
+  font-weight: 820;
+}
+
 .scenario-toggle-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1639,6 +1657,50 @@ summary {
   font-style: normal;
   font-weight: 700;
   line-height: 1.12;
+}
+
+.scenario-readout {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid rgba(245, 240, 232, .08);
+  border-bottom: 1px solid rgba(245, 240, 232, .08);
+  margin-bottom: 12px;
+}
+
+.scenario-readout div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-left: 1px solid rgba(245, 240, 232, .08);
+}
+
+.scenario-readout div:first-child {
+  border-left: 0;
+}
+
+.scenario-readout span {
+  color: var(--soft);
+  font-size: .72rem;
+  font-weight: 790;
+  line-height: 1.08;
+  text-transform: uppercase;
+}
+
+.scenario-readout strong {
+  color: rgba(245, 240, 232, .88);
+  font-size: clamp(.98rem, 1.8vw, 1.22rem);
+  font-weight: 820;
+  line-height: 1.02;
+  overflow-wrap: anywhere;
+}
+
+.scenario-readout strong[data-net="positive"] {
+  color: #b8c6b4;
+}
+
+.scenario-readout strong[data-net="negative"] {
+  color: #d8bf8e;
 }
 
 .net-point {
@@ -1931,6 +1993,19 @@ summary {
 
   .scenario-toggle-row {
     grid-template-columns: 1fr;
+  }
+
+  .scenario-readout {
+    grid-template-columns: 1fr;
+  }
+
+  .scenario-readout div {
+    border-left: 0;
+    border-top: 1px solid rgba(245, 240, 232, .08);
+  }
+
+  .scenario-readout div:first-child {
+    border-top: 0;
   }
 
   .net-foot,

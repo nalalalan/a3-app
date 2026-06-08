@@ -43,6 +43,9 @@ const els = {
   projectionRange: document.getElementById("projectionRange"),
   projectionCarToggle: document.getElementById("projectionCarToggle"),
   projectionJobToggle: document.getElementById("projectionJobToggle"),
+  projectionJobDelta: document.getElementById("projectionJobDelta"),
+  projectionCarDelta: document.getElementById("projectionCarDelta"),
+  projectionJobStart: document.getElementById("projectionJobStart"),
   recentPatterns: document.getElementById("recentPatterns"),
   currentIncomeValue: document.getElementById("currentIncomeValue"),
   currentIncomeDetail: document.getElementById("currentIncomeDetail"),
@@ -724,7 +727,11 @@ function renderMonthlyNet(data) {
   const plotBottom = height - 44;
   const plotW = plotRight - plotLeft;
   const plotH = plotBottom - plotTop;
-  const nets = visible.map((item) => Number(item.net || 0));
+  const comparisonRows = Array.isArray(mode.compareRows) ? mode.compareRows : [];
+  const nets = [
+    ...visible.map((item) => Number(item.net || 0)),
+    ...comparisonRows.map((item) => Number(item.net || 0))
+  ];
   const maxAbs = Math.max(1, ...nets.map((value) => Math.abs(value))) * 1.08;
   const yFor = (value) => plotTop + ((maxAbs - value) / (maxAbs * 2)) * plotH;
   const step = visible.length > 1 ? plotW / (visible.length - 1) : 0;
@@ -809,7 +816,9 @@ function recentProjectionRates(rows) {
   };
 }
 
-function projectionScenario(data, days) {
+function projectionScenario(data, days, scenario = {}) {
+  const buyCar = scenario.buyCar ?? projectionBuyCar;
+  const hasJob = scenario.job ?? projectionJob;
   const analysis = data.analysis || {};
   const accounts = analysis.accounts || {};
   const totals = analysis.totals || {};
@@ -821,13 +830,13 @@ function projectionScenario(data, days) {
   const cashFloor = Math.max(0, Number(settings.cashFloor || 0));
   const targetDown = Math.max(0, Number(settings.downPaymentTarget || 0));
   const availableDown = Math.max(0, startCash - cashFloor);
-  const downPayment = projectionBuyCar
+  const downPayment = buyCar
     ? Math.min(projectionConfig.a3Price, targetDown > 0 ? Math.min(targetDown, Math.max(0, startCash)) : availableDown)
     : 0;
-  const principal = projectionBuyCar ? Math.max(0, projectionConfig.a3Price - downPayment) : 0;
+  const principal = buyCar ? Math.max(0, projectionConfig.a3Price - downPayment) : 0;
   const loan = loanPayment(principal, projectionConfig.apr, projectionConfig.months);
-  const carPaymentMonthly = projectionBuyCar ? loan.payment : 0;
-  const carCostMonthly = projectionBuyCar ? carPaymentMonthly + projectionConfig.monthlyInsurance : 0;
+  const carPaymentMonthly = buyCar ? loan.payment : 0;
+  const carCostMonthly = buyCar ? carPaymentMonthly + projectionConfig.monthlyInsurance : 0;
   const jobNetMonthly = (projectionConfig.jobBase * projectionConfig.jobTakeHomeRate) / 12;
   const jobNetDaily = jobNetMonthly / 30.4375;
   let balance = startCash - downPayment;
@@ -835,7 +844,7 @@ function projectionScenario(data, days) {
     date: startDate,
     net: balance,
     dayIndex: 0,
-    carMonthly: projectionBuyCar ? carCostMonthly : 0,
+    carMonthly: buyCar ? carCostMonthly : 0,
     jobMonthly: 0,
     baseline: true
   }];
@@ -843,9 +852,9 @@ function projectionScenario(data, days) {
   for (let day = 1; day <= days; day += 1) {
     const date = addDaysKey(startDate, day);
     const elapsedMonths = day / 30.4375;
-    const activePayment = projectionBuyCar && elapsedMonths <= projectionConfig.months ? carPaymentMonthly : 0;
-    const activeCarMonthly = projectionBuyCar ? activePayment + projectionConfig.monthlyInsurance : 0;
-    const jobActive = projectionJob && date >= projectionConfig.jobStartDate;
+    const activePayment = buyCar && elapsedMonths <= projectionConfig.months ? carPaymentMonthly : 0;
+    const activeCarMonthly = buyCar ? activePayment + projectionConfig.monthlyInsurance : 0;
+    const jobActive = hasJob && date >= projectionConfig.jobStartDate;
     const inflowDaily = jobActive ? Math.max(rates.inflowDaily, jobNetDaily) : rates.inflowDaily;
     const dailyNet = inflowDaily - rates.spendDaily - (activeCarMonthly / 30.4375);
     balance += dailyNet;
@@ -930,7 +939,11 @@ function renderProjectionChart(mode) {
   const plotBottom = height - 44;
   const plotW = plotRight - plotLeft;
   const plotH = plotBottom - plotTop;
-  const nets = visible.map((item) => Number(item.net || 0));
+  const comparisonRows = Array.isArray(mode.compareRows) ? mode.compareRows : [];
+  const nets = [
+    ...visible.map((item) => Number(item.net || 0)),
+    ...comparisonRows.map((item) => Number(item.net || 0))
+  ];
   const min = Math.min(...nets, 0);
   const max = Math.max(...nets, 1);
   const range = Math.max(1, max - min);
@@ -943,6 +956,12 @@ function renderProjectionChart(mode) {
     const command = index === 0 ? "M" : "L";
     return `${command}${xFor(index).toFixed(2)},${yFor(Number(item.net || 0)).toFixed(2)}`;
   }).join(" ");
+  const comparisonD = comparisonRows.length === visible.length
+    ? comparisonRows.map((item, index) => {
+      const command = index === 0 ? "M" : "L";
+      return `${command}${xFor(index).toFixed(2)},${yFor(Number(item.net || 0)).toFixed(2)}`;
+    }).join(" ")
+    : "";
   const foundCurrent = visible.findIndex((item) => item.dayIndex === highlight.dayIndex);
   const currentIndex = foundCurrent >= 0 ? foundCurrent : visible.length - 1;
   const pointEvery = Math.max(1, Math.ceil(visible.length / 90));
@@ -976,9 +995,16 @@ function renderProjectionChart(mode) {
   const currentY = yFor(Number(highlight.net || 0));
   const currentLabelX = currentX > width - 120 ? currentX - 8 : currentX + 8;
   const currentAnchor = currentX > width - 120 ? " end" : "";
+  const jobStartIndex = visible.findIndex((item) => item.date >= projectionConfig.jobStartDate);
+  const jobMarker = projectionJob && jobStartIndex > 0
+    ? `<line class="projection-job-marker" x1="${xFor(jobStartIndex).toFixed(2)}" x2="${xFor(jobStartIndex).toFixed(2)}" y1="${plotTop}" y2="${plotBottom}"></line>
+      <text class="projection-job-label" x="${Math.min(plotRight - 4, xFor(jobStartIndex) + 8).toFixed(2)}" y="${(plotTop + 14).toFixed(2)}">May 2027</text>`
+    : "";
   els.projectionChart.innerHTML = `
     ${grid}
+    ${comparisonD ? `<path class="net-line projection-compare-line" d="${comparisonD}"></path>` : ""}
     <path class="net-line projection-line" d="${lineD}"></path>
+    ${jobMarker}
     ${points}
     <line class="net-current-rule" x1="${currentX.toFixed(2)}" x2="${currentX.toFixed(2)}" y1="${plotTop}" y2="${plotBottom}"></line>
     <circle class="net-current-dot" cx="${currentX.toFixed(2)}" cy="${currentY.toFixed(2)}" r="5"></circle>
@@ -995,7 +1021,10 @@ function renderProjection(data) {
   const modes = projectionModeData(data);
   if (!modes[activeProjectionMode]) activeProjectionMode = "week";
   const mode = modes[activeProjectionMode] || modes.week;
+  const noJobMode = projectionScenario(data, mode.days, { buyCar: projectionBuyCar, job: false });
+  const noCarMode = projectionScenario(data, mode.days, { buyCar: false, job: projectionJob });
   const current = mode.current;
+  mode.compareRows = projectionJob ? noJobMode.rows : [];
   renderProjectionModeButtons(modes);
   if (!current) {
     setText(els.projectionWindow, "Awaiting history");
@@ -1017,6 +1046,14 @@ function renderProjection(data) {
     : "$130k excluded";
   setText(els.projectionBasis, `${rateText}. ${carText}.`);
   setText(els.projectionRange, `${jobText}. ${mode.rangeLabel()}.`);
+  const jobDelta = projectionJob && noJobMode.current ? current.net - noJobMode.current.net : 0;
+  const carDelta = projectionBuyCar && noCarMode.current ? current.net - noCarMode.current.net : 0;
+  const finalDate = mode.rows[mode.rows.length - 1]?.date || todayKey();
+  setText(els.projectionJobDelta, projectionJob ? money.format(jobDelta) : "excluded");
+  setText(els.projectionCarDelta, projectionBuyCar ? money.format(carDelta) : "excluded");
+  setText(els.projectionJobStart, finalDate >= projectionConfig.jobStartDate ? "May 2027 in span" : "May 2027 beyond span");
+  if (els.projectionJobDelta) els.projectionJobDelta.dataset.net = jobDelta >= 0 ? "positive" : "negative";
+  if (els.projectionCarDelta) els.projectionCarDelta.dataset.net = carDelta >= 0 ? "positive" : "negative";
   renderProjectionChart(mode);
 }
 
