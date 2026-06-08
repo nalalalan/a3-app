@@ -71,6 +71,8 @@ let projectionJob = localStorage.getItem("a3ProjectionJob") !== "false";
 
 const projectionConfig = {
   a3Price: 31500,
+  downPaymentRate: 0.2,
+  downPaymentDelayDays: 7,
   apr: 7,
   months: 60,
   monthlyInsurance: 260,
@@ -827,17 +829,15 @@ function projectionScenario(data, days, scenario = {}) {
   const analysis = data.analysis || {};
   const accounts = analysis.accounts || {};
   const totals = analysis.totals || {};
-  const settings = data.settings || {};
   const rows = dailyRows(data);
   const rates = recentProjectionRates(rows);
   const startDate = todayKey();
   const startCash = projectionStartCash(data, accounts, totals);
-  const cashFloor = Math.max(0, Number(settings.cashFloor || 0));
-  const targetDown = Math.max(0, Number(settings.downPaymentTarget || 0));
-  const availableDown = Math.max(0, startCash - cashFloor);
   const downPayment = buyCar
-    ? Math.min(projectionConfig.a3Price, targetDown > 0 ? Math.min(targetDown, Math.max(0, startCash)) : availableDown)
+    ? Math.round(projectionConfig.a3Price * projectionConfig.downPaymentRate)
     : 0;
+  const downPaymentDay = buyCar ? projectionConfig.downPaymentDelayDays : 0;
+  const downPaymentDate = buyCar ? addDaysKey(startDate, downPaymentDay) : "";
   const principal = buyCar ? Math.max(0, projectionConfig.a3Price - downPayment) : 0;
   const loan = loanPayment(principal, projectionConfig.apr, projectionConfig.months);
   const carPaymentMonthly = buyCar ? loan.payment : 0;
@@ -848,31 +848,35 @@ function projectionScenario(data, days, scenario = {}) {
   const postJobInflowMonthly = rates.inflowMonthly + postJobSalaryMonthly;
   const postJobCarMonthly = buyCar ? carCostMonthly : 0;
   const postJobMonthlyNet = postJobInflowMonthly - rates.spendMonthly - postJobCarMonthly;
-  let balance = startCash - downPayment;
+  let balance = startCash;
   const visible = [{
     date: startDate,
     net: balance,
     dayIndex: 0,
-    carMonthly: buyCar ? carCostMonthly : 0,
+    carMonthly: 0,
     jobMonthly: 0,
+    downPayment: 0,
     baseline: true
   }];
 
   for (let day = 1; day <= days; day += 1) {
     const date = addDaysKey(startDate, day);
-    const elapsedMonths = day / 30.4375;
-    const activePayment = buyCar && elapsedMonths <= projectionConfig.months ? carPaymentMonthly : 0;
-    const activeCarMonthly = buyCar ? activePayment + projectionConfig.monthlyInsurance : 0;
+    const carActive = buyCar && day >= downPaymentDay;
+    const elapsedCarMonths = Math.max(0, (day - downPaymentDay) / 30.4375);
+    const activePayment = carActive && elapsedCarMonths <= projectionConfig.months ? carPaymentMonthly : 0;
+    const activeCarMonthly = carActive ? activePayment + projectionConfig.monthlyInsurance : 0;
     const jobActive = hasJob && date >= projectionConfig.jobStartDate;
     const inflowDaily = rates.inflowDaily + (jobActive ? jobNetDaily : 0);
     const dailyNet = inflowDaily - rates.spendDaily - (activeCarMonthly / 30.4375);
-    balance += dailyNet;
+    const downPaymentToday = buyCar && day === downPaymentDay ? downPayment : 0;
+    balance += dailyNet - downPaymentToday;
     visible.push({
       date,
       net: balance,
       dayIndex: day,
       carMonthly: activeCarMonthly,
-      jobMonthly: jobActive ? jobNetMonthly : 0
+      jobMonthly: jobActive ? jobNetMonthly : 0,
+      downPayment: downPaymentToday
     });
   }
 
@@ -883,6 +887,8 @@ function projectionScenario(data, days, scenario = {}) {
     key: "dayIndex",
     startCash,
     downPayment,
+    downPaymentDay,
+    downPaymentDate,
     principal,
     carPaymentMonthly,
     carCostMonthly,
@@ -1037,19 +1043,6 @@ function renderProjectionChart(mode) {
   const jobMarker = projectionJob && jobStartIndex > 0
     ? `<line class="projection-job-marker" x1="${xFor(jobStartIndex).toFixed(2)}" x2="${xFor(jobStartIndex).toFixed(2)}" y1="${plotTop}" y2="${plotBottom}"></line>`
     : "";
-  const downPaymentBadge = projectionBuyCar && Number(mode.downPayment || 0) > 0
-    ? (() => {
-      const badgeW = 190;
-      const badgeH = 48;
-      const badgeX = plotLeft + 10;
-      const badgeY = plotBottom - badgeH - 8;
-      return `<g class="projection-down-badge" transform="translate(${badgeX.toFixed(2)} ${badgeY.toFixed(2)})">
-        <rect width="${badgeW}" height="${badgeH}" rx="7"></rect>
-        <text class="projection-down-badge-title" x="12" y="20">-${escapeHtml(money.format(mode.downPayment))} down today</text>
-        <text class="projection-down-badge-sub" x="12" y="36">chart starts after down payment</text>
-      </g>`;
-    })()
-    : "";
   els.projectionChart.innerHTML = `
     ${grid}
     ${comparisonD ? `<path class="net-line projection-compare-line" d="${comparisonD}"></path>` : ""}
@@ -1057,7 +1050,6 @@ function renderProjectionChart(mode) {
     ${jobSegmentD ? `<path class="net-line projection-job-line" d="${jobSegmentD}"></path>` : ""}
     ${jobMarker}
     ${jobBadge}
-    ${downPaymentBadge}
     ${points}
     <line class="net-current-rule" x1="${currentX.toFixed(2)}" x2="${currentX.toFixed(2)}" y1="${plotTop}" y2="${plotBottom}"></line>
     <circle class="net-current-dot" cx="${currentX.toFixed(2)}" cy="${currentY.toFixed(2)}" r="5"></circle>
@@ -1091,11 +1083,12 @@ function renderProjection(data) {
   setText(els.projectionCurrent, money.format(current.net));
   els.projectionCurrent.dataset.net = current.net >= 0 ? "positive" : "negative";
   const rateText = `${mode.rates.days}d rate ${money.format(mode.rates.inflowMonthly)}/mo in - ${money.format(mode.rates.spendMonthly)}/mo out`;
+  const downPaymentText = mode.downPaymentDate ? `${money.format(mode.downPayment)} down on ${dateLabel(mode.downPaymentDate)}` : "";
   const startText = projectionBuyCar
-    ? `Start ${money.format(mode.startCash)} cash - ${money.format(mode.downPayment)} down = ${money.format(mode.startCash - mode.downPayment)}`
+    ? `Start ${money.format(mode.startCash)} cash. ${downPaymentText}`
     : `Start ${money.format(mode.startCash)} cash`;
   const carText = projectionBuyCar
-    ? `A3 ${money.format(mode.downPayment)} down + ${money.format(mode.carCostMonthly)}/mo`
+    ? `A3 ${downPaymentText} + ${money.format(mode.carCostMonthly)}/mo`
     : "A3 excluded";
   const slopeText = projectionJob
     ? `Post-May ${money.format(mode.rates.inflowMonthly)}/mo current + ${money.format(mode.postJobSalaryMonthly)}/mo salary - ${money.format(mode.rates.spendMonthly)}/mo spend - ${money.format(mode.postJobCarMonthly)}/mo A3 = ${moneySigned(mode.postJobMonthlyNet)}/mo`
