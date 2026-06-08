@@ -1594,6 +1594,12 @@ summary {
   stroke: rgba(216, 191, 142, .95);
 }
 
+.projection-job-line {
+  stroke: #b8c6b4;
+  stroke-width: 3.8;
+  filter: drop-shadow(0 0 7px rgba(184, 198, 180, .28));
+}
+
 .projection-compare-line {
   stroke: rgba(245, 240, 232, .28);
   stroke-width: 1.8;
@@ -1601,14 +1607,14 @@ summary {
 }
 
 .projection-job-marker {
-  stroke: rgba(216, 191, 142, .42);
-  stroke-width: 1.2;
-  stroke-dasharray: 2 5;
+  stroke: rgba(184, 198, 180, .95);
+  stroke-width: 2.2;
+  stroke-dasharray: 5 5;
 }
 
 .projection-job-label {
-  fill: rgba(216, 191, 142, .9);
-  font-size: 10px;
+  fill: rgba(232, 242, 226, .94);
+  font-size: 11px;
   font-weight: 820;
 }
 
@@ -1701,6 +1707,72 @@ summary {
 
 .scenario-readout strong[data-net="negative"] {
   color: #d8bf8e;
+}
+
+.job-impact-strip {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  margin: 0 0 12px;
+  padding: 13px 15px;
+  border: 1px solid rgba(184, 198, 180, .28);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(184, 198, 180, .17), rgba(184, 198, 180, .055)),
+    rgba(245, 240, 232, .028);
+  box-shadow: inset 0 0 0 1px rgba(245, 240, 232, .035);
+}
+
+.job-impact-strip span {
+  color: rgba(232, 242, 226, .84);
+  font-size: .78rem;
+  font-weight: 860;
+  letter-spacing: .04em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.job-impact-strip strong {
+  color: #edf5ea;
+  font-size: clamp(1.5rem, 4vw, 2.8rem);
+  font-weight: 900;
+  line-height: .92;
+  overflow-wrap: anywhere;
+}
+
+.job-impact-strip em {
+  color: rgba(232, 242, 226, .72);
+  font-size: .88rem;
+  font-style: normal;
+  font-weight: 760;
+  line-height: 1.08;
+  text-align: right;
+}
+
+.job-impact-strip[data-state="future"] {
+  border-color: rgba(216, 191, 142, .24);
+  background:
+    linear-gradient(90deg, rgba(216, 191, 142, .13), rgba(216, 191, 142, .04)),
+    rgba(245, 240, 232, .025);
+}
+
+.job-impact-strip[data-state="future"] strong,
+.job-impact-strip[data-state="future"] em,
+.job-impact-strip[data-state="future"] span {
+  color: rgba(216, 191, 142, .88);
+}
+
+.job-impact-strip[data-state="excluded"] {
+  border-color: rgba(245, 240, 232, .12);
+  background: rgba(245, 240, 232, .03);
+}
+
+.job-impact-strip[data-state="excluded"] strong,
+.job-impact-strip[data-state="excluded"] em,
+.job-impact-strip[data-state="excluded"] span {
+  color: rgba(245, 240, 232, .58);
 }
 
 .net-point {
@@ -2006,6 +2078,20 @@ summary {
 
   .scenario-readout div:first-child {
     border-top: 0;
+  }
+
+  .job-impact-strip {
+    grid-template-columns: 1fr;
+    gap: 7px;
+    padding: 12px;
+  }
+
+  .job-impact-strip strong {
+    font-size: clamp(1.4rem, 10vw, 2.25rem);
+  }
+
+  .job-impact-strip em {
+    text-align: left;
   }
 
   .net-foot,
