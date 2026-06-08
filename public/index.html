@@ -13,7 +13,7 @@
     <link rel="icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons" type="image/svg+xml">
     <link rel="apple-touch-icon" href="https://aolabs.io/icons/a3.svg?v=20260523-tab-icons">
     <link rel="manifest" href="/site.webmanifest?v=20260516-a3-three-rings">
-    <link rel="stylesheet" href="/styles.css?v=20260607-dense-target">
+    <link rel="stylesheet" href="/styles.css?v=20260607-projection">
   </head>
   <body class="locked-view">
     <header class="suite-topbar" aria-label="a3 navigation">
@@ -160,6 +160,57 @@
           <div class="net-foot">
             <span id="netAverage">Awaiting history.</span>
             <span id="netRange">Telemetry pending.</span>
+          </div>
+        </section>
+
+        <section class="projection-panel" aria-label="Future projection">
+          <div class="net-head">
+            <div>
+              <h3>Future projection</h3>
+              <span id="projectionWindow">7 days from today</span>
+            </div>
+            <strong id="projectionCurrent">--</strong>
+          </div>
+          <div class="scenario-toggle-row" aria-label="Future scenario toggles">
+            <label class="scenario-toggle">
+              <input id="projectionCarToggle" type="checkbox" checked>
+              <span>A3 today</span>
+              <em>$31.5k / 7% / 60mo</em>
+            </label>
+            <label class="scenario-toggle">
+              <input id="projectionJobToggle" type="checkbox" checked>
+              <span>$130k May 2027</span>
+              <em>estimated take-home</em>
+            </label>
+          </div>
+          <div class="net-mode-row projection-mode-row" id="projectionModeRow" role="group" aria-label="Projection period">
+            <button type="button" class="net-mode-button is-active" data-projection-mode="week" aria-pressed="true">
+              <span>7 days</span>
+              <strong>--</strong>
+            </button>
+            <button type="button" class="net-mode-button" data-projection-mode="month" aria-pressed="false">
+              <span>30 days</span>
+              <strong>--</strong>
+            </button>
+            <button type="button" class="net-mode-button" data-projection-mode="quarter" aria-pressed="false">
+              <span>90 days</span>
+              <strong>--</strong>
+            </button>
+            <button type="button" class="net-mode-button" data-projection-mode="year" aria-pressed="false">
+              <span>Year</span>
+              <strong>--</strong>
+            </button>
+            <button type="button" class="net-mode-button" data-projection-mode="five" aria-pressed="false">
+              <span>5 years</span>
+              <strong>--</strong>
+            </button>
+          </div>
+          <div class="net-chart-frame">
+            <svg id="projectionChart" class="net-chart projection-chart" viewBox="0 0 720 260" role="img" aria-label="Future projection"></svg>
+          </div>
+          <div class="net-foot">
+            <span id="projectionBasis">Awaiting history.</span>
+            <span id="projectionRange">Telemetry pending.</span>
           </div>
         </section>
 
@@ -388,6 +439,6 @@
     </main>
 
     <script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
-    <script src="/app.js?v=20260607-dense-target" defer></script>
+    <script src="/app.js?v=20260607-projection" defer></script>
   </body>
 </html>

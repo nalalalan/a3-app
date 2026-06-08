@@ -35,6 +35,14 @@ const els = {
   netChart: document.getElementById("netChart"),
   netAverage: document.getElementById("netAverage"),
   netRange: document.getElementById("netRange"),
+  projectionWindow: document.getElementById("projectionWindow"),
+  projectionCurrent: document.getElementById("projectionCurrent"),
+  projectionModeButtons: Array.from(document.querySelectorAll("[data-projection-mode]")),
+  projectionChart: document.getElementById("projectionChart"),
+  projectionBasis: document.getElementById("projectionBasis"),
+  projectionRange: document.getElementById("projectionRange"),
+  projectionCarToggle: document.getElementById("projectionCarToggle"),
+  projectionJobToggle: document.getElementById("projectionJobToggle"),
   recentPatterns: document.getElementById("recentPatterns"),
   currentIncomeValue: document.getElementById("currentIncomeValue"),
   currentIncomeDetail: document.getElementById("currentIncomeDetail"),
@@ -54,6 +62,19 @@ const els = {
 };
 
 let activeNetMode = localStorage.getItem("a3NetMode") || "week";
+let activeProjectionMode = localStorage.getItem("a3ProjectionMode") || "week";
+let projectionBuyCar = localStorage.getItem("a3ProjectionBuyCar") !== "false";
+let projectionJob = localStorage.getItem("a3ProjectionJob") !== "false";
+
+const projectionConfig = {
+  a3Price: 31500,
+  apr: 7,
+  months: 60,
+  monthlyInsurance: 260,
+  jobBase: 130000,
+  jobTakeHomeRate: 0.72,
+  jobStartDate: "2027-05-01"
+};
 
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -268,6 +289,22 @@ function daysAgoKey(baseDate, days) {
   const date = new Date(`${baseDate}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() - days);
   return date.toISOString().slice(0, 10);
+}
+
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function addDaysKey(baseDate, days) {
+  const date = new Date(`${baseDate}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function dayDiff(startDate, endDate) {
+  const start = new Date(`${startDate}T00:00:00Z`).getTime();
+  const end = new Date(`${endDate}T00:00:00Z`).getTime();
+  return Math.round((end - start) / 86400000);
 }
 
 function netForRange(rows, days) {
@@ -745,6 +782,244 @@ function renderMonthlyNet(data) {
   `;
 }
 
+function projectionStartCash(data, accounts = {}, totals = {}) {
+  const cash = Number(accounts.cash);
+  if (accounts.connected && Number.isFinite(cash)) return cash;
+  const balance = Number(totals.balance);
+  if (Number.isFinite(balance)) return balance;
+  const transactions = Array.isArray(data?.analysis?.transactions) ? data.analysis.transactions : [];
+  const withBalance = transactions.find((transaction) => Number.isFinite(Number(transaction.balance)));
+  return withBalance ? Number(withBalance.balance) : 0;
+}
+
+function recentProjectionRates(rows) {
+  const latest = rows[rows.length - 1]?.date || todayKey();
+  const start = rows.length ? daysAgoKey(latest, 89) : latest;
+  const windowRows = rows.filter((item) => item.date >= start && item.date <= latest);
+  const first = windowRows[0]?.date || latest;
+  const spanDays = Math.max(1, dayDiff(first, latest) + 1);
+  const inflow = windowRows.reduce((total, item) => total + Number(item.inflow || 0), 0);
+  const spend = windowRows.reduce((total, item) => total + Number(item.spend || 0), 0);
+  return {
+    days: spanDays,
+    inflowDaily: inflow / spanDays,
+    spendDaily: spend / spanDays,
+    inflowMonthly: (inflow / spanDays) * 30.4375,
+    spendMonthly: (spend / spanDays) * 30.4375
+  };
+}
+
+function projectionScenario(data, days) {
+  const analysis = data.analysis || {};
+  const accounts = analysis.accounts || {};
+  const totals = analysis.totals || {};
+  const settings = data.settings || {};
+  const rows = dailyRows(data);
+  const rates = recentProjectionRates(rows);
+  const startDate = todayKey();
+  const startCash = projectionStartCash(data, accounts, totals);
+  const cashFloor = Math.max(0, Number(settings.cashFloor || 0));
+  const targetDown = Math.max(0, Number(settings.downPaymentTarget || 0));
+  const availableDown = Math.max(0, startCash - cashFloor);
+  const downPayment = projectionBuyCar
+    ? Math.min(projectionConfig.a3Price, targetDown > 0 ? Math.min(targetDown, Math.max(0, startCash)) : availableDown)
+    : 0;
+  const principal = projectionBuyCar ? Math.max(0, projectionConfig.a3Price - downPayment) : 0;
+  const loan = loanPayment(principal, projectionConfig.apr, projectionConfig.months);
+  const carPaymentMonthly = projectionBuyCar ? loan.payment : 0;
+  const carCostMonthly = projectionBuyCar ? carPaymentMonthly + projectionConfig.monthlyInsurance : 0;
+  const jobNetMonthly = (projectionConfig.jobBase * projectionConfig.jobTakeHomeRate) / 12;
+  const jobNetDaily = jobNetMonthly / 30.4375;
+  let balance = startCash - downPayment;
+  const visible = [{
+    date: startDate,
+    net: balance,
+    dayIndex: 0,
+    carMonthly: projectionBuyCar ? carCostMonthly : 0,
+    jobMonthly: 0,
+    baseline: true
+  }];
+
+  for (let day = 1; day <= days; day += 1) {
+    const date = addDaysKey(startDate, day);
+    const elapsedMonths = day / 30.4375;
+    const activePayment = projectionBuyCar && elapsedMonths <= projectionConfig.months ? carPaymentMonthly : 0;
+    const activeCarMonthly = projectionBuyCar ? activePayment + projectionConfig.monthlyInsurance : 0;
+    const jobActive = projectionJob && date >= projectionConfig.jobStartDate;
+    const inflowDaily = jobActive ? Math.max(rates.inflowDaily, jobNetDaily) : rates.inflowDaily;
+    const dailyNet = inflowDaily - rates.spendDaily - (activeCarMonthly / 30.4375);
+    balance += dailyNet;
+    visible.push({
+      date,
+      net: balance,
+      dayIndex: day,
+      carMonthly: activeCarMonthly,
+      jobMonthly: jobActive ? jobNetMonthly : 0
+    });
+  }
+
+  return {
+    rows: visible,
+    current: visible[visible.length - 1] || null,
+    highlight: visible[visible.length - 1] || null,
+    key: "dayIndex",
+    startCash,
+    downPayment,
+    principal,
+    carPaymentMonthly,
+    carCostMonthly,
+    jobNetMonthly,
+    rates
+  };
+}
+
+function projectionModeData(data) {
+  const configs = {
+    week: { days: 7, title: "7-day projection", axisTitle: "$ / 7 days" },
+    month: { days: 30, title: "30-day projection", axisTitle: "$ / 30 days" },
+    quarter: { days: 90, title: "90-day projection", axisTitle: "$ / 90 days" },
+    year: { days: 365, title: "1-year projection", axisTitle: "$ / year" },
+    five: { days: 365 * 5, title: "5-year projection", axisTitle: "$ / 5 years" }
+  };
+  return Object.fromEntries(Object.entries(configs).map(([key, config]) => {
+    const mode = projectionScenario(data, config.days);
+    return [key, {
+      ...mode,
+      ...config,
+      title: config.title,
+      axisTitle: config.axisTitle,
+      currentLabel: () => `${config.days === 365 * 5 ? "5 years" : config.days === 365 ? "1 year" : `${config.days} days`} from today`,
+      rangeLabel: () => `${dateLabelWithYear(mode.rows[0]?.date)} - ${dateLabelWithYear(mode.rows[mode.rows.length - 1]?.date)}`,
+      pointLabel: (item) => item.baseline ? "Today" : dateLabel(item.date)
+    }];
+  }));
+}
+
+function renderProjectionModeButtons(modes) {
+  for (const button of els.projectionModeButtons) {
+    const modeKey = button.dataset.projectionMode || "week";
+    const mode = modes[modeKey];
+    const current = mode?.current || null;
+    const value = button.querySelector("strong");
+    const isActive = modeKey === activeProjectionMode;
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", isActive ? "true" : "false");
+    if (value) {
+      value.textContent = current ? money.format(current.net || 0) : "--";
+      if (current) {
+        value.dataset.net = Number(current.net || 0) >= 0 ? "positive" : "negative";
+      } else {
+        delete value.dataset.net;
+      }
+    }
+  }
+}
+
+function renderProjectionChart(mode) {
+  const visible = Array.isArray(mode.rows) ? mode.rows : [];
+  const highlight = mode.highlight || visible[visible.length - 1] || null;
+  if (!visible.length || !highlight) {
+    els.projectionChart.innerHTML = "";
+    return;
+  }
+  const width = 720;
+  const height = 260;
+  const plotLeft = 64;
+  const plotRight = width - 24;
+  const plotTop = 22;
+  const plotBottom = height - 44;
+  const plotW = plotRight - plotLeft;
+  const plotH = plotBottom - plotTop;
+  const nets = visible.map((item) => Number(item.net || 0));
+  const min = Math.min(...nets, 0);
+  const max = Math.max(...nets, 1);
+  const range = Math.max(1, max - min);
+  const paddedMin = min - range * .08;
+  const paddedMax = max + range * .08;
+  const yFor = (value) => plotTop + ((paddedMax - value) / (paddedMax - paddedMin)) * plotH;
+  const step = visible.length > 1 ? plotW / (visible.length - 1) : 0;
+  const xFor = (index) => plotLeft + (index * step);
+  const lineD = visible.map((item, index) => {
+    const command = index === 0 ? "M" : "L";
+    return `${command}${xFor(index).toFixed(2)},${yFor(Number(item.net || 0)).toFixed(2)}`;
+  }).join(" ");
+  const foundCurrent = visible.findIndex((item) => item.dayIndex === highlight.dayIndex);
+  const currentIndex = foundCurrent >= 0 ? foundCurrent : visible.length - 1;
+  const pointEvery = Math.max(1, Math.ceil(visible.length / 90));
+  const points = visible.map((item, index) => {
+    if (index !== 0 && index !== currentIndex && index % pointEvery !== 0) return "";
+    const value = Number(item.net || 0);
+    const currentClass = item.dayIndex === highlight.dayIndex ? " is-current" : "";
+    const signClass = value >= 0 ? "positive" : "negative";
+    return `<circle class="net-point ${signClass}${currentClass}" cx="${xFor(index).toFixed(2)}" cy="${yFor(value).toFixed(2)}" r="${currentClass ? 4.5 : 2.15}">
+      <title>${escapeHtml(mode.pointLabel(item))}: ${escapeHtml(money.format(value))} projected cash</title>
+    </circle>`;
+  }).join("");
+  const gridValues = [paddedMax, paddedMax - (paddedMax - paddedMin) * .25, paddedMax - (paddedMax - paddedMin) * .5, paddedMax - (paddedMax - paddedMin) * .75, paddedMin];
+  const grid = gridValues.map((value) => {
+    const y = yFor(value);
+    const zeroClass = Math.abs(value) < Math.max(1, range * .015) ? " is-zero" : "";
+    return `<g class="net-grid${zeroClass}">
+      <line x1="${plotLeft}" x2="${plotRight}" y1="${y.toFixed(2)}" y2="${y.toFixed(2)}"></line>
+      <text x="${plotLeft - 12}" y="${(y + 4).toFixed(2)}">${escapeHtml(moneyShort(value))}</text>
+    </g>`;
+  }).join(" ");
+  const ticks = axisTicks(activeProjectionMode, visible);
+  const labelEvery = ticks.length > 8 ? Math.max(1, Math.ceil(ticks.length / 7)) : 1;
+  const xLabels = ticks.map((item, labelIndex) => {
+    if (labelIndex % labelEvery !== 0 && labelIndex !== ticks.length - 1) return "";
+    const anchor = item.index === visible.length - 1 ? " end" : "";
+    const x = xFor(item.index);
+    return `<text class="net-axis-label${anchor}" x="${x.toFixed(2)}" y="${height - 22}">${escapeHtml(String(item.label))}</text>`;
+  }).join("");
+  const currentX = xFor(currentIndex);
+  const currentY = yFor(Number(highlight.net || 0));
+  const currentLabelX = currentX > width - 120 ? currentX - 8 : currentX + 8;
+  const currentAnchor = currentX > width - 120 ? " end" : "";
+  els.projectionChart.innerHTML = `
+    ${grid}
+    <path class="net-line projection-line" d="${lineD}"></path>
+    ${points}
+    <line class="net-current-rule" x1="${currentX.toFixed(2)}" x2="${currentX.toFixed(2)}" y1="${plotTop}" y2="${plotBottom}"></line>
+    <circle class="net-current-dot" cx="${currentX.toFixed(2)}" cy="${currentY.toFixed(2)}" r="5"></circle>
+    <text class="net-current-label${currentAnchor}" x="${currentLabelX.toFixed(2)}" y="${Math.max(plotTop + 14, currentY - 10).toFixed(2)}">${escapeHtml(moneyShort(highlight.net))}</text>
+    ${xLabels}
+    <text class="net-axis-title" x="${plotRight}" y="${height - 8}">${escapeHtml(mode.axisTitle || "")}</text>
+  `;
+}
+
+function renderProjection(data) {
+  if (!els.projectionChart) return;
+  if (els.projectionCarToggle) els.projectionCarToggle.checked = projectionBuyCar;
+  if (els.projectionJobToggle) els.projectionJobToggle.checked = projectionJob;
+  const modes = projectionModeData(data);
+  if (!modes[activeProjectionMode]) activeProjectionMode = "week";
+  const mode = modes[activeProjectionMode] || modes.week;
+  const current = mode.current;
+  renderProjectionModeButtons(modes);
+  if (!current) {
+    setText(els.projectionWindow, "Awaiting history");
+    setText(els.projectionCurrent, "--");
+    setText(els.projectionBasis, "Awaiting history.");
+    setText(els.projectionRange, "Telemetry pending.");
+    els.projectionChart.innerHTML = "";
+    return;
+  }
+  setText(els.projectionWindow, mode.currentLabel());
+  setText(els.projectionCurrent, money.format(current.net));
+  els.projectionCurrent.dataset.net = current.net >= 0 ? "positive" : "negative";
+  const rateText = `${mode.rates.days}d rate ${money.format(mode.rates.inflowMonthly)}/mo in - ${money.format(mode.rates.spendMonthly)}/mo out`;
+  const carText = projectionBuyCar
+    ? `A3 ${money.format(mode.downPayment)} down + ${money.format(mode.carCostMonthly)}/mo`
+    : "A3 excluded";
+  const jobText = projectionJob
+    ? `$130k May 2027 -> ${money.format(mode.jobNetMonthly)}/mo est`
+    : "$130k excluded";
+  setText(els.projectionBasis, `${rateText}. ${carText}.`);
+  setText(els.projectionRange, `${jobText}. ${mode.rangeLabel()}.`);
+  renderProjectionChart(mode);
+}
+
 function renderTelemetry(data, sampleOnly) {
   const analysis = data.analysis || {};
   const accounts = analysis.accounts || {};
@@ -773,6 +1048,7 @@ function renderTelemetry(data, sampleOnly) {
   renderPatterns(data, sampleOnly);
   renderDailyScan(data, accounts);
   renderMonthlyNet(data);
+  renderProjection(data);
 }
 
 function renderBuild(data) {
@@ -996,6 +1272,32 @@ els.netModeButtons.forEach((button) => {
     if (lastState) renderMonthlyNet(lastState);
   });
 });
+
+els.projectionModeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    activeProjectionMode = button.dataset.projectionMode || "week";
+    localStorage.setItem("a3ProjectionMode", activeProjectionMode);
+    if (lastState) renderProjection(lastState);
+  });
+});
+
+if (els.projectionCarToggle) {
+  els.projectionCarToggle.checked = projectionBuyCar;
+  els.projectionCarToggle.addEventListener("change", () => {
+    projectionBuyCar = els.projectionCarToggle.checked;
+    localStorage.setItem("a3ProjectionBuyCar", projectionBuyCar ? "true" : "false");
+    if (lastState) renderProjection(lastState);
+  });
+}
+
+if (els.projectionJobToggle) {
+  els.projectionJobToggle.checked = projectionJob;
+  els.projectionJobToggle.addEventListener("change", () => {
+    projectionJob = els.projectionJobToggle.checked;
+    localStorage.setItem("a3ProjectionJob", projectionJob ? "true" : "false");
+    if (lastState) renderProjection(lastState);
+  });
+}
 
 renderDebtPhysics();
 renderSources();

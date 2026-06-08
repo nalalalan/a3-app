@@ -1445,6 +1445,7 @@ summary {
 }
 
 .net-panel,
+.projection-panel,
 .daily-panel,
 .pattern-panel {
   display: grid;
@@ -1587,6 +1588,57 @@ summary {
   stroke-linecap: round;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
+}
+
+.projection-line {
+  stroke: rgba(216, 191, 142, .95);
+}
+
+.scenario-toggle-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 0 12px;
+}
+
+.scenario-toggle {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "input label"
+    "input meta";
+  column-gap: 10px;
+  row-gap: 2px;
+  align-items: center;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(245, 240, 232, .1);
+  border-radius: 8px;
+  background: rgba(245, 240, 232, .035);
+}
+
+.scenario-toggle input {
+  grid-area: input;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--amber);
+}
+
+.scenario-toggle span {
+  grid-area: label;
+  color: rgba(245, 240, 232, .88);
+  font-size: .9rem;
+  font-weight: 820;
+  line-height: 1.08;
+}
+
+.scenario-toggle em {
+  grid-area: meta;
+  color: var(--soft);
+  font-size: .72rem;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1.12;
 }
 
 .net-point {
@@ -1875,6 +1927,10 @@ summary {
 
   .net-chart-frame {
     height: 198px;
+  }
+
+  .scenario-toggle-row {
+    grid-template-columns: 1fr;
   }
 
   .net-foot,
