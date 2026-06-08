@@ -1620,14 +1620,27 @@ summary {
 
 .projection-job-badge-title {
   fill: #edf5ea;
-  font-size: 26px;
+  font-size: 30px;
   font-weight: 900;
 }
 
 .projection-job-badge-sub {
   fill: rgba(232, 242, 226, .7);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 780;
+}
+
+.projection-job-badge-slope {
+  font-size: 19px;
+  font-weight: 850;
+}
+
+.projection-job-badge-slope.positive {
+  fill: #edf5ea;
+}
+
+.projection-job-badge-slope.negative {
+  fill: #d8bf8e;
 }
 
 .scenario-toggle-row {
@@ -2007,6 +2020,10 @@ summary {
 
   .net-chart-frame {
     height: 198px;
+  }
+
+  .projection-panel .net-chart-frame {
+    height: 250px;
   }
 
   .scenario-toggle-row {
