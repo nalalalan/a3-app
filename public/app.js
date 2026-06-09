@@ -268,6 +268,13 @@ function moneySigned(value) {
   return `${numeric > 0 ? "+" : ""}${money.format(numeric)}`;
 }
 
+function gridValuesWithZero(values, tolerance = 1) {
+  return [
+    ...values.filter((value) => Math.abs(Number(value || 0)) > tolerance),
+    0
+  ].sort((a, b) => b - a);
+}
+
 function monthLabel(month) {
   if (!month) return "pending";
   return monthName.format(new Date(`${month}-01T00:00:00Z`));
@@ -993,7 +1000,13 @@ function renderProjectionChart(mode) {
       <title>${escapeHtml(mode.pointLabel(item))}: ${escapeHtml(money.format(value))} projected cash</title>
     </circle>`;
   }).join("");
-  const gridValues = [paddedMax, paddedMax - (paddedMax - paddedMin) * .25, paddedMax - (paddedMax - paddedMin) * .5, paddedMax - (paddedMax - paddedMin) * .75, paddedMin];
+  const gridValues = gridValuesWithZero([
+    paddedMax,
+    paddedMax - (paddedMax - paddedMin) * .25,
+    paddedMax - (paddedMax - paddedMin) * .5,
+    paddedMax - (paddedMax - paddedMin) * .75,
+    paddedMin
+  ], Math.max(1, range * .015));
   const grid = gridValues.map((value) => {
     const y = yFor(value);
     const zeroClass = Math.abs(value) < Math.max(1, range * .015) ? " is-zero" : "";
