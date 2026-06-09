@@ -1612,37 +1612,6 @@ summary {
   stroke-dasharray: 5 5;
 }
 
-.projection-job-badge rect {
-  fill: rgba(10, 16, 12, .88);
-  stroke: rgba(184, 198, 180, .58);
-  stroke-width: 1.2;
-}
-
-.projection-job-badge-title {
-  fill: #edf5ea;
-  font-size: 30px;
-  font-weight: 900;
-}
-
-.projection-job-badge-sub {
-  fill: rgba(232, 242, 226, .7);
-  font-size: 16px;
-  font-weight: 780;
-}
-
-.projection-job-badge-slope {
-  font-size: 19px;
-  font-weight: 850;
-}
-
-.projection-job-badge-slope.positive {
-  fill: #edf5ea;
-}
-
-.projection-job-badge-slope.negative {
-  fill: #d8bf8e;
-}
-
 .scenario-toggle-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

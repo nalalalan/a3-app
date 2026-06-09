@@ -859,6 +859,7 @@ function projectionScenario(data, days, scenario = {}) {
   const visible = [{
     date: startDate,
     net: balance,
+    delta: 0,
     dayIndex: 0,
     carMonthly: 0,
     jobMonthly: 0,
@@ -880,6 +881,7 @@ function projectionScenario(data, days, scenario = {}) {
     visible.push({
       date,
       net: balance,
+      delta: balance - startCash,
       dayIndex: day,
       carMonthly: activeCarMonthly,
       jobMonthly: jobActive ? jobNetMonthly : 0,
@@ -940,9 +942,9 @@ function renderProjectionModeButtons(modes) {
     button.classList.toggle("is-active", isActive);
     button.setAttribute("aria-pressed", isActive ? "true" : "false");
     if (value) {
-      value.textContent = current ? money.format(current.net || 0) : "--";
+      value.textContent = current ? money.format(current.delta || 0) : "--";
       if (current) {
-        value.dataset.net = Number(current.net || 0) >= 0 ? "positive" : "negative";
+        value.dataset.net = Number(current.delta || 0) >= 0 ? "positive" : "negative";
       } else {
         delete value.dataset.net;
       }
@@ -966,9 +968,10 @@ function renderProjectionChart(mode) {
   const plotW = plotRight - plotLeft;
   const plotH = plotBottom - plotTop;
   const comparisonRows = Array.isArray(mode.compareRows) ? mode.compareRows : [];
+  const chartValue = (item) => Number(item.delta ?? 0);
   const nets = [
-    ...visible.map((item) => Number(item.net || 0)),
-    ...comparisonRows.map((item) => Number(item.net || 0))
+    ...visible.map(chartValue),
+    ...comparisonRows.map(chartValue)
   ];
   const min = Math.min(...nets, 0);
   const max = Math.max(...nets, 1);
@@ -980,12 +983,12 @@ function renderProjectionChart(mode) {
   const xFor = (index) => plotLeft + (index * step);
   const lineD = visible.map((item, index) => {
     const command = index === 0 ? "M" : "L";
-    return `${command}${xFor(index).toFixed(2)},${yFor(Number(item.net || 0)).toFixed(2)}`;
+    return `${command}${xFor(index).toFixed(2)},${yFor(chartValue(item)).toFixed(2)}`;
   }).join(" ");
   const comparisonD = comparisonRows.length === visible.length
     ? comparisonRows.map((item, index) => {
       const command = index === 0 ? "M" : "L";
-      return `${command}${xFor(index).toFixed(2)},${yFor(Number(item.net || 0)).toFixed(2)}`;
+      return `${command}${xFor(index).toFixed(2)},${yFor(chartValue(item)).toFixed(2)}`;
     }).join(" ")
     : "";
   const foundCurrent = visible.findIndex((item) => item.dayIndex === highlight.dayIndex);
@@ -993,11 +996,11 @@ function renderProjectionChart(mode) {
   const pointEvery = Math.max(1, Math.ceil(visible.length / 90));
   const points = visible.map((item, index) => {
     if (index !== 0 && index !== currentIndex && index % pointEvery !== 0) return "";
-    const value = Number(item.net || 0);
+    const value = chartValue(item);
     const currentClass = item.dayIndex === highlight.dayIndex ? " is-current" : "";
     const signClass = value >= 0 ? "positive" : "negative";
     return `<circle class="net-point ${signClass}${currentClass}" cx="${xFor(index).toFixed(2)}" cy="${yFor(value).toFixed(2)}" r="${currentClass ? 4.5 : 2.15}">
-      <title>${escapeHtml(mode.pointLabel(item))}: ${escapeHtml(money.format(value))} projected cash</title>
+      <title>${escapeHtml(mode.pointLabel(item))}: ${escapeHtml(money.format(value))} projected change</title>
     </circle>`;
   }).join("");
   const gridValues = gridValuesWithZero([
@@ -1024,7 +1027,7 @@ function renderProjectionChart(mode) {
     return `<text class="net-axis-label${anchor}" x="${x.toFixed(2)}" y="${height - 22}">${escapeHtml(String(item.label))}</text>`;
   }).join("");
   const currentX = xFor(currentIndex);
-  const currentY = yFor(Number(highlight.net || 0));
+  const currentY = yFor(chartValue(highlight));
   const currentLabelX = currentX > width - 120 ? currentX - 8 : currentX + 8;
   const currentAnchor = currentX > width - 120 ? " end" : "";
   const jobStartIndex = visible.findIndex((item) => item.date >= projectionConfig.jobStartDate);
@@ -1034,24 +1037,8 @@ function renderProjectionChart(mode) {
     ? jobSegmentRows.map((item, offset) => {
       const index = jobSegmentStart + offset;
       const command = offset === 0 ? "M" : "L";
-      return `${command}${xFor(index).toFixed(2)},${yFor(Number(item.net || 0)).toFixed(2)}`;
+      return `${command}${xFor(index).toFixed(2)},${yFor(chartValue(item)).toFixed(2)}`;
     }).join(" ")
-    : "";
-  const jobBadge = projectionJob && jobStartIndex > 0
-    ? (() => {
-      const badgeW = 310;
-      const badgeH = 92;
-      const badgeX = Math.min(plotRight - badgeW, Math.max(plotLeft + 8, xFor(jobStartIndex) - badgeW * .45));
-      const badgeY = plotTop + 6;
-      const monthlySlope = Number(mode.postJobMonthlyNet || 0);
-      const slopeClass = monthlySlope >= 0 ? "positive" : "negative";
-      return `<g class="projection-job-badge" transform="translate(${badgeX.toFixed(2)} ${badgeY.toFixed(2)})">
-        <rect width="${badgeW}" height="${badgeH}" rx="7"></rect>
-        <text class="projection-job-badge-title" x="16" y="32">$130k/year</text>
-        <text class="projection-job-badge-sub" x="17" y="55">+$7.8k/mo salary layer</text>
-        <text class="projection-job-badge-slope ${slopeClass}" x="17" y="78">${escapeHtml(moneySigned(monthlySlope))}/mo net after spend/A3</text>
-      </g>`;
-    })()
     : "";
   const jobMarker = projectionJob && jobStartIndex > 0
     ? `<line class="projection-job-marker" x1="${xFor(jobStartIndex).toFixed(2)}" x2="${xFor(jobStartIndex).toFixed(2)}" y1="${plotTop}" y2="${plotBottom}"></line>`
@@ -1062,11 +1049,10 @@ function renderProjectionChart(mode) {
     <path class="net-line projection-line" d="${lineD}"></path>
     ${jobSegmentD ? `<path class="net-line projection-job-line" d="${jobSegmentD}"></path>` : ""}
     ${jobMarker}
-    ${jobBadge}
     ${points}
     <line class="net-current-rule" x1="${currentX.toFixed(2)}" x2="${currentX.toFixed(2)}" y1="${plotTop}" y2="${plotBottom}"></line>
     <circle class="net-current-dot" cx="${currentX.toFixed(2)}" cy="${currentY.toFixed(2)}" r="5"></circle>
-    <text class="net-current-label${currentAnchor}" x="${currentLabelX.toFixed(2)}" y="${Math.max(plotTop + 14, currentY - 10).toFixed(2)}">${escapeHtml(moneyShort(highlight.net))}</text>
+    <text class="net-current-label${currentAnchor}" x="${currentLabelX.toFixed(2)}" y="${Math.max(plotTop + 14, currentY - 10).toFixed(2)}">${escapeHtml(moneyShort(chartValue(highlight)))}</text>
     ${xLabels}
     <text class="net-axis-title" x="${plotRight}" y="${height - 8}">${escapeHtml(mode.axisTitle || "")}</text>
   `;
@@ -1093,8 +1079,8 @@ function renderProjection(data) {
     return;
   }
   setText(els.projectionWindow, mode.currentLabel());
-  setText(els.projectionCurrent, money.format(current.net));
-  els.projectionCurrent.dataset.net = current.net >= 0 ? "positive" : "negative";
+  setText(els.projectionCurrent, money.format(current.delta || 0));
+  els.projectionCurrent.dataset.net = Number(current.delta || 0) >= 0 ? "positive" : "negative";
   const rateText = `${mode.rates.days}d rate ${money.format(mode.rates.inflowMonthly)}/mo in - ${money.format(mode.rates.spendMonthly)}/mo out`;
   const downPaymentText = mode.downPaymentDate ? `${money.format(mode.downPayment)} down on ${dateLabel(mode.downPaymentDate)}` : "";
   const startText = projectionBuyCar
