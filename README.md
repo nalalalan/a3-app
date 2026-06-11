@@ -34,6 +34,7 @@ Recommended Railway variables:
 - `OPENAI_API_KEY=<rotated key>`
 - `OPENAI_MODEL=gpt-5-mini`
 - `A3_MONITOR_INTERVAL_MS=86400000` for daily bank syncs
+- `A3_PLAID_SYNC_MIN_INTERVAL_MS=86400000` so startup, interval, and manual sync paths reuse the stored bank snapshot until one day has passed
 - `PLAID_CLIENT_ID=<Plaid client id>`
 - `PLAID_SECRET=<Plaid secret>`
 - `PLAID_ENV=production` for Chase
@@ -47,4 +48,4 @@ Add `https://a3.aolabs.io/oauth.html` to the allowed redirect URIs in the Plaid 
 
 ## Plaid cost guard
 
-Routine A3 refreshes must stay on `/transactions/sync` plus `/accounts/get`. Do not use `/accounts/balance/get` for the normal A3 motivation/readiness surface; Plaid bills successful Balance calls per request, and A3 only needs current-enough bank snapshots for purchase friction.
+Routine A3 refreshes must stay on `/transactions/sync` plus `/accounts/get`, and the Plaid sync gate must stay at one scan per day unless Alan explicitly changes the cadence. Do not use `/accounts/balance/get` for the normal A3 motivation/readiness surface; Plaid bills successful Balance calls per request, and A3 only needs current-enough bank snapshots for the daily morning-email/Audi motivation loop.

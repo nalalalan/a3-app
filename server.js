@@ -12,6 +12,7 @@ const queueSnapshotPath = path.join(dataDir, "queue-snapshot.json");
 const openAiApiKey = process.env.OPENAI_API_KEY || "";
 const openAiModel = process.env.OPENAI_MODEL || "gpt-5-mini";
 const monitorIntervalMs = Number(process.env.A3_MONITOR_INTERVAL_MS || 24 * 60 * 60 * 1000);
+const plaidSyncMinIntervalMs = Number(process.env.A3_PLAID_SYNC_MIN_INTERVAL_MS || 24 * 60 * 60 * 1000);
 const accessCode = process.env.A3_ACCESS_CODE || "";
 const plaidClientId = process.env.PLAID_CLIENT_ID || "";
 const plaidSecret = process.env.PLAID_SECRET || "";
@@ -299,9 +300,44 @@ function publicConnection(connection) {
   };
 }
 
+function sortedPlaidSyncs(store, options = {}) {
+  return [...(store.bankSyncs || [])]
+    .filter((item) => !item.provider || item.provider === "plaid")
+    .filter((item) => !options.successful || (!item.error && !item.skipped))
+    .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+}
+
+function isoAfter(value, intervalMs) {
+  const baseMs = Date.parse(value || "");
+  const interval = Number(intervalMs || 0);
+  if (!Number.isFinite(baseMs) || !Number.isFinite(interval) || interval <= 0) return "";
+  return new Date(baseMs + interval).toISOString();
+}
+
+function plaidSyncGate(store) {
+  const latestSync = sortedPlaidSyncs(store, { successful: true })[0];
+  if (!latestSync) return null;
+  if (!Number.isFinite(plaidSyncMinIntervalMs) || plaidSyncMinIntervalMs < 60000) return null;
+  const nextSyncAt = isoAfter(latestSync.createdAt, plaidSyncMinIntervalMs);
+  const nextMs = Date.parse(nextSyncAt || "");
+  if (!Number.isFinite(nextMs)) return null;
+  const remainingMs = nextMs - Date.now();
+  if (remainingMs <= 0) return null;
+  return {
+    skipReason: "daily_sync_gate",
+    lastSyncAt: latestSync.createdAt,
+    nextSyncAt,
+    remainingMs
+  };
+}
+
 function plaidStatus(store) {
   const connections = (store.bankConnections || []).map(publicConnection);
-  const latestSync = [...(store.bankSyncs || [])].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))[0];
+  const allSyncs = sortedPlaidSyncs(store);
+  const latestSync = sortedPlaidSyncs(store, { successful: true })[0];
+  const latestCheck = allSyncs[0];
+  const latestSkipped = allSyncs.find((item) => item.skipped);
+  const latestError = allSyncs.find((item) => item.error);
   const accounts = dedupeBankAccounts(store.bankAccounts || []);
   return {
     configured: plaidConfigured(),
@@ -313,9 +349,14 @@ function plaidStatus(store) {
     accountCount: accounts.length,
     balanceMode: plaidRealtimeBalance ? "realtime_balance" : "cached_accounts",
     balanceEndpointEnabled: plaidRealtimeBalance,
+    minSyncIntervalMs: plaidSyncMinIntervalMs,
+    minSyncIntervalLabel: intervalText(plaidSyncMinIntervalMs),
     lastAccountSource: latestSync?.accountSource || connections.find((item) => item.lastAccountSource)?.lastAccountSource || "",
     lastSyncAt: latestSync?.createdAt || "",
-    lastError: latestSync?.error || connections.find((item) => item.lastError)?.lastError || ""
+    nextSyncAt: latestSync?.createdAt ? isoAfter(latestSync.createdAt, plaidSyncMinIntervalMs) : "",
+    lastCheckAt: latestCheck?.createdAt || "",
+    lastSkippedAt: latestSkipped?.createdAt || "",
+    lastError: latestError?.error || connections.find((item) => item.lastError)?.lastError || ""
   };
 }
 
@@ -332,9 +373,10 @@ function intervalText(ms) {
 
 function autoUpdateStatus(store) {
   const enabled = Number.isFinite(monitorIntervalMs) && monitorIntervalMs >= 60000;
-  const syncs = [...(store.bankSyncs || [])]
-    .filter((item) => !item.provider || item.provider === "plaid")
-    .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+  const syncs = sortedPlaidSyncs(store);
+  const successfulSyncs = sortedPlaidSyncs(store, { successful: true });
+  const latestSkipped = syncs.find((item) => item.skipped);
+  const latestError = syncs.find((item) => item.error);
   const latestConnection = [...(store.bankConnections || [])]
     .sort((a, b) => String(b.lastSyncAt || b.updatedAt || "").localeCompare(String(a.lastSyncAt || a.updatedAt || "")))[0];
   return {
@@ -343,8 +385,13 @@ function autoUpdateStatus(store) {
     intervalLabel: enabled ? intervalText(monitorIntervalMs) : "off",
     balanceMode: plaidRealtimeBalance ? "realtime_balance" : "cached_accounts",
     balanceEndpointEnabled: plaidRealtimeBalance,
-    lastSyncAt: syncs[0]?.createdAt || latestConnection?.lastSyncAt || "",
-    lastError: syncs[0]?.error || latestConnection?.lastError || ""
+    minSyncIntervalMs: plaidSyncMinIntervalMs,
+    minSyncIntervalLabel: intervalText(plaidSyncMinIntervalMs),
+    lastSyncAt: successfulSyncs[0]?.createdAt || latestConnection?.lastSyncAt || "",
+    nextSyncAt: successfulSyncs[0]?.createdAt ? isoAfter(successfulSyncs[0].createdAt, plaidSyncMinIntervalMs) : "",
+    lastCheckAt: syncs[0]?.createdAt || "",
+    lastSkippedAt: latestSkipped?.createdAt || "",
+    lastError: latestError?.error || latestConnection?.lastError || ""
   };
 }
 
@@ -2514,6 +2561,29 @@ async function syncPlaidConnection(store, connection, reason = "manual") {
 
 async function syncAllPlaidConnections(store, reason = "manual") {
   const syncs = [];
+  const gate = plaidSyncGate(store);
+  if (gate) {
+    const now = new Date().toISOString();
+    const sync = {
+      id: crypto.randomUUID(),
+      provider: "plaid",
+      reason,
+      createdAt: now,
+      skipped: true,
+      skipReason: gate.skipReason,
+      lastSyncAt: gate.lastSyncAt,
+      nextSyncAt: gate.nextSyncAt
+    };
+    store.bankSyncs = [...(store.bankSyncs || []), sync];
+    store.events = [...(store.events || []), {
+      id: crypto.randomUUID(),
+      createdAt: now,
+      type: "bank_sync_skipped",
+      label: "Bank sync held",
+      detail: `Daily Plaid sync gate until ${gate.nextSyncAt}`
+    }];
+    return [sync];
+  }
   for (const connection of store.bankConnections || []) {
     try {
       syncs.push(await syncPlaidConnection(store, connection, reason));
