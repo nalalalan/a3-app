@@ -11,7 +11,7 @@ const statePath = path.join(dataDir, "state.json");
 const queueSnapshotPath = path.join(dataDir, "queue-snapshot.json");
 const openAiApiKey = process.env.OPENAI_API_KEY || "";
 const openAiModel = process.env.OPENAI_MODEL || "gpt-5-mini";
-const monitorIntervalMs = Number(process.env.A3_MONITOR_INTERVAL_MS || 12 * 60 * 60 * 1000);
+const monitorIntervalMs = Number(process.env.A3_MONITOR_INTERVAL_MS || 24 * 60 * 60 * 1000);
 const accessCode = process.env.A3_ACCESS_CODE || "";
 const plaidClientId = process.env.PLAID_CLIENT_ID || "";
 const plaidSecret = process.env.PLAID_SECRET || "";
@@ -23,6 +23,7 @@ const plaidRedirectUri = process.env.PLAID_REDIRECT_URI || "";
 const plaidWebhookUrl = process.env.PLAID_WEBHOOK_URL || "";
 const plaidDaysRequested = Number(process.env.PLAID_DAYS_REQUESTED || 730);
 const plaidProductionReviewPending = /^(1|true|yes|pending)$/i.test(String(process.env.PLAID_PRODUCTION_REVIEW_PENDING || ""));
+const plaidRealtimeBalance = /^(1|true|yes|realtime)$/i.test(String(process.env.PLAID_REALTIME_BALANCE || ""));
 const tokenSecret = process.env.A3_TOKEN_SECRET || accessCode || "";
 
 const PLAID_BASE_URLS = {
@@ -293,6 +294,7 @@ function publicConnection(connection) {
     updatedAt: connection.updatedAt,
     lastSyncAt: connection.lastSyncAt || "",
     lastError: connection.lastError || "",
+    lastAccountSource: connection.lastAccountSource || "",
     accountCount: Number(connection.accountCount || 0)
   };
 }
@@ -309,6 +311,9 @@ function plaidStatus(store) {
     tokenProtected: Boolean(tokenKey()),
     connections,
     accountCount: accounts.length,
+    balanceMode: plaidRealtimeBalance ? "realtime_balance" : "cached_accounts",
+    balanceEndpointEnabled: plaidRealtimeBalance,
+    lastAccountSource: latestSync?.accountSource || connections.find((item) => item.lastAccountSource)?.lastAccountSource || "",
     lastSyncAt: latestSync?.createdAt || "",
     lastError: latestSync?.error || connections.find((item) => item.lastError)?.lastError || ""
   };
@@ -336,6 +341,8 @@ function autoUpdateStatus(store) {
     enabled,
     intervalMs: enabled ? monitorIntervalMs : 0,
     intervalLabel: enabled ? intervalText(monitorIntervalMs) : "off",
+    balanceMode: plaidRealtimeBalance ? "realtime_balance" : "cached_accounts",
+    balanceEndpointEnabled: plaidRealtimeBalance,
     lastSyncAt: syncs[0]?.createdAt || latestConnection?.lastSyncAt || "",
     lastError: syncs[0]?.error || latestConnection?.lastError || ""
   };
@@ -1402,16 +1409,16 @@ function overallReview(input) {
 
   if (!accounts.connected) {
     return {
-      verdict: "No live review yet.",
-      summary: "No live financial read.",
+      verdict: "No bank snapshot yet.",
+      summary: "No financial snapshot.",
       good: ["The page is waiting for bank data instead of using fake sample numbers."],
       bad: ["No current balances or transactions are connected."],
-      must: ["Live balances are required before the car decision."]
+      must: ["Bank snapshot and purchases are needed for the car decision."]
     };
   }
 
   const good = [
-    "Live bank data is connected.",
+    "Connected bank snapshot is available.",
     `${moneyText(cash)} current cash is included in the full-purchase check.`
   ];
   if (paymentStatus?.amount > 0 && paymentStatus.status !== "pending") {
@@ -1715,7 +1722,7 @@ function immediateImprovements(input) {
       dailyScan: { window: "latest 7 days", days: 7, spendingDays: 0, total: 0, creditsTotal: 0, otherInflowTotal: 0, inflowTotal: 0, netOut: 0, dailyAverage: 0, averageSpendingDay: 0, topMerchant: "", rows: [] },
       spending: [],
       items: [
-        { label: "Live balances", detail: "The full A3 decision needs current balances and purchases.", severity: "watch" },
+        { label: "Bank snapshot", detail: "The full A3 decision needs connected balances and purchases.", severity: "watch" },
         { label: "Down payment today", detail: "Wait for real account data before testing cash damage.", severity: "watch" }
       ]
     };
@@ -2041,7 +2048,7 @@ function watchItems(input) {
   const { withFlow, last30, latestDate, balanceKnown, balance, cashFloor, bufferDays, spendChange, recurring, goal, accounts } = input;
   const items = [];
   if (accounts?.debtTotal > 0) {
-    items.push({ label: "Connected balance", detail: `$${Math.round(accounts.debtTotal)} across credit/loan accounts`, severity: "danger" });
+    items.push({ label: "Connected snapshot", detail: `$${Math.round(accounts.debtTotal)} across credit/loan accounts`, severity: "danger" });
   }
   if (balanceKnown && balance < cashFloor) {
     items.push({ label: "Below cash buffer", detail: `${moneyText(balance)} current cash is below the planning buffer`, severity: "danger" });
@@ -2271,7 +2278,7 @@ async function callOpenAiForAdvice({ analysis, events, messages }) {
         "Do not claim to be a licensed financial advisor. Do not give investment, tax, insurance, or loan approval guarantees.",
         "Use the provided source-backed numbers only. If a required number is missing, say what is missing.",
         "Frame down-payment cash as immediate cash impact, not as a savings label.",
-        "Frame the decision around full price, current cash, credit/loan balance, repeat spending, monthly payment, insurance, and cashflow.",
+        "Frame the decision around full price, current cash, credit/loan balance snapshot, repeat spending, monthly payment, insurance, and cashflow.",
         "Return one calm action. Keep it concrete, low-stress, and measurable.",
         "Do not write paragraphs. status is 1-3 words. one_action is at most 12 words.",
         "Do not recommend a specific extra payment amount unless that exact amount is present in the source data or settings.",
@@ -2426,19 +2433,24 @@ function mergePlaidTransactions(store, connection, accountsById, added, modified
 
 async function refreshPlaidAccounts(store, connection, accessToken, now) {
   let response;
+  let accountSource = plaidRealtimeBalance ? "realtime_balance" : "cached_accounts";
+  const endpoint = plaidRealtimeBalance ? "/accounts/balance/get" : "/accounts/get";
   try {
-    response = await plaidPost("/accounts/balance/get", { access_token: accessToken });
-  } catch {
+    response = await plaidPost(endpoint, { access_token: accessToken });
+  } catch (error) {
+    if (!plaidRealtimeBalance) throw error;
     response = await plaidPost("/accounts/get", { access_token: accessToken });
+    accountSource = "cached_accounts_after_balance_error";
   }
   upsertBankAccounts(store, response.accounts || [], connection, now);
-  return response.accounts || [];
+  return { accounts: response.accounts || [], accountSource };
 }
 
 async function syncPlaidConnection(store, connection, reason = "manual") {
   const now = new Date().toISOString();
   const accessToken = revealToken(connection.accessToken);
-  const accounts = await refreshPlaidAccounts(store, connection, accessToken, now);
+  const accountRefresh = await refreshPlaidAccounts(store, connection, accessToken, now);
+  const accounts = accountRefresh.accounts;
   const accountsById = new Map((store.bankAccounts || [])
     .filter((account) => account.connectionId === connection.id)
     .map((account) => [account.accountId, account]));
@@ -2466,6 +2478,7 @@ async function syncPlaidConnection(store, connection, reason = "manual") {
   connection.cursor = cursor;
   connection.updatedAt = now;
   connection.lastSyncAt = now;
+  connection.lastAccountSource = accountRefresh.accountSource;
   connection.lastError = "";
   const sync = {
     id: crypto.randomUUID(),
@@ -2474,6 +2487,7 @@ async function syncPlaidConnection(store, connection, reason = "manual") {
     reason,
     createdAt: now,
     accounts: accounts.length,
+    accountSource: accountRefresh.accountSource,
     added: added.length,
     modified: modified.length,
     removed: removed.length,
