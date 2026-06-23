@@ -70,7 +70,7 @@ let projectionBuyCar = localStorage.getItem("a3ProjectionBuyCar") !== "false";
 let projectionJob = localStorage.getItem("a3ProjectionJob") !== "false";
 
 const projectionConfig = {
-  a3Price: 31500,
+  a3Price: 39825,
   downPaymentRate: 0.2,
   downPaymentDelayDays: 7,
   apr: 7,
@@ -154,7 +154,7 @@ const sources = [
   {
     title: "Ryan & Deci 2000 Self-Determination Theory",
     url: "https://doi.org/10.1037/0003-066X.55.1.68",
-    why: "Supports the A3 pleasure map's control layer: private mobility and environmental control are real well-being variables."
+    why: "Supports the car pleasure map's control layer: private mobility and environmental control are real well-being variables."
   },
   {
     title: "Salimpoor et al. 2011 Music and Dopamine",
@@ -192,9 +192,9 @@ const sources = [
     why: "Debt pressure source: unsecured debt is associated with mental and physical health outcomes in the review literature."
   },
   {
-    title: "Audi A3 Build PDF",
-    url: "/a3-awg0xsw9.pdf",
-    why: "Local source for the A3 code, build reference, and car image/spec basis used on this page."
+    title: "MINI Cooper Build PDF",
+    url: "/mini-cooper-fwc3k9x3.pdf",
+    why: "Local source for the MINI build code, build reference, and car image/spec basis used on this page."
   }
 ];
 
@@ -1087,11 +1087,11 @@ function renderProjection(data) {
     ? `Start ${money.format(mode.startCash)} cash. ${downPaymentText}`
     : `Start ${money.format(mode.startCash)} cash`;
   const carText = projectionBuyCar
-    ? `A3 ${downPaymentText} + ${money.format(mode.carCostMonthly)}/mo`
-    : "A3 excluded";
+    ? `MINI ${downPaymentText} + ${money.format(mode.carCostMonthly)}/mo`
+    : "MINI excluded";
   const slopeText = projectionJob
-    ? `Post-May ${money.format(mode.rates.inflowMonthly)}/mo current + ${money.format(mode.postJobSalaryMonthly)}/mo salary - ${money.format(mode.rates.spendMonthly)}/mo spend - ${money.format(mode.postJobCarMonthly)}/mo A3 = ${moneySigned(mode.postJobMonthlyNet)}/mo`
-    : `Future slope ${money.format(mode.rates.inflowMonthly)}/mo current - ${money.format(mode.rates.spendMonthly)}/mo spend - ${money.format(mode.postJobCarMonthly)}/mo A3 = ${moneySigned(mode.postJobMonthlyNet)}/mo`;
+    ? `Post-May ${money.format(mode.rates.inflowMonthly)}/mo current + ${money.format(mode.postJobSalaryMonthly)}/mo salary - ${money.format(mode.rates.spendMonthly)}/mo spend - ${money.format(mode.postJobCarMonthly)}/mo MINI = ${moneySigned(mode.postJobMonthlyNet)}/mo`
+    : `Future slope ${money.format(mode.rates.inflowMonthly)}/mo current - ${money.format(mode.rates.spendMonthly)}/mo spend - ${money.format(mode.postJobCarMonthly)}/mo MINI = ${moneySigned(mode.postJobMonthlyNet)}/mo`;
   setText(els.projectionBasis, `${startText}. ${rateText}. ${carText}.`);
   setText(els.projectionRange, `${slopeText}. ${mode.rangeLabel()}.`);
   const jobDelta = projectionJob && noJobMode.current ? current.net - noJobMode.current.net : 0;
@@ -1139,11 +1139,12 @@ function renderTelemetry(data, sampleOnly) {
 
 function renderBuild(data) {
   const goal = data.goal || {};
-  setText(els.heroA3Price, "$31,500");
-  setText(els.heroA3Code, goal.audiCode || "AWG0XSW9");
-  setText(els.heroA3Cabin, "white / black / 5k");
-  setText(els.heroMiniPrice, "$39,825");
-  setText(els.a3Build, cleanVisibleText(`${goal.exterior || "Arkona White"} / ${goal.interior || "Parchment Beige-Steel Gray"} / ${goal.package || "Black optic package"}`));
+  const buildPrice = Number(goal.priceAsBuilt || projectionConfig.a3Price || 39825);
+  setText(els.heroA3Price, money.format(buildPrice));
+  setText(els.heroA3Code, goal.buildCode || goal.audiCode || "FWC3K9X3");
+  setText(els.heroA3Cabin, `${goal.exterior || "Nanuq White Metallic"} / ${goal.interior || "Vescin Beige"}`);
+  setText(els.heroMiniPrice, money.format(buildPrice));
+  setText(els.a3Build, cleanVisibleText(`${goal.exterior || "Nanuq White Metallic"} / ${goal.interior || "Vescin Beige"} / ${goal.package || "Iconic / Favoured style / Comfort Package Plus"}`));
 }
 
 function renderDetails(data) {

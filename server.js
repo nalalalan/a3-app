@@ -34,22 +34,23 @@ const PLAID_BASE_URLS = {
 };
 
 const A3_GOAL = {
-  name: "Audi A3 Premium Plus",
-  trim: "A3 TFSI quattro Premium Plus S tronic",
-  audiCode: "AWG0XSW9",
-  audiUrl: "https://www.audiusa.com/AWG0XSW9",
-  sourcePdf: "/a3-awg0xsw9.pdf",
-  sourceDate: "2026-06-01",
-  priceAsBuilt: 46095,
-  msrp: 43000,
-  options: 1800,
-  destinationCharge: 1295,
-  exterior: "Arkona White",
-  interior: "Parchment Beige-Steel Gray / Black dashboard",
-  package: "Black optic package",
+  name: "MINI Cooper S Hardtop 2 Door",
+  trim: "Iconic / Favoured style / 7-speed dual clutch",
+  buildCode: "FWC3K9X3",
+  audiCode: "FWC3K9X3",
+  audiUrl: "https://www.miniusa.com/build-your-own.html#/studio/FWC3K9X3",
+  sourcePdf: "/mini-cooper-fwc3k9x3.pdf",
+  sourceDate: "2026-05-31",
+  priceAsBuilt: 39825,
+  msrp: 39825,
+  options: null,
+  destinationCharge: null,
+  exterior: "Nanuq White Metallic",
+  interior: "Vescin Beige",
+  package: "Iconic / Favoured style / Comfort Package Plus",
   power: "201 HP",
-  torque: "236 lb-ft",
-  acceleration: "0-60 mph in 6.0 seconds",
+  torque: "221 lb-ft",
+  acceleration: "0-60 mph in 6.3 seconds",
   fuel: "Premium"
 };
 
@@ -1496,7 +1497,7 @@ function overallReview(input) {
 
   return {
     verdict: cardBalance > 0
-      ? "A3 money read: credit/loan load plus repeat spending."
+      ? "Car money read: credit/loan load plus repeat spending."
       : "Full purchase still needs payment, insurance, debt, and cashflow fit.",
     summary: `Whole purchase: ${moneyText(A3_GOAL.priceAsBuilt)}. Current picture: ${moneyText(cardBalance)} card/loan balance, ${moneyText(cash)} cash.`,
     good: good.slice(0, 4),
@@ -1615,7 +1616,7 @@ function buildQueueItems(analysis, spendingLocks) {
   } else if (fullPurchaseGap > 0) {
     items.push(`a3: full-cost gap ${moneyText(fullPurchaseGap)} before tax, fees, insurance, and interest`);
   } else {
-    items.push(`a3: ${analysis.readiness?.label || "review"}; ${analysis.readiness?.reason || "A3 fit still needs review"}`);
+    items.push(`a3: ${analysis.readiness?.label || "review"}; ${analysis.readiness?.reason || "car fit still needs review"}`);
   }
 
   if (topProgress) {
@@ -1662,6 +1663,7 @@ function buildQueueSnapshot(store, analysis, source = "unknown") {
     car: {
       name: A3_GOAL.name,
       trim: A3_GOAL.trim,
+      buildCode: A3_GOAL.buildCode || A3_GOAL.audiCode,
       audiCode: A3_GOAL.audiCode,
       priceAsBuilt: queueMoney(A3_GOAL.priceAsBuilt)
     },
@@ -2250,9 +2252,9 @@ function readinessState(input) {
     return { label: "full-cost check", reason: "Payment, insurance, and cashflow still decide", color: "watch" };
   }
   if ((bufferDays !== null && bufferDays < 14) || (spendChange !== null && spendChange > 18) || watch.length >= 3 || goal.monthlyRoom < 0) {
-    return { label: "watch", reason: "A3 pace needs control", color: "watch" };
+    return { label: "watch", reason: "car pace needs control", color: "watch" };
   }
-  return { label: "building", reason: "A3 path improving", color: "good" };
+  return { label: "building", reason: "car path improving", color: "good" };
 }
 
 function oneAction(input) {
@@ -2320,8 +2322,8 @@ async function callOpenAiForAdvice({ analysis, events, messages }) {
     body: JSON.stringify({
       model: openAiModel,
       instructions: [
-        "You are the private financial planning layer inside a boring A3 goal app.",
-        "The goal is to judge whether the whole Audi A3 purchase is realistic without destabilizing cash flow.",
+        "You are the private financial planning layer inside a boring car-goal app.",
+        "The goal is to judge whether the whole MINI Cooper purchase is realistic without destabilizing cash flow.",
         "Do not claim to be a licensed financial advisor. Do not give investment, tax, insurance, or loan approval guarantees.",
         "Use the provided source-backed numbers only. If a required number is missing, say what is missing.",
         "Frame down-payment cash as immediate cash impact, not as a savings label.",
@@ -2676,7 +2678,13 @@ async function handleApi(req, res, requestUrl) {
 
   if (requestUrl.pathname === "/api/queue-snapshot" && req.method === "GET") {
     const store = await readStore();
-    const snapshot = await readStoredQueueSnapshot(store);
+    let snapshot = await readStoredQueueSnapshot(store);
+    const snapshotCode = snapshot?.car?.buildCode || snapshot?.car?.audiCode || "";
+    if (snapshot && (snapshot.car?.name !== A3_GOAL.name || snapshotCode !== (A3_GOAL.buildCode || A3_GOAL.audiCode))) {
+      const analysis = analyze(store);
+      snapshot = await publishQueueSnapshot(store, analysis, "target_refresh");
+      await writeStore(store);
+    }
     if (!snapshot) {
       sendJson(res, 200, {
         ok: true,

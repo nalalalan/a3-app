@@ -1,6 +1,6 @@
 # a3.aolabs.io
 
-Persistent Audi A3 ownership cockpit for desire, price anchors, and private telemetry.
+Persistent MINI Cooper ownership cockpit for desire, price anchors, and private telemetry.
 
 ## Current build
 
@@ -48,4 +48,4 @@ Add `https://a3.aolabs.io/oauth.html` to the allowed redirect URIs in the Plaid 
 
 ## Plaid cost guard
 
-Routine A3 refreshes must stay on `/transactions/sync` plus `/accounts/get`, and the Plaid sync gate must stay at one scan per day unless Alan explicitly changes the cadence. Do not use `/accounts/balance/get` for the normal A3 motivation/readiness surface; Plaid bills successful Balance calls per request, and A3 only needs current-enough bank snapshots for the daily morning-email/Audi motivation loop.
+Routine A3 refreshes must stay on `/transactions/sync` plus `/accounts/get`, and the Plaid sync gate must stay at one scan per day unless Alan explicitly changes the cadence. Do not use `/accounts/balance/get` for the normal car-goal motivation/readiness surface; Plaid bills successful Balance calls per request, and A3 only needs current-enough bank snapshots for the daily morning-email/MINI motivation loop.

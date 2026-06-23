@@ -2,7 +2,7 @@
   "name": "a3-aolabs",
   "version": "0.1.0",
   "private": true,
-  "description": "Persistent Audi A3 ownership cockpit.",
+  "description": "Persistent MINI Cooper ownership cockpit.",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
