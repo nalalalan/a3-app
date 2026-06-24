@@ -70,7 +70,7 @@ let projectionBuyCar = localStorage.getItem("a3ProjectionBuyCar") !== "false";
 let projectionJob = localStorage.getItem("a3ProjectionJob") !== "false";
 
 const projectionConfig = {
-  a3Price: 39825,
+  a3Price: 36025,
   downPaymentRate: 0.2,
   downPaymentDelayDays: 7,
   apr: 7,
@@ -192,8 +192,8 @@ const sources = [
     why: "Debt pressure source: unsecured debt is associated with mental and physical health outcomes in the review literature."
   },
   {
-    title: "MINI Cooper Build PDF",
-    url: "/mini-cooper-fwc3k9x3.pdf",
+    title: "MINI Cooper FX0S4VNE Build PDF",
+    url: "/mini-cooper-fx0s4vne.pdf",
     why: "Local source for the MINI build code, build reference, and car image/spec basis used on this page."
   }
 ];
@@ -1169,12 +1169,12 @@ function renderTelemetry(data, sampleOnly) {
 
 function renderBuild(data) {
   const goal = data.goal || {};
-  const buildPrice = Number(goal.priceAsBuilt || projectionConfig.a3Price || 39825);
+  const buildPrice = Number(goal.priceAsBuilt || projectionConfig.a3Price || 36025);
   setText(els.heroA3Price, money.format(buildPrice));
-  setText(els.heroA3Code, goal.buildCode || goal.audiCode || "FWC3K9X3");
-  setText(els.heroA3Cabin, `${goal.exterior || "Nanuq White Metallic"} / ${goal.interior || "Vescin Beige"}`);
+  setText(els.heroA3Code, goal.buildCode || goal.audiCode || "FX0S4VNE");
+  setText(els.heroA3Cabin, `${goal.exterior || "Melting Silver III Metallic"} / ${goal.interior || "Vescin Beige"}`);
   setText(els.heroMiniPrice, money.format(buildPrice));
-  setText(els.a3Build, cleanVisibleText(`${goal.exterior || "Nanuq White Metallic"} / ${goal.interior || "Vescin Beige"} / ${goal.package || "Iconic / Favoured style / Comfort Package Plus"}`));
+  setText(els.a3Build, cleanVisibleText(`${goal.exterior || "Melting Silver III Metallic"} / ${goal.interior || "Vescin Beige"} / ${goal.package || "Iconic / Favoured style / Comfort Package Plus"}`));
 }
 
 function renderDetails(data) {

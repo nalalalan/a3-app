@@ -34,23 +34,23 @@ const PLAID_BASE_URLS = {
 };
 
 const A3_GOAL = {
-  name: "MINI Cooper S Hardtop 2 Door",
+  name: "MINI Cooper Hardtop 2 Door",
   trim: "Iconic / Favoured style / 7-speed dual clutch",
-  buildCode: "FWC3K9X3",
-  audiCode: "FWC3K9X3",
-  audiUrl: "https://www.miniusa.com/build-your-own.html#/studio/FWC3K9X3",
-  sourcePdf: "/mini-cooper-fwc3k9x3.pdf",
-  sourceDate: "2026-05-31",
-  priceAsBuilt: 39825,
-  msrp: 39825,
+  buildCode: "FX0S4VNE",
+  audiCode: "FX0S4VNE",
+  audiUrl: "https://www.miniusa.com/build-your-own.html#/studio/fx0s4vne/summary",
+  sourcePdf: "/mini-cooper-fx0s4vne.pdf",
+  sourceDate: "2026-06-24",
+  priceAsBuilt: 36025,
+  msrp: 36025,
   options: null,
-  destinationCharge: null,
-  exterior: "Nanuq White Metallic",
+  destinationCharge: 1175,
+  exterior: "Melting Silver III Metallic",
   interior: "Vescin Beige",
   package: "Iconic / Favoured style / Comfort Package Plus",
-  power: "201 HP",
-  torque: "221 lb-ft",
-  acceleration: "0-60 mph in 6.3 seconds",
+  power: "161 HP",
+  torque: "",
+  acceleration: "0-60 mph in 7.4 seconds",
   fuel: "Premium"
 };
 
