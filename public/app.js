@@ -513,6 +513,15 @@ function renderDailyScan(data, accounts = {}) {
   if (!els.dailyScanList) return;
   const scan = data?.analysis?.improvements?.dailyScan || {};
   const rows = Array.isArray(scan.rows) ? scan.rows : [];
+  const scanDays = Number(scan.days || 7);
+  const cashRows = dailyRows(data);
+  const latestCashDate = cashRows[cashRows.length - 1]?.date || "";
+  const cashflowRows = latestCashDate
+    ? cashRows.filter((item) => item.date >= daysAgoKey(latestCashDate, scanDays - 1) && item.date <= latestCashDate)
+    : [];
+  const cashflowIn = cashflowRows.reduce((total, item) => total + Number(item.inflow || 0), 0);
+  const cashflowOut = cashflowRows.reduce((total, item) => total + Number(item.spend || 0), 0);
+  const cashflowNet = cashflowIn - cashflowOut;
   const purchaseTotal = Number(scan.total || 0);
   const creditsTotal = Number(scan.creditsTotal || 0);
   const otherInflowTotal = Number(scan.otherInflowTotal || 0);
@@ -520,18 +529,38 @@ function renderDailyScan(data, accounts = {}) {
   const netOut = Number.isFinite(Number(scan.netOut))
     ? Number(scan.netOut || 0)
     : Math.max(0, purchaseTotal - inflowTotal);
+  const offsetParts = [];
+  if (creditsTotal > 0) offsetParts.push(`${money.format(creditsTotal)} credits/returns`);
+  if (otherInflowTotal > 0) offsetParts.push(`${money.format(otherInflowTotal)} other in`);
   let scanWindow = `${money.format(purchaseTotal)} purchases / ${scan.window || "latest 7 days"}`;
   if (creditsTotal > 0 && otherInflowTotal > 0) {
-    scanWindow = `${money.format(netOut)} net out / ${money.format(creditsTotal)} credits/returns / ${money.format(otherInflowTotal)} in`;
+    scanWindow = `${money.format(netOut)} net purchase out / ${money.format(creditsTotal)} credits/returns / ${money.format(otherInflowTotal)} in`;
   } else if (creditsTotal > 0) {
-    scanWindow = `${money.format(netOut)} net out / ${money.format(creditsTotal)} credits/returns`;
+    scanWindow = `${money.format(netOut)} net purchase out / ${money.format(creditsTotal)} credits/returns`;
   } else if (otherInflowTotal > 0) {
-    scanWindow = `${money.format(netOut)} net out / ${money.format(otherInflowTotal)} in`;
+    scanWindow = `${money.format(netOut)} net purchase out / ${money.format(otherInflowTotal)} in`;
   }
   setText(els.dailyScanWindow, accounts.connected ? scanWindow : "Purchases only");
 
+  const summaryParts = [];
+  if (cashflowRows.length) {
+    summaryParts.push(`${money.format(cashflowIn)} in - ${money.format(cashflowOut)} out`);
+  }
+  summaryParts.push(`${money.format(purchaseTotal)} purchases`);
+  if (offsetParts.length) summaryParts.push(offsetParts.join(" / "));
+  summaryParts.push(`${money.format(netOut)} net purchase out`);
+  const summaryHtml = accounts.connected && (cashflowRows.length || purchaseTotal > 0 || inflowTotal > 0)
+    ? `<div class="daily-scan-row daily-scan-summary" data-severity="${cashflowNet >= 0 ? "good" : "watch"}" data-offset="${cashflowNet >= 0 ? "true" : "false"}">
+      <time>${escapeHtml(`${scanDays || 7}d`)}</time>
+      <div>
+        <strong>${escapeHtml(`cashflow ${moneySigned(cashflowNet)}`)}</strong>
+        <span>${escapeHtml(cleanVisibleText(summaryParts.join(" / ")))}</span>
+      </div>
+    </div>`
+    : "";
+
   if (!rows.length) {
-    els.dailyScanList.innerHTML = `<div class="daily-scan-row" data-severity="quiet">
+    els.dailyScanList.innerHTML = `${summaryHtml}<div class="daily-scan-row" data-severity="quiet">
       <time>${accounts.connected ? "Quiet" : "Waiting"}</time>
       <div>
         <strong>${accounts.connected ? "Clear scan" : "Awaiting telemetry"}</strong>
@@ -541,7 +570,7 @@ function renderDailyScan(data, accounts = {}) {
     return;
   }
 
-  els.dailyScanList.innerHTML = rows.map((row) => {
+  const dailyHtml = rows.map((row) => {
     const merchants = Array.isArray(row.merchants) && row.merchants.length
       ? row.merchants.join(" / ")
       : row.topMerchant || "Purchases";
@@ -577,6 +606,7 @@ function renderDailyScan(data, accounts = {}) {
       </div>
     </div>`;
   }).join("");
+  els.dailyScanList.innerHTML = `${summaryHtml}${dailyHtml}`;
 }
 
 function netWindowMode(rows, days, title, emptyRange, axisTitle) {
