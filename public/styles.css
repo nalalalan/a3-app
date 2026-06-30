@@ -547,14 +547,14 @@ ul {
 
 .tier-stack {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: 1fr;
+  gap: 10px;
 }
 
 .tier-card {
   display: grid;
-  grid-template-columns: 54px minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: 1fr;
+  gap: 8px;
   align-items: start;
   padding: 14px;
   border: 1px solid rgba(245, 240, 232, .12);
@@ -574,7 +574,7 @@ ul {
   display: grid;
   place-items: start;
   min-height: 0;
-  padding-top: 3px;
+  padding-top: 0;
   border-radius: 0;
   background: transparent;
   color: var(--amber);
@@ -1297,14 +1297,14 @@ summary {
 
   .tier-card {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 8px;
     padding: 15px;
   }
 
   .tier-rank {
-    min-height: 38px;
-    place-items: center start;
-    padding: 0 11px;
+    min-height: 0;
+    place-items: start;
+    padding: 0;
   }
 
   .tier-body ul {
@@ -1444,7 +1444,7 @@ summary {
 }
 
 .tier-card {
-  grid-template-columns: 74px minmax(0, 1fr);
+  grid-template-columns: 1fr;
 }
 
 .tier-s .tier-body ul {
